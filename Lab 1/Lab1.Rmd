@@ -1,6 +1,8 @@
 ---
-title: "Lab 1"
-output: html_document
+title: "Andrew Sparkes - STAT332 Statistical Analysis of Networks Sec 01 - Lab 1"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 # STAT 332:  Lab 1
@@ -110,7 +112,6 @@ This graph data already exists, so we didn't have to create it ourselves, but we
 
 ```{r}
 summary(g)
-
 ```
 
 Ignoring the numbers directly after IGRAPH, You can see that the ouput is: UN-- 4 7 – The seven bridges of Koenigsberg. The first four characters indicate the poperties of the graph. U means unidrected and D means directed. N tells us that a vertex attribute called "name" exists (so that there are names for the verticies and numbers shouldn't be used for the labels). W would indicate that the graph is weighted. And B as the fourth character would indicate a vertex attributed called "type" (B is historic and represents a bipartite graph). Dashes indicate the absence of these parameters. The number 4 indicates that this graph has 4 vertices and the number 7 indicates the number of edges. The next two dashes are just to separate the title of the graph from the encoded information. The next thing that we can see is a list of the node and edge attributes of the graph. Anything with a "v" indicates that it's an attribute of the vertex and anything with an "e" indicates it's an edge attribute. Let's explore these attributes.
@@ -182,7 +183,7 @@ If we want to look at the proportion of values that are isolates, we can do this
 Proportion of isolates:
 
 ```{r}
-sum(degree(g) == 0)/gorder(g)
+sum(degree(g) == 0) / gorder(g)
 ```
 
 #### Density
@@ -220,8 +221,8 @@ Obviously, this is not very effective at presenting the results. We should make 
 ```{r}
 library(data.table)
 table <- data.table(
-  ID = c("Size", "Components", "Isolate Proportion", "Density", "Diameter", "Average Path Length"), 
-  Value = c(gorder(g), count_components(g), sum(degree(g) == 0)/gorder(g), edge_density(simplify(g)), diameter(g), mean_distance(g))
+  ID = c("Size", "Components", "Isolate Proportion", "Density", "Diameter", "Average Path Length"),
+  Value = c(gorder(g), count_components(g), sum(degree(g) == 0) / gorder(g), edge_density(simplify(g)), diameter(g), mean_distance(g))
 )
 ```
 
@@ -235,21 +236,29 @@ table %>% gt()
 A collection of journal articles is provided for your consumption. I have provided csv files for both the nodes and links as well as code to read and create a network from this data. Using what you know from the code above, create a plot of this network and a table that summarizes the statistics describing this data.
 
 ```{r}
-nodes <- read.csv("Citation_vertices.csv", header=T, as.is=T)
-links <- read.csv("Citation_Edgelist.csv", header=T, as.is=T)
-net <- graph_from_data_frame(d=links, vertices=nodes, directed=T)
+nodes <- read.csv("Citation_vertices.csv", header = T, as.is = T)
+links <- read.csv("Citation_Edgelist.csv", header = T, as.is = T)
+net <- graph_from_data_frame(d = links, vertices = nodes, directed = T)
 ```
 
 ### Plot (remember, this is a directed graph)
 
 ```{r}
-
+plot(net)
 ```
 
 ### Table of Summary Information
 
 ```{r}
+make_table_happen <- function(graph) {
+  data.table(
+    ID = c("Size", "Components", "Isolate Proportion", "Density", "Diameter", "Average Path Length"),
+    Value = c(gorder(graph), count_components(graph), sum(degree(graph) == 0) / gorder(graph), edge_density(simplify(graph)), diameter(graph), mean_distance(graph))
+  ) |>
+    gt()
+}
 
+make_table_happen(net)
 ```
 
 ## 4.)  Your turn #2:
@@ -264,11 +273,13 @@ g2 <- sample_gnp(50, 0.048)
 ### Plot
 
 ```{r}
+plot(g2)
 ```
 
 ### Table of Summary Information
 
 ```{r}
+make_table_happen(g2)
 ```
 
 ## 
