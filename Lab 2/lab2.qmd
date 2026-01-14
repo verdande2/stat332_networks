@@ -1,0 +1,11 @@
+---
+title: "Andrew Sparkes - STAT332 Statistical Analysis of Networks Sec 01 - Lab 2"
+format: html
+---
+
+```{r libraries}
+#| label: libraries
+
+library(igraph)
+library(readr)
+```

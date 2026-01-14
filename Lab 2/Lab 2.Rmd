@@ -1,0 +1,638 @@
+---
+title: "Andrew Sparkes - STAT332 Statistical Analysis of Networks Sec 01 - Lab 2"
+output: html_document
+---
+
+```{r libraries}
+library(igraph)
+library(readr)
+library(data.table)
+library(gt)
+```
+
+```{r func_defs}
+make_table_happen <- function(graph) {
+  data.table(
+    ID = c("Size", "Components", "Isolate Proportion", "Density", "Diameter", "Average Path Length"),
+    Value = c(gorder(graph), count_components(graph), sum(degree(graph) == 0) / gorder(graph), edge_density(simplify(graph)), diameter(graph), mean_distance(graph))
+  ) |>
+    gt()
+}
+```
+
+
+# STAT 332: Lab 2
+
+## 1.) Setup
+
+Welcome to Lab 2. This week we are going to be working with igraph data visualization tools. In general, this means that we will be understanding how to manipulate and visualize igraph objects.
+
+We will be working with data from <https://kateto.net/network-visualization>. In order to make this process easier, I have already created an igraph object from the data and stored it as a .rds file to be read. This is provided in your canvas shell as Media Network.rds.
+
+The documentation for igraph in R is located at <https://r.igraph.org/>. This documentation will be critical for a lot of our work in this course, so you might want to bookmark the page because we will be getting really comfortable with reading their documentation.
+
+Our goal for this lab is going to be to reproduce and improve on the following graph:
+
+![Goal network image for this lab](Example%20Goal.png)
+
+## 2.) Lab Walkthrough
+
+### 2.a) Getting started.
+
+Using ctrl-alt-i you can create a section where you are going to embed R code. We're going to start by loading in the igraph library.
+
+```{r}
+library(igraph)
+library(readr) #This library is used for reading the data.
+```
+
+```{r}
+g <- read_rds("Media Network.rds")
+```
+
+Assuming that your data file is in the right working directory (same one as your .Rmd file for this lab) you should be good. Please stop me if you need help setting your working directory. If there was no error, and the data read in correctly, it should appear in your Data tab as a "List" of 17. We need to use the class function to make sure this is an igraph object.
+
+```{r}
+class(g)
+```
+
+And, let's run the summary function to get a picture of the dataset.
+
+```{r}
+summary(g)
+```
+
+I may not have mentioned this before, but igraph objects can have graph attributes, vertex attributes, and edge attributes. The (g/c) would denote a categorical graph attribute and a (g/n) would indicate a numeric graph attribute. The same pattern applies for both vertex (v) and edge (e) attributes. For this graph, we have 17 nodes and 49 edges. We created some code last lab to get some summary statistics about this graph.
+
+```{r}
+library(data.table)
+table <- data.table(
+  ID = c("Size", "Components", "Isolate Proportion", "Density", "Diameter", "Average Path Length"), 
+  Value = c(gorder(g), count_components(g), sum(degree(g) == 0)/gorder(g), edge_density(simplify(g)), diameter(g), mean_distance(g))
+)
+library(gt)
+table %>% gt()
+```
+
+Okay, that gives us some of the statistics; however, there's another set of information that would be more critical before we know the statistics. These are be basic properties of the graph. For example, is this a simple graph? Does this graph have loops? Is this a multigraph? Is it Directed? Is it acyclic? Are there edge Weights? The number of components above tells us that this graph is connected, but that's one we can include in our next table. Is the graph bipartite? Is the graph a tree or a forest?\
+
+```{r}
+table <- data.table(
+  ID = c("Connected", "Simple", "Loops", "Multigraph", "Weighted", "Directed", "Acyclic", "Bipartite", "Tree", "Forest"), 
+  Value = c(is_connected(g), is_simple(g), any_loop(g), any_multiple(g), is_weighted(g), is_directed(g), is_acyclic(g), is_bipartite(g), is_tree(g), is_forest(g))
+)
+library(gt)
+table %>% gt()
+```
+
+So, as we already knew, this graph is connected but now we find out that it is not a simple graph. While it is not a multigraph, it does have loops. It has edge weights and is also directed but not acyclic. Furthermore, it is not a bipartite graph, nor is it a tree or a forest. Realistically, this information (along with citation information) could be stored as attributes of the graph. if we want to store something as an attribute of the graph, we need to use the set_graph_attr() function. First, let's check the graph attributes.
+
+```{r}
+graph_attr(g)
+```
+
+You'll notice that this is an empty list. If you want to check the vertex attributes or edge attributes, that is just as easy.
+
+```{r}
+print("Vertex Attributes")
+print(vertex_attr(g))
+print("Edge Attributes")
+print(edge_attr(g))
+```
+
+Let's store a graph attribute. Specifically, let's store that this graph is weighted and directed as graph attributes. The documentation shows us how to use the function.
+
+```         
+set_graph_attr(graph, name, value)
+```
+
+```{r}
+g <- set_graph_attr(g, name = "Weighted", value = TRUE)
+g <- set_graph_attr(g, name = "Directed", value = TRUE)
+```
+
+```{r}
+graph_attr(g)
+```
+
+Perfect, now if a we save this graph and a future user loads it, they will know that it is weighted and directed. Actually, that isn't really all that important though because you could have found that out from the summary function. Characteristics such as whether the graph is bipartite are actually much more important to store in the graph data, and all of these should be represented in your documentation of your graph so that users know what to expect.
+
+### 2b.) Adding degree as attributes
+
+This dataset actually has a reasonable number of both node and edge properties which could be used for our analysis but we really should get used to augmenting the data with properties that can be used for visualization. Since we already know what degree and component are, those seem like a great place to start. Let's add degree as a vertex attribute. We know the mean_degree and max_degree, but we haven't really messed with the degree function. Let's look at the documentation.
+
+```         
+degree(   
+  graph,   
+  v = V(graph),   
+  mode = c("all", "out", "in", "total"),   
+  loops = TRUE,   
+  normalized = FALSE )
+```
+
+The variable graph is simply the name of the graph. v is the list of nodes that we will perform the calculations for. Obviously, we will want to calculate the degree for all vertices and V(graph) is the default so we don't even need to do anything there. There are loops in the graph, IF we want them to count. And now is our first decision point. Is it important if a media outlet links or references themselves? Does this add value to their trustworthyness, authority, value, or anything else? If not, perhaps we should remove the loops before any further analysis. (Our goal picture does have a loop represented, so we are going to leave them in, but we will investigate filtering out loops in a moment. Finally, normalized just divides every value by n-1 which doesn't serve much purpose for degree (for other measures it's a lot more meaningful.)
+
+I ignored "mode". This is a directed graph, so we need to know what we care about. In degree would represent media sources from other networks (perhaps this is a sign of trust?) Out degree would be the number of other media sources referenced by this source. Total is just the sum of the two (and is the same as "all"). Note that the weight of the edges tells us the number of references to each, so what does degree actually mean in this context?
+
+```{r}
+degree(g, mode = "out")
+```
+
+```{r}
+degree(g, mode = "in")
+```
+
+As you might have guessed, degree might not be the best measure here. Actually, for directed graphs, there's a better measure that
+
+```         
+strength(   
+  graph,   
+  vids = V(graph),   
+  mode = c("all", "out", "in", "total"),   
+  loops = TRUE,   
+  weights = NULL 
+  )
+```
+
+Strength actually sums up the weights of the adjacent edges, so it's a better metric for the impact of these numbers because it tells how often links and references are made rather than just that a tie exists. Be careful here though. The weights parameter is NULL indicating that it does not just automatically use a weight unless a specific parameter in edges is specified as the weights parameter. This is done by making sure that the edge attribute for weight has the name "weight". You can use a different edge attribute for weights, and that's what this parameter is for (just in case you don't have an edge attribute named weight).
+
+```{r}
+strength(g, mode = "in")
+```
+
+```{r}
+strength(g, mode = "out")
+```
+
+There are some interesting difference to note here. Some nodes like S10, S11, and S17 are often linked or referenced by other sources but do not seem to reciprocate much. Similarly, nodes like s05 have the opposite pattern of behavior. Adding all three of these to the data source as vertex attributes might be useful for future analysis.
+
+```{r}
+g <- set_vertex_attr(g, name = "degree_in", value = strength(g, mode = "in"))
+g <- set_vertex_attr(g, name = "degree_out", value = strength(g, mode = "out"))
+g <- set_vertex_attr(g, name = "degree_total", value = strength(g, mode = "total"))
+```
+
+Let's make sure we have our new attributes.
+
+```{r}
+summary(g)
+```
+
+### 2c.) Adding components as attributes
+
+There's only one component here, right? Let's check with a quick plot.
+
+```{r}
+plot(g)
+```
+
+Yup, looks fully connected. Actually, it's not. Look carefully at S11. Remember the out degree of S11 is 0? That means that this graph is only connected in one direction! The terminology for this is to call it "Weakly" connected. If there is any node or group of nodes where, starting at that node or within the group, you cannot reach other nodes by following the directed graphs then the graph is "Weakly" connected. A component is said to be "Strongly" connected if a path exists from every node to every other node. Let's look back at that "is_connected()" documentation.
+
+```         
+is_connected(graph, mode = c("weak", "strong"))
+```
+
+The documentation doesn't tell us what the default mode is for this. Let's check.
+
+```{r}
+is_connected(g)
+```
+
+```{r}
+is_connected(g, mode = "strong")
+```
+
+It looks like "weak" is the default option here. This graph is not strongly connected but it is weakly connected. If we want to generate the components, we can do that.
+
+```{r}
+components(g, mode = "strong")
+```
+
+The result of the components function returns three values: membership, csize, and no. To access any component of an R object, you can use the \$. Let's do that:
+
+```{r}
+components_results <- components(g, mode = "strong")
+components_results$membership
+```
+
+Obviously, we can store this separate from the graph if we want to (like we did here), but there's really no reason to do so unless we want to waste RAM. What we should do here is to store these as a vertex attribute.
+
+```{r}
+g <- set_vertex_attr(g, 
+                name = "component", 
+                value = components(g, mode = "strong")$membership)
+```
+
+A final summary can verify that this has worked.
+
+```{r}
+summary(g)
+```
+
+### 2d.) Let's graph
+
+```{r}
+plot(g)
+```
+
+Well, it's time to improve this plot. Recall that a network plot has for real components we need to deal with. We need titles, subtitles, footnotes, and legends. We need layouts to determine the position of the nodes. We need node characteristics. And finally, we need edge characteristics. Plotting is so significant of a task that an entire webpage of the documentation is dedicated to it: <https://r.igraph.org/reference/plot.common.html>. You do not have to identify everything within the plot object and in many cases, it is completely understandable why someone would want to set the parameters separate from the plot code. Let's try to get a full context for the plot and build it one piece at a time.
+
+**Title, subtitle, and caption:**
+
+These elements need to be in the outer margins of the plot and have to be controlled by a specific set of parameters. A full description for margin control is located at: <https://r-graph-gallery.com/74-margin-and-oma-cheatsheet.html>
+
+The critical fact is that there are two parameters that matter. Margins are controlled by the mar() function and outer margins are controlled by the oma() parameter. oma(Bottom, Left, Top, Right) tells it how many lines should be made available in the outer margin. Then, the mtext parameter can be used to dictate the location, color, font, size, etc... for the information. If you want more information on this, ?mtext in the console will get you more information about how the mtext argument is applied. Here's an example.
+
+```{r}
+plot(
+  g,
+  oma = c(2,3,5,2)
+  )
+title = "Media Networks Link to and Reference Eachother"
+subtitle = "A network plot of networks."
+caption = "Data from:  https://kateto.net/network-visualization."
+mtext(side = 3, line = 3, at = -2, adj = 0, cex = 1.1, title)
+mtext(side = 3, line = 2, at = -2, adj = 0, cex = 0.7, subtitle)
+mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption )
+```
+
+You might notice that the information for the title, subtitle, caption, (and eventually our legends appear outside of the plot() function. These are actually added onto the canvas after the grah object has been created.
+
+**Layout**
+
+The notes from class give us a lot of different layouts that can be used. Let's try to look at one of them: type ?layout_with_fr into the console. There's a lot here that you would need to look into in order to really understand this graph; however, it's honestly not that bad to use. Usually, I don't even mess with the parameters.
+
+```{r}
+plot(g,
+     layout = layout_with_fr
+     )
+```
+
+That doesn't mean you can't change the parameters within the plot function.
+
+```{r}
+plot(g,
+     layout = layout_with_lgl(graph = g, maxiter = 200)
+    )
+```
+
+**Vertex and edge Parameters**
+
+Vertex parameters begin with the term "vertex." For example, vertex.size will be used to set the vertex size. vertex.label is used to set the vertex label. Rather than going through them one at a time, here's a generic code:
+
+,
+
+```         
+plot_params <- list(
+  x = g,
+  layout = layout,
+  
+  vertex.size = node_sizes,
+  vertex.color = adjustcolor(node_colors, alpha.f = transparency),
+  vertex.frame.width = frame_width,
+  vertex.frame.color = frame_color,
+  vertex.shape = node_shapes,
+  
+  vertex.label = vertex attribute
+  vertex.label.cex
+  vertex.label.color
+  vertex.label.dist
+  
+  edge.width = edge_widths,
+  edge.color = adjustcolor(edge_colors, alpha.f = transparency),
+  edge.lty = as.numeric(edge_styles),
+  edge.curved = a number between -0.5 and 0.5
+  
+  edge.label = edge attribute for label
+  edge.label.cex = edge label size
+  edge.label.color = edge label color
+  
+  edge.arrow.size <- edge.width * 0.35 (this will dynamically adjust them)
+  edge.arrow.mode <- one of: ">" = 2,"<" = 1, "<>" = 3,"-" = 0)
+  
+  rescale = TRUE
+  
+  main = "",  # We'll add titles manually for better control
+  sub = "",
+  xlab = "",
+  ylab = ""
+)
+```
+
+Setting parameters equal to constants applies to the entire graph.
+
+```{r}
+plot(g,
+     layout = layout_with_lgl,
+     vertex.size = 30,
+     vertex.color = adjustcolor("blue", alpha.f = 0.5),
+     vertex.shape = "square"
+     )
+```
+
+Let's remind ourselves of our attributes and the legends from the above plot:
+
+```{r}
+summary(g)
+```
+
+In the graph we are shooting for, node shape is based on the type label, size is based on audience size, color is also based on type label, label is the media. Edges seem to be curved, style is based on type, color is also based on type, width is based on weight, and the weights are labeled. Some of these are pretty easy to do and some are more difficult. Let's shoot for the low hanging fruit first.
+
+```{r}
+plot.new()
+plot(g,
+  layout = layout_with_lgl,
+  
+  vertex.size = V(g)$audience.size,
+
+  
+  vertex.label = V(g)$media,
+
+  
+  edge.width = E(g)$weight,
+
+  edge.curved = 0.3,
+  
+  edge.label = E(g)$weight,
+
+  
+  edge.arrow.size <- 0.35,
+  edge.arrow.mode <- 3, #one of: ">" = 2,"<" = 1, "<>" = 3,"-" = 0)
+  
+  rescale = TRUE,
+  oma = c(2,3,5,2)
+  )
+title = "Media Networks Link to and Reference Eachother"
+subtitle = "A network plot of networks."
+caption = "Data from:  https://kateto.net/network-visualization."
+mtext(side = 3, line = 3, at = -2, adj = 0, cex = 1.1, title)
+mtext(side = 3, line = 2, at = -2, adj = 0, cex = 0.7, subtitle)
+mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption )
+```
+
+Wow! And now we have something interesting. Our size parameters scale us completely off the graph.
+
+```{r}
+# Set margins
+par(mar = c(3,1,4,1))
+
+# Calculate edge widths for reuse
+edge_widths <- E(g)$weight/max(E(g)$weight)*2
+
+plot(g,
+  layout = layout_with_lgl,
+  
+  vertex.size = V(g)$audience.size/max(V(g)$audience.size)*20,
+#  vertex.color = adjustcolor(node_colors, alpha.f = transparency),
+#  vertex.shape = node_shapes,
+
+  vertex.label = V(g)$media,
+  vertex.label.cex = 0.7,
+  vertex.label.dist = 0.5,
+  
+  edge.width = edge_widths,
+# edge.color = adjustcolor(edge_colors, alpha.f = transparency),
+# edge.lty = as.numeric(edge_styles), #edge styles
+
+  edge.curved = 0.35,
+  edge.label = E(g)$weight,
+  edge.label.cex = 0.6,
+  
+  edge.arrow.size = edge_widths * 0.35,
+  edge.arrow.mode = 1,
+  
+  rescale = TRUE
+)
+
+# Add titles
+title_text <- "Media Networks Link to and Reference Eachother"
+subtitle_text <- "A network plot of networks."
+caption_text <- "Data from: https://kateto.net/network-visualization."
+
+mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text)
+mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
+mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
+
+```
+
+Alright, this is a lot better, and we are getting there. Now we need to deal with colors, shapes, styles, and legends.
+
+```{r}
+library(RColorBrewer)
+library(scales)
+
+#___________________________________________
+## PLOT PROPERTIES
+#___________________________________________
+par(mar = c(3,1,4,1))
+#par(oma = c(2,3,5,2))
+
+
+
+#___________________________________________
+## VERTEX PROPERTIES
+#___________________________________________
+
+# ------------------------
+# VERTEX COLORS 
+# ------------------------
+v_vals   <- V(g)$type.label
+v_levels <- sort(unique(v_vals))
+
+# Automated Color Identification
+v_pal <- setNames(
+  brewer.pal(length(v_levels), "Paired"),
+  v_levels
+)
+
+# Manual Color Identification
+  ## Example: color-blind friendly Okabe–Ito (first k colors will be used)
+#okabe_ito <- c(
+#  "#000000", "#E69F00", "#56B4E9", "#009E73",
+#  "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
+#)
+
+  ## Build a named palette by aligning colors to the detected levels
+## If there are more levels than colors, we recycle (or you can stop with an error)
+#user_colors <- okabe_ito  # or any vector like c("#AABBCC", "#DDEEFF", ...)
+#v_pal <- setNames(user_colors[seq_along(v_levels)], v_levels)
+
+vertex_colors <- v_pal[v_vals]
+
+
+## ---- (b) Continuous palette (if needed) ----
+# library(scales)
+# pal_cont <- col_numeric("viridis", domain = range(V(g)$some_number))
+# vertex_colors <- pal_cont(V(g)$some_number)
+
+
+
+# ------------------------
+#  VERTEX SHAPES
+# ------------------------
+
+shape_levels <- levels(as.factor(v_vals))
+shape_pal <- setNames(c("circle", "square", "rectangle")[seq_along(shape_levels)], shape_levels)
+vertex_shapes <- shape_pal[v_vals]
+
+
+
+
+#___________________________________________
+## EDGE PROPERTIES
+#___________________________________________
+
+
+# ------------------------
+#  EDGE COLORS 
+# ------------------------
+e_vals   <- E(g)$type
+e_levels <- sort(unique(e_vals))
+
+e_pal <- setNames(
+  brewer.pal(length(e_levels), "Paired"), # Paired is the name of the palette from color brewer. 
+  e_levels
+)
+
+edge_colors <- e_pal[e_vals]
+
+## ---- (b) Continuous palette (if needed) ----
+# pal_cont <- col_numeric("viridis", domain = range(E(g)$some_number))
+# edge_colors <- pal_cont(E(g)$some_number)
+
+# ------------------------
+#  EDGE LINE TYPES (discrete)
+# ------------------------
+e_lty_vals   <- E(g)$type
+e_lty_levels <- sort(unique(e_lty_vals))
+
+# assign linetypes to the levels
+lty_palette <- c(1, 2)  # or however many you want
+e_lty_pal <- setNames(
+  lty_palette[seq_along(e_lty_levels)],
+  e_lty_levels
+)
+
+edge_line_types <- e_lty_pal[e_lty_vals]
+
+
+
+
+
+# ------------------------
+# 5. PLOT
+# ------------------------
+plot(
+  g,
+  layout = layout_with_lgl,
+
+  vertex_sizes = scales::rescale(V(g)$audience.size, to = c(5, 25)),
+  vertex.color = adjustcolor(vertex_colors, alpha.f = 0.5),
+  vertex.shape = vertex_shapes,
+
+  vertex.label = V(g)$media,
+  vertex.label.cex = 0.7,
+  vertex.label.dist = 0.5,
+
+  edge_widths = scales::rescale(E(g)$weight, to = c(0.5, 3)),
+  edge.color = edge_colors,
+  edge.lty = edge_line_types,
+
+  edge.curved = 0.35,
+  edge.label = E(g)$weight,
+  edge.label.cex = 0.6,
+
+  edge.arrow.size = scales::rescale(E(g)$weight, to = c(0.5, 3))*0.3,
+  edge.arrow.mode = 1
+)
+
+# ------------------------
+# 8. LEGENDS
+# ------------------------
+
+
+legend(
+  "topright",
+  title = "Vertex Type",
+  legend = v_levels,
+  fill   = v_pal[v_levels],
+  border = NA,
+  bty = "n",
+  cex = 0.8
+)
+
+
+
+shape_pch_map <- c(
+  circle     = 21,
+  square     = 22,
+  rectangle  = 22,  
+  csquare    = 22,
+  crectangle = 22
+)
+
+legend(
+  "topleft",
+  title = "Vertex Shape",
+  legend = shape_levels,
+  pch    = shape_pch_map[ shape_pal[shape_levels] ],
+  pt.bg  = "gray80",
+  bty = "n",
+  cex = 0.8
+)
+
+
+
+legend(
+  "bottomright",
+  title = "Edge Type",
+  legend = e_levels,
+  col    = e_pal[e_levels],
+  lwd    = 3,
+  bty = "n",
+  cex = 0.8
+)
+
+
+
+legend(
+  "bottomleft",
+  title = "Edge Line Type",
+  legend = e_lty_levels,
+  lty    = unname(e_lty_pal[e_lty_levels]),
+  lwd    = 3,
+  bty = "n",
+  cex = 0.8
+)
+
+
+# ------------------------
+# 7. TITLES
+# ------------------------
+title_text <- "Media Networks Link to and Reference Each Other"
+subtitle_text <- "A network plot of networks."
+caption_text <- "Data from: https://kateto.net/network-visualization."
+
+mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text)
+mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
+mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
+
+```
+
+## 3.) Your turn:
+
+The London Gang Network has been made available to you in the course shell. I would like you to use the information in this lab to give your best shot to reproducing the following graph.\
+\
+![London Gang Network Visualization](London%20Gang%20Network.png)
+
+```{r}
+
+```
+
+### 
+
+## 
+
+## 5.) Results
+
+What you need to do next is to "knit" your document into an html using the "Knit" button near the top of the screen. This will give you an HTML that you can turn in.
