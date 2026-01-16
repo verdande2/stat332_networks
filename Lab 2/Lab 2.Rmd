@@ -624,14 +624,260 @@ mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
 The London Gang Network has been made available to you in the course shell. I would like you to use the information in this lab to give your best shot to reproducing the following graph.\
 \
 ![London Gang Network Visualization](London%20Gang%20Network.png)
-
-```{r}
-
+Well, taking an initial look at the network graph picture, I see 3 legends at 3 of the 4 corners (missing top left), showing:
+ - legend for node size to top right, ranging from min to max of values
+ - legend for node color to bottom right, categorical based on 4 different birthplace values
+ - legend for edge width to bottom left, ranging from min to max of values
+ - title above, centered, labeled "London Gang Network", looks like 2-3 lines above, title on line ~2, in the outer margin (just to the top)
+ - no caption, subtitle, etc
+ - legend titles are centered in their bounding boxes
+ - nodes appear to have a semitransparent opacity set
+ - edges also appear to have some transparency set
+ - looking to margins, it seems that outer margins are zero'd, and inner margins are minimal, so starting with 0
+ 
+Now, listing those all out like that makes them easy to cannabalize and turn into psuedocode comments below, used to guide my process...
+ 
+ 
+To start out, I'll begin by copy/pasting the above plotting code chunk to below and adapting that as I go, but first, lets get the data actually in the environment:
+```{r prob4_load_dataset}
+gangs <- read_rds("London Gang Network.rds")
 ```
+
+Make sure we know what we just imported:
+```{r test_the_thing}
+class(gangs)
+gangs
+```
+Looks good to me! We pulled a igraph object directly out of the rds binary. Excellent. Let's make sure there isn't anything obviously awry by throwing it to plot with default parameters...
+
+```{r prob4_plot_the_ugly_network}
+plot(gangs)
+```
+Well, I see some circles and numbers and lines, looks about right to me! That was easy enough... On to the plot code...
 
 ### 
 
-## 
+## 4.) My turn (code and plot)
+
+```{r}
+# I know these were already imported in a prev code chunk, but getting used to seeing the library names so I don't forget them later
+library(RColorBrewer) # color pallettes etc
+library(scales) # scales pkg for scaling ranges of values for legends, etc
+
+#___________________________________________
+## PLOT PROPERTIES
+#___________________________________________
+par(mar = c(0,0,0,0)) # bottom, left, top and right margins (in that order)
+#par(oma = c(2,3,5,2))
+
+
+
+#___________________________________________
+## VERTEX PROPERTIES
+#___________________________________________
+
+# ------------------------
+# VERTEX COLORS 
+# ------------------------
+# - nodes/vertices are colored by "Birthplace (v/n)"
+
+# V(gangs)$Birthplace shows that Birthplace is stored as a string, but is actually numbers "1" - "4", which appears to color AND label the vertices
+
+v_vals   <- V(gangs)$Birthplace
+v_levels <- sort(unique(v_vals)) # will look like c("1", "2", "3", "4")
+
+# keeping the rest of this as is for now... Paired pallette is fine, only choosing four colors anyway...
+
+# Automated Color Identification
+v_pal <- setNames(
+  brewer.pal(length(v_levels), "Paired"),
+  v_levels
+)
+
+# Manual Color Identification
+  ## Example: color-blind friendly Okabe–Ito (first k colors will be used)
+#okabe_ito <- c(
+#  "#000000", "#E69F00", "#56B4E9", "#009E73",
+#  "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
+#)
+
+  ## Build a named palette by aligning colors to the detected levels
+## If there are more levels than colors, we recycle (or you can stop with an error)
+#user_colors <- okabe_ito  # or any vector like c("#AABBCC", "#DDEEFF", ...)
+#v_pal <- setNames(user_colors[seq_along(v_levels)], v_levels)
+
+vertex_colors <- v_pal[v_vals]
+
+
+## ---- (b) Continuous palette (if needed) ----
+# library(scales)
+# pal_cont <- col_numeric("viridis", domain = range(V(g)$some_number))
+# vertex_colors <- pal_cont(V(g)$some_number)
+
+
+
+# ------------------------
+#  VERTEX SHAPES
+# ------------------------
+# All vertices are displayed as colored circles in the network graph, so this part will be largely unused/commented out
+# shape_levels <- levels(as.factor(v_vals))
+# shape_pal <- setNames(c("circle", "square", "rectangle")[seq_along(shape_levels)], shape_levels)
+# vertex_shapes <- shape_pal[v_vals]
+
+vertex_shapes <- c("circle") # let the vertices be circles, and circles they shall be!
+
+
+#___________________________________________
+## EDGE PROPERTIES
+#___________________________________________
+
+
+# ------------------------
+#  EDGE COLORS 
+# ------------------------
+
+
+#  - edge width is the edge weights ("Weight")
+
+# keeping this to use the weights to set width/size/etc
+e_vals   <- E(gangs)$weight # Lesson learned. w != W...
+
+# don't need this bit...
+# e_levels <- sort(unique(e_vals))
+# 
+# e_pal <- setNames(
+#   brewer.pal(length(e_levels), "Paired"), # Paired is the name of the palette from color brewer. 
+#   e_levels
+# )
+# 
+# edge_colors <- e_pal[e_vals]
+
+edge_colors <- c("#000000") # back in black...
+
+## ---- (b) Continuous palette (if needed) ----
+# pal_cont <- col_numeric("viridis", domain = range(E(g)$some_number))
+# edge_colors <- pal_cont(E(g)$some_number)
+
+# ------------------------
+#  EDGE LINE TYPES (discrete)
+# ------------------------
+# commenting out most of this, just setting the line types all to the default solid line == 1
+# e_lty_vals   <- E(g)$type
+# e_lty_levels <- sort(unique(e_lty_vals))
+# 
+# # assign linetypes to the levels
+# lty_palette <- c(1, 2)  # or however many you want
+# e_lty_pal <- setNames(
+#   lty_palette[seq_along(e_lty_levels)],
+#   e_lty_levels
+# )
+# 
+# edge_line_types <- e_lty_pal[e_lty_vals]
+
+edge_line_types <- c(1)
+
+```
+
+
+```{r segregated_plot_chunk}
+
+# ------------------------
+# 5. PLOT
+# ------------------------
+plot(
+  gangs,
+  layout = layout_with_lgl,
+
+  vertex.sizes = scales::rescale(V(gangs)$Arrests, to = c(min(V(gangs)$Arrests), max(V(gangs)$Arrests))),
+  
+  # - nodes appear to have a semitransparent opacity set
+  vertex.color = adjustcolor(vertex_colors, alpha.f = 0.7), # VERTEX ALPHA HERE
+  vertex.shape = vertex_shapes,
+
+  vertex.label = V(gangs)$Birthplace,
+  vertex.label.cex = 0.7,
+  vertex.label.dist = 0.5,
+
+  edge.widths = 3 * scales::rescale(E(gangs)$weight, to = c(min(E(gangs)$weight), max(E(gangs)$weight))), # scale factor of 3?
+  
+  #  - edges also appear to have some transparency set
+  edge.color = adjustcolor(edge_colors, alpha.f = 0.7), # EDGE ALPHA HERE
+  edge.lty = edge_line_types,
+
+  edge.curved = 0, # straight lines
+  edge.label = "", # edges are unlabeled for this plot, guess I technically could comment it out and it should default to blank
+  #edge.label.cex = 0.6, don't need
+
+  edge.arrow.size = 0, # zero'd, no arrows in network, it's undirected
+  edge.arrow.mode = 0 # zero for no arrows, 1 for backward, 2 for forward, 3 for both
+)
+
+# ------------------------
+# 8. LEGENDS
+# ------------------------
+
+
+# TODO FIX ALL LEGENDS
+
+#  - legend titles are centered in their bounding boxes
+
+
+ # - legend for node size to top right, ranging from min to max of values
+legend(
+  "topright",
+  title = "Node Arrests",
+  legend = sort(unique(v_vals)),
+  border = NA,
+  bty = "n",
+  cex = 0.8
+)
+
+
+
+shape_pch_map <- c(
+  circle     = 21 # only circles for this network
+)
+
+ # - legend for edge width to bottom left, ranging from min to max of values
+legend(
+  "bottomleft",
+  title = "Edge Weight",
+  legend = sort(unique(e_vals)), # should be edge values (=weights) (do I need sort/unique calls on a noncategorical var?)
+  pch    = 21, # shape_pch_map[ shape_pal[shape_levels] ], just swapped to 21 for the circle symbol
+  pt.bg  = "gray80",
+  bty = "n",
+  cex = 0.8
+)
+
+
+ # - legend for node color to bottom right, categorical based on 4 different birthplace values
+legend(
+  "bottomright",
+  title = "Node Birthplace",
+  legend = sort(unique(v_vals)), # v_vals col should be birthplace str == one of c("1", "2", ...)
+  #col    = e_pal[e_levels], # TODO determine wtf this does
+  lwd    = 3, # TODO what do you do?
+  bty = "n",
+  cex = 0.8
+)
+
+# ------------------------
+# 7. TITLES
+# ------------------------
+
+ # - title above, centered, labeled "London Gang Network", looks like 2-3 lines above, title on line ~2, in the outer margin (just to the top)
+ # - no caption, subtitle, etc
+
+
+title_text <- "London Gang Network"
+subtitle_text <- ""
+caption_text <- ""
+
+mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text) # centered title text
+#mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
+#mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
+```
+
 
 ## 5.) Results
 
