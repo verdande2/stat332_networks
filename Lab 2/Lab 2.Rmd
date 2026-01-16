@@ -821,12 +821,13 @@ plot(
 
 #  - legend titles are centered in their bounding boxes
 
-
+# TODO this legend has the legend vector being passed correctly, just needs the bullet sizes to reflect the value
+# see https://stackoverflow.com/a/47308865
  # - legend for node size to top right, ranging from min to max of values
 legend(
   "topright",
   title = "Node Arrests",
-  legend = v_vals,
+  legend = seq(from = min(V(gangs)$Arrests), to = max(V(gangs)$Arrests), length.out = 5), # should have min, max and 5-2 = 3 evenly spaced intermediate sizes for the legend
   border = NA,
   bty = "n",
   cex = 0.8
