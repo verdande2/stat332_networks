@@ -788,10 +788,10 @@ plot(
   gangs,
   layout = layout_with_lgl,
 
-  vertex.sizes = scales::rescale(V(gangs)$Arrests, to = c(min(V(gangs)$Arrests), max(V(gangs)$Arrests))),
+  vertex.sizes = scales::rescale(V(gangs)$Arrests, to = c(1, 25)), # even with 0 arrests, min size is 1 so we still see vertex
   
   # - nodes appear to have a semitransparent opacity set
-  vertex.color = adjustcolor(vertex_colors, alpha.f = 0.7), # VERTEX ALPHA HERE
+  vertex.color = adjustcolor(vertex_colors, alpha.f = 0.5), # VERTEX ALPHA HERE
   vertex.shape = vertex_shapes,
 
   vertex.label = V(gangs)$Birthplace,
@@ -826,7 +826,7 @@ plot(
 legend(
   "topright",
   title = "Node Arrests",
-  legend = sort(unique(v_vals)),
+  legend = v_vals,
   border = NA,
   bty = "n",
   cex = 0.8
