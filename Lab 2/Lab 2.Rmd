@@ -780,7 +780,7 @@ edge_line_types <- c(1)
 
 
 ```{r segregated_plot_chunk}
-
+png("LondonGangNetwork.png", width = 800, height = 600) # saving to file
 # ------------------------
 # 5. PLOT
 # ------------------------
@@ -788,17 +788,17 @@ plot(
   gangs,
   layout = layout_with_lgl,
 
-  vertex.sizes = scales::rescale(V(gangs)$Arrests, to = c(1, 25)), # even with 0 arrests, min size is 1 so we still see vertex
+  vertex.size = scales::rescale(V(gangs)$Arrests, to = c(1, 25)), # even with 0 arrests, min size is 1 so we still see vertex
   
   # - nodes appear to have a semitransparent opacity set
   vertex.color = adjustcolor(vertex_colors, alpha.f = 0.5), # VERTEX ALPHA HERE
   vertex.shape = vertex_shapes,
 
   vertex.label = V(gangs)$Birthplace,
-  vertex.label.cex = 0.7,
-  vertex.label.dist = 0.5,
+  vertex.label.cex = 0,
+  vertex.label.dist = 0,
 
-  edge.widths = 3 * scales::rescale(E(gangs)$weight, to = c(min(E(gangs)$weight), max(E(gangs)$weight))), # scale factor of 3?
+  edge.width = 3 * scales::rescale(E(gangs)$weight, to = c(min(E(gangs)$weight), max(E(gangs)$weight))), # scale factor of 3? Seems enough
   
   #  - edges also appear to have some transparency set
   edge.color = adjustcolor(edge_colors, alpha.f = 0.7), # EDGE ALPHA HERE
@@ -824,14 +824,38 @@ plot(
 # TODO this legend has the legend vector being passed correctly, just needs the bullet sizes to reflect the value
 # see https://stackoverflow.com/a/47308865
  # - legend for node size to top right, ranging from min to max of values
-legend(
+arrest_count_cutoffs <- seq(from = 0,
+                            to = max(V(gangs)$Arrests),
+                            length.out = 5 # means 5 total sizes, including both endpoints, so 3 intermediate legend values
+)
+
+arrest_count_cutoffs <- round(arrest_count_cutoffs, 0) # integerize the decimals if needed
+legend_TR_base <- legend(
   "topright",
   title = "Node Arrests",
-  legend = seq(from = min(V(gangs)$Arrests), to = max(V(gangs)$Arrests), length.out = 5), # should have min, max and 5-2 = 3 evenly spaced intermediate sizes for the legend
-  border = NA,
-  bty = "n",
-  cex = 0.8
+  legend = arrest_count_cutoffs, # seq(from = min(V(gangs)$Arrests), to = max(V(gangs)$Arrests), length.out = 5), # should have min, max and 5-2 = 3 evenly spaced intermediate sizes for the legend
+  pt.cex = scales::rescale(
+    arrest_count_cutoffs,
+    to = c(0, 1) # normalize to betwen 0-1
+  ),
+  bty = "n", # TODO look into what this param does in src
+  col = "black"
 )
+legend_TR_circles <- legend(
+  "topright",
+  legend = arrest_count_cutoffs,
+  pt.cex = arrest_count_cutoffs,
+  col = "white",
+  pch = 21, # circle
+  pt.bg = "white"
+)
+x <- (legend_TR_circles$text$x + legend_TR_circles$rect$left) / 2
+y <- legend_TR_circles$text$y
+symbols(x, y, circles = arrest_count_cutoffs / 200, inches = FALSE, add = TRUE, bg = "orange")
+
+
+
+
 
 
 
@@ -871,12 +895,10 @@ legend(
 
 
 title_text <- "London Gang Network"
-subtitle_text <- ""
-caption_text <- ""
-
 mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text) # centered title text
-#mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
-#mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
+
+# close device
+dev.off()
 ```
 
 
