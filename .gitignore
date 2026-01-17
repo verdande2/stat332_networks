@@ -212,3 +212,5 @@ __marimo__/
 .Rproj.user
 
 *.png
+*.html
+*.pdf
