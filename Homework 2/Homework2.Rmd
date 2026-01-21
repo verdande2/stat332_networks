@@ -1,6 +1,5 @@
 ---
-title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 2 - Prof.
-  Joe Reid"
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 2 - Prof. Joe Reid"
 author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
 output:
@@ -10,7 +9,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE) # default to echo all the things
 
 library(readr)
 library(igraph)
@@ -20,10 +19,11 @@ library(scales)
 library(data.table)
 library(gt)
 library(testit)
+```
 
+
+```{r utility_functions}
 # various utility functions, will inevitably put these in a utils.R library at some point
-
-
 fruit_or_veg <- function(thing) {
   switch(thing,
          Apple = "Fruit", 
@@ -162,13 +162,22 @@ Well. I couldn't bring myself to drag out a piece of paper and do these by hand,
 ```{r create_the_first_component}
 # A, B, C, D, and E are strongly connected.
 # => strongly connected means there are bidirectional paths between all pairs of vertices, so A/B/C/D/E are completely dense 
-g1_vertex_labels <=- c("A", "B", "C", "D", "E")
+g1_vertex_labels <- c("A", "B", "C", "D", "E")
 g1 <- igraph::make_full_graph(length(g1_vertex_labels), 
                       directed = TRUE, 
                       loops = FALSE
                       )
 V(g1)$name <- g1_vertex_labels # assigning the lettered labels to the name of each vertex in the subgraph g1
 ```
+
+Now, let's do a quick verification that we now have vertices with lettered labels:
+
+```{r verify_first_component_creation}
+V(g1) # to see labeled vertices
+E(g1) # to see label vertices in edge pairs
+plot(g1)
+```
+Excellent!
 
 
 ```{r create_the_second_component}
@@ -182,6 +191,13 @@ g2 <- igraph::make_full_graph(length(g2_vertex_labels),
 V(g2)$name <- g2_vertex_labels # assigning the lettered labels to the name of each vertex in the subgraph g2
 ```
 
+Now, a quick double check as usual:
+```{r verify_second_component_creation}
+V(g2) # to see labeled vertices
+E(g2) # to see label vertices in edge pairs
+plot(g2)
+```
+
 
 ```{r combine_the_components}
 # now that we have the two complete subgraphs, we can combine them 
@@ -189,44 +205,68 @@ graph <- g1 + g2
 ```
 
 Ensuring our graph looks right after combining the two components into a larger graph, before adding edges between them (we should see two separate and disjoint complete subgraphs):
+
 ```{r plot_the_combined_graph}
 plot(graph)
 ```
+Well, that is shaping up nicely!
 
 And now we add the remaining edges to connect the two subgraphs:
 
 ```{r make_multigraph_edges}
 # multigraph where there are two paths from A to B and three paths from E to D
-# => multigraph means more than one edge between a pair of vertices, so there are two entries in the edge list like: 
-# (A, B, blah, blah)
+# => multigraph means more than one edge between a pair of vertices, so there are multiple entries in the edge list like: 
+# (A, B, blah, blah) <- original edge in graph
 # (A, B, blah2, blah2)
 # as well as
-# (E, D, blah, blah)
+# (E, D, blah, blah) <- original edge in graph
 # (E, D, blah2, blah2)
 # (E, D, blah3, blah3)
+# BUT, the first linkage between A,B let's say is labeled S1, and only the "extra" edges connecting will be named S2 and S3, so we're really only adding 3 vertices.
+
+# provide a names attribute for every edge denoting the edge: S1 if it's the first edge connecting two nodes, S2 if it's the second, and S3 if it's the third
+# first edge connecting... how do I determine who was first? First seen in the edge list I guess? alphabetical order? maybe A->B is "greater" than B->A? Sort it alphabetically, that sounds workable...
+
+# graph is our combined igraph object, let's add those 3 edges and label them!
+# first, setup a df with the edge data
+data <- data.frame(
+  from = c("A","E","E"), 
+  to = c("B","D","D"), 
+  name = c("S2", "S2", "S3"), # TODO think about this... maybe ask joe...
+  weight = c(0,0,0)
+  )
+
+igraph::add_edges(
+  graph,
+  unlist(data[, c("from", "to")])
+  )
+
+graph <- set_edge_attr(graph, name = "name", value = data[, c("name")])
+
+# this order won't work. I need to assign the name attribute for edges earlier, with the "first" edge being S1, second S2 and so on, but this is a bidirectional graph, so it's not like A->B is measurable against B->A 
+# lazy programmer method would be to loop over all nodes, get their connected edges, and then number them as they come and deal with it later. I think that seems prudent.
 ```
+
+
 
 
 ```{r generate_and_assign_edge_weights}
 # Generate a weights attribute by creating random weights between 0 and 1 for each of the edges
 # runif(n) returns a vector of random decimals in [0,1]
-E(ig)$Weight = runif(length(E(ig)))
+E(graph)$weight = runif(length(E(graph)))
 ```
 
-
-```{r assign_edge_names}
-# provide a names attribute for every edge denoting the edge: S1 if it's the first edge connecting two nodes, S2 if it's the second, and S3 if it's the third
-# first edge connecting... how do I determine who was first? First seen in the edge list I guess?
-
-# ig <- set_edge_attr(ig, name = "name", value = v)
+```{r verifying_added_weights}
+E(graph)$weight
 ```
+
 
 The graph should have no isolates:
 
 ```{r isolates_check}
 # The graph should have no isolates
-ig_degrees <- igraph::degree(ig) # gets all the vertex's degrees in col vector
-num_of_isolates <- sum(ig_degrees == 0) # sum of all the entries that are ==0 aka isolated
+graph_degrees <- igraph::degree(graph) # gets all the vertex's degrees in col vector
+num_of_isolates <- sum(graph_degrees == 0) # sum of all the entries that are ==0 aka isolated
 
 testit::assert("There should be no isolates.", {
   num_of_isolates == 0
@@ -238,9 +278,9 @@ testit::assert("There should be no isolates.", {
 # create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation
 nodes_filename <- "nodes_list.csv"
 data.table(
-  name = V(ig)$name, # pull the names directly from the vertices of the graph
+  name = V(graph)$name, # pull the names directly from the vertices of the graph
   # Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
-  type = fruit_or_veg(V(ig)$name) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
+  type = fruit_or_veg(V(graph)$name) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
 )
 ```
 
@@ -266,15 +306,15 @@ ig_from_df <- igraph::graph_from_data_frame(d = edge_list)
 Produce a summary of your graph to make sure the igraph works correctly.
 
 ```{r assert_igraph_class}
-testit::assert(paste0("ig object should be of class: igraph, but returned class: ",class(ig)), {
-  class(ig) == "igraph"
+testit::assert(paste0("ig object should be of class: igraph, but returned class: ",class(graph)), {
+  class(graph) == "igraph"
 })
 ```
 
 
 ```{r print_ig_as_string}
 print("Printing raw object as string representation:")
-ig
+graph
 
 print("---")
 ```
@@ -282,7 +322,7 @@ print("---")
 
 ```{r print_igraph_summary}
 print("--- igraph Summary ---")
-igraph::summary(ig)
+igraph::summary(graph)
 
 print("---")
 ```
@@ -290,19 +330,19 @@ print("---")
 
 ```{r print_metadata_summary}
 print("--- Metadata Summary ---")
-print_metadata_summary_table(ig)
+print_metadata_summary_table(graph)
 
 print("---")
 ```
 
 ```{r print_graph_vertex_edge_attr}
 print("--- Graph, Vertex and Edge Attributes ---")
-print_igraph_attr(ig)
+print_igraph_attr(graph)
 ```
 
 ```{r print_obnoxiously_long_summary}
 print("--- Graph Summary With All The Things ---")
-print_big_fancy_summary_table(ig)
+print_big_fancy_summary_table(graph)
 
 print("---")
 ```
@@ -350,7 +390,7 @@ print_metadata_summary_w_compare <- function(graph) {
 }
 
 
-print_metadata_summary_w_compare(ig)
+print_metadata_summary_w_compare(graph)
 
 
 
@@ -453,21 +493,21 @@ I guess we better add the other elements from the edges matrix into our graph as
 
 ```{r look_at_existing_attributes}
 # first, let's remind ourselves what attributes are already present in the graph
-print_igraph_attr(ig)
+print_igraph_attr(graph)
 ```
 
 ```{r adding_edge_attributes}
 # okay, there are 4 columns in the edgelist csv: to, from (both of which are nodes), weight (for the edge), and name (of the edge)
 # therefore, my goal is to add the edge weights and the edge names
 name_list <- c()
-igraph::set_edge_attr(ig, "name", name_list)
-igraph::set_edge_attr(ig, "Weight", weight_list)
+igraph::set_edge_attr(graph, "name", name_list)
+igraph::set_edge_attr(graph, "Weight", weight_list)
 ```
 
 Let's verify that those attributes got bolted onto our igraph object:
 
 ```{r verify_added_edge_attributes}
-print_igraph_attr(ig)
+print_igraph_attr(graph)
 ```
 
 
@@ -484,22 +524,22 @@ Now, we have the nodes list csv file loaded, and have pulled out the columns for
 ```{r update_vertex_attributes}
 # update the vertex property with the types
 # assuming this means to use the data inside nodes_list as the type attribute of the vertices? If I'm understanding that right? node_list.csv will have columns: name (to identify the vertex, assuming vertex letter, not name?), type (to identify the type), and ...
-igraph::set_vertex_attr(ig, "name", name_list)
+igraph::set_vertex_attr(graph, "name", name_list)
 ```
 
 Let's verify we see name and weight in our igraph:
 ```{r verify_vertex_attributes}
-print_igraph_attr(ig)
+print_igraph_attr(graph)
 ```
 
 
 Finally, produce a summary of the graph again. You should see that, because you have a column called weight, the summary is now: DNWB 8. This means it is a weighted graph.
 
 ```{r}
-# using default summaery and my helper function to barf out a nicely formatted gt table of various metrics for the graph and compare
-igraph::summary(ig)
+# using default summary and my helper function to barf out a nicely formatted gt table of various metrics for the graph and compare
+igraph::summary(graph)
 print("----------------------------------------------")
-print_metadata_summary_table(ig) # to compare to the default igraph summary (also has is_weighted call in there)
+print_metadata_summary_table(graph) # to compare to the default igraph summary (also has is_weighted call in there)
 ```
 
 That looks good to me!
@@ -510,7 +550,7 @@ Produce a quick plot of the graph to make sure it looks like you expected.
 
 ```{r}
 # quick, dirty, ugly plot
-plot(ig)
+plot(graph)
 ```
 
 ### 2.)  Graphing
