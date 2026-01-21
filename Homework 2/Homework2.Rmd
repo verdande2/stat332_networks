@@ -19,7 +19,112 @@ library(RColorBrewer)
 library(scales)
 library(data.table)
 library(gt)
+library(testit)
 
+# various utility functions, will inevitably put these in a utils.R library at some point
+
+
+fruit_or_veg <- function(thing) {
+  switch(thing,
+         Apple = "Fruit", 
+         Banana = "Fruit", 
+         Carrot = "Vegetable",
+         Date = "Fruit",
+         Eggplant = "Fruit",
+         Fig = "Fruit",
+         Grapes = "Fruit",
+         Horseradish = "Vegetable",
+         "Unknown Frui-egetable!" # default case
+         )
+}
+
+# after taking the time to make a pretty switch call in the previous function, it appears I don't need to classify, just test if fruit is true or false with a whitelist. Oh well, another quick utility function
+is_fruit <- function(thing) {
+  return(thing %in% c("Apple", "Banana", "Date", "Eggplant", "Fig", "Grapes"))
+}
+
+
+print_big_fancy_summary_table <- function(graph) {
+  big_fancy_igraph_table <- data.table(
+    Label = c(
+      "Connected?", 
+      "Simple?", 
+      "Loops?", 
+      "Multigraph?", 
+      "Weighted?", 
+      "Directed?", 
+      "Acyclic?", 
+      "Bipartite?", 
+      "Tree?", 
+      "Forest?",
+      "Size:", 
+      "Components:",
+      "Isolate Proportion:", 
+      "Density:", 
+      "Diameter:", 
+      "Average Path Length:"
+      ),
+    Value = c(
+      is_connected(g), 
+      is_simple(g), 
+      any_loop(g), 
+      any_multiple(g), 
+      is_weighted(g), 
+      is_directed(g), 
+      is_acyclic(g), 
+      is_bipartite(g), 
+      is_tree(g), 
+      is_forest(g),
+      gorder(g), 
+      count_components(g), 
+      sum(degree(g) == 0)/gorder(g), 
+      edge_density(simplify(g)), 
+      diameter(g), 
+      mean_distance(g)
+      )
+  )
+  big_fancy_igraph_table |> gt()
+}
+
+
+# this was actually quite handy as an utility func
+print_igraph_attr <- function(graph) {
+  print("Graph Attributes")
+  print(graph_attr(graph))
+  
+  print("Vertex Attributes")
+  print(vertex_attr(graph))
+  
+  print("Edge Attributes")
+  print(edge_attr(graph))
+}
+
+# generic version of this function, without the third col of expected values
+print_metadata_summary_table <- function(graph) {
+  tbl <- data.table(
+    Label <- c(
+      "Directed?",
+      "Weighted?",
+      "Not Simple?",
+      "Has Multiple Edges?",
+      "Weakly Connected?",
+      "Strongly Connected?",
+      "# of Strongly-connected components:",
+      "# of Weakly-connected components:"
+    ),
+    Value <- c(
+      igraph::is_directed(graph),
+      igraph::is_weighted(graph),
+      !igraph::is_simple(graph),
+      length(E(graph)) > 1,
+      is_connected(graph, mode = "weak"), # mode = weak is the default
+      is_connected(graph, mode = "strong"),
+      components(graph, mode = "strong")$no,
+      components(graph, mode = "weak")$no # mode = weak is the default
+    )
+  )
+  tbl |> gt()
+}
 
 ```
 
@@ -37,63 +142,178 @@ Create a .csv file using a spreadsheet software or notepad. This file should hav
 
 Read in your edgelist. The following code can help.
 
-```{r}
+```{r notes, collapse=TRUE}
+# assorted notes to copy/paste from
+
 # Node names:
-Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
-Apple
-Banana
-Carrot
-Date
-Eggplant
-Fig
-Grapes
-Horseradish
+# Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
+# Apple
+# Banana
+# Carrot
+# Date
+# Eggplant
+# Fig
+# Grapes
+# Horseradish
+```
 
+Well. I couldn't bring myself to drag out a piece of paper and do these by hand, even though that probably would have been quicker and easier, but then I wouldn't get as much tinkering in with igraph and everything else, so I opted to generate the graph from the ground up using igraph, then spit out an edgelist to a csv, load it in and pretend I just started with an existing csv! Hopefully that is kosher!
+
+```{r create_the_first_component}
 # A, B, C, D, and E are strongly connected.
+# => strongly connected means there are bidirectional paths between all pairs of vertices, so A/B/C/D/E are completely dense 
+g1_vertex_labels <=- c("A", "B", "C", "D", "E")
+g1 <- igraph::make_full_graph(length(g1_vertex_labels), 
+                      directed = TRUE, 
+                      loops = FALSE
+                      )
+V(g1)$name <- g1_vertex_labels # assigning the lettered labels to the name of each vertex in the subgraph g1
+```
+
+
+```{r create_the_second_component}
 # F, G, and H are strongly connected.
+# => strongly connected means bidirectional paths between all pairs, so F/G/H are all completely dense in their subgraph
+g2_vertex_labels <- c("F", "G", "H")
+g2 <- igraph::make_full_graph(length(g2_vertex_labels), 
+                      directed = TRUE, 
+                      loops = FALSE
+                      )
+V(g2)$name <- g2_vertex_labels # assigning the lettered labels to the name of each vertex in the subgraph g2
+```
 
+
+```{r combine_the_components}
+# now that we have the two complete subgraphs, we can combine them 
+graph <- g1 + g2
+```
+
+Ensuring our graph looks right after combining the two components into a larger graph, before adding edges between them (we should see two separate and disjoint complete subgraphs):
+```{r plot_the_combined_graph}
+plot(graph)
+```
+
+And now we add the remaining edges to connect the two subgraphs:
+
+```{r make_multigraph_edges}
 # multigraph where there are two paths from A to B and three paths from E to D
+# => multigraph means more than one edge between a pair of vertices, so there are two entries in the edge list like: 
+# (A, B, blah, blah)
+# (A, B, blah2, blah2)
+# as well as
+# (E, D, blah, blah)
+# (E, D, blah2, blah2)
+# (E, D, blah3, blah3)
+```
 
+
+```{r generate_and_assign_edge_weights}
 # Generate a weights attribute by creating random weights between 0 and 1 for each of the edges
+# runif(n) returns a vector of random decimals in [0,1]
+E(ig)$Weight = runif(length(E(ig)))
+```
 
+
+```{r assign_edge_names}
 # provide a names attribute for every edge denoting the edge: S1 if it's the first edge connecting two nodes, S2 if it's the second, and S3 if it's the third
+# first edge connecting... how do I determine who was first? First seen in the edge list I guess?
 
+# ig <- set_edge_attr(ig, name = "name", value = v)
+```
+
+The graph should have no isolates:
+
+```{r isolates_check}
 # The graph should have no isolates
+ig_degrees <- igraph::degree(ig) # gets all the vertex's degrees in col vector
+num_of_isolates <- sum(ig_degrees == 0) # sum of all the entries that are ==0 aka isolated
 
+testit::assert("There should be no isolates.", {
+  num_of_isolates == 0
+})
+```
+
+
+```{r load_the_nodes}
 # create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation
+nodes_filename <- "nodes_list.csv"
+data.table(
+  name = V(ig)$name, # pull the names directly from the vertices of the graph
+  # Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
+  type = fruit_or_veg(V(ig)$name) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
+)
+```
 
 
-
+```{r load_the_edge_list}
 edges <- readr::read_csv("edge_list.csv",
                            header = TRUE,
                            sep = ","
                          )
+
 # prune out the edge start and end vertices and dump them in edge_list
 edge_list <- edges[, c("from", "to")]          
 ```
 
-Once you have your edgelist, convert it to an igraph object using the graph_from_data_frame() function (you may need the documentation).
+Once you have your edge list, convert it to an igraph object using the graph_from_data_frame() function (you may need the documentation).
 
-```{r}
-ig <- igraph::graph_from_data_frame(d = edge_list)
+```{r convert_igraph_to_df}
+ig_from_df <- igraph::graph_from_data_frame(d = edge_list)
 ```
 
 ### 1.b)
 
 Produce a summary of your graph to make sure the igraph works correctly.
 
-```{r}
-ig
-class(ig) # should be igraph
-igraph::summary(ig)
+```{r assert_igraph_class}
+testit::assert(paste0("ig object should be of class: igraph, but returned class: ",class(ig)), {
+  class(ig) == "igraph"
+})
 ```
+
+
+```{r print_ig_as_string}
+print("Printing raw object as string representation:")
+ig
+
+print("---")
+```
+
+
+```{r print_igraph_summary}
+print("--- igraph Summary ---")
+igraph::summary(ig)
+
+print("---")
+```
+
+
+```{r print_metadata_summary}
+print("--- Metadata Summary ---")
+print_metadata_summary_table(ig)
+
+print("---")
+```
+
+```{r print_graph_vertex_edge_attr}
+print("--- Graph, Vertex and Edge Attributes ---")
+print_igraph_attr(ig)
+```
+
+```{r print_obnoxiously_long_summary}
+print("--- Graph Summary With All The Things ---")
+print_big_fancy_summary_table(ig)
+
+print("---")
+```
+
 
 ### 1.c)
 
 In Lab 2 we looked at how to create a summary of the metadata for the graph. Use this code as a basis to make sure that the above conditions are met in general (Directed, Weigted, Not Simple, Has Multiple Edges, is weakly connected but not strongly connected, has two components when counting the number of strongly connected components but only one when counting the number of weakly connected components.
 
 ```{r}
-metadata_summary <- function(graph) {
+print_metadata_summary_w_compare <- function(graph) {
   tbl <- data.table(
     Label <- c(
       "Directed?",
@@ -130,58 +350,9 @@ metadata_summary <- function(graph) {
 }
 
 
-big_fancy_igraph_table <- data.table(
-  label = c(
-    "Connected?", 
-     "Simple?", 
-     "Loops?", 
-     "Multigraph?", 
-     "Weighted?", 
-     "Directed?", 
-     "Acyclic?", 
-     "Bipartite?", 
-     "Tree?", 
-     "Forest?",
-    "Size:", 
-    "Components:", 
-    "Isolate Proportion:", 
-    "Density:", 
-    "Diameter:", 
-    "Average Path Length:",
-    
-    ),
-  value = c(
-    is_connected(g), 
-    is_simple(g), 
-    any_loop(g), 
-    any_multiple(g), 
-    is_weighted(g), 
-    is_directed(g), 
-    is_acyclic(g), 
-    is_bipartite(g), 
-    is_tree(g), 
-    is_forest(g),
-    gorder(g), 
-    count_components(g), 
-    sum(degree(g) == 0)/gorder(g), 
-    edge_density(simplify(g)), 
-    diameter(g), 
-    mean_distance(g)
-    )
-)
-big_fancy_igraph_table |> gt()
+print_metadata_summary_w_compare(ig)
 
 
-print_igraph_attr <- function(g) {
-  print("Graph Attributes")
-  print(graph_attr(g))
-  
-  print("Vertex Attributes")
-  print(vertex_attr(g))
-  
-  print("Edge Attributes")
-  print(edge_attr(g))
-}
 
 #g <- set_graph_attr(g, name = "Weighted", value = TRUE)
 #g <- set_graph_attr(g, name = "Directed", value = TRUE)
@@ -273,35 +444,65 @@ Wait a minute. If you used the same work we did in lab, you will find out that t
 
 I guess we better add the other elements from the edges matrix into our graph as edge attributes.
 
-```{r}
+```{r planning_and_thinking}
 # add the other elements from the edges matrix into our graph as edge attributes
-
-
+# ig is our igraph object, with the vegetable/fruit names for vertex names, etc
+# add the other elements... from the edges matrix... OHHHHH, I'm dumb... "edges matrix" is the edge list csv... duh...
 ```
+
+
+```{r look_at_existing_attributes}
+# first, let's remind ourselves what attributes are already present in the graph
+print_igraph_attr(ig)
+```
+
+```{r adding_edge_attributes}
+# okay, there are 4 columns in the edgelist csv: to, from (both of which are nodes), weight (for the edge), and name (of the edge)
+# therefore, my goal is to add the edge weights and the edge names
+name_list <- c()
+igraph::set_edge_attr(ig, "name", name_list)
+igraph::set_edge_attr(ig, "Weight", weight_list)
+```
+
+Let's verify that those attributes got bolted onto our igraph object:
+
+```{r verify_added_edge_attributes}
+print_igraph_attr(ig)
+```
+
 
 Also, read in your nodes file the same way you did for the edges file and update the vertex property with the types.
 
 ```{r}
 # read in your nodes file
-nodes <- readr::read_csv("node_list.csv",
-                           header = TRUE,
-                           sep = ","
-                         )
-
+nodes_list <- readr::read_csv("node_list.csv", header = TRUE, sep = ",")
+name_list <- nodes_list[, c("name")]
+type_list <- nodes_list[, c("type")]
 ```
 
-```{r}
+Now, we have the nodes list csv file loaded, and have pulled out the columns for name and type for later use.
+```{r update_vertex_attributes}
 # update the vertex property with the types
-
-
+# assuming this means to use the data inside nodes_list as the type attribute of the vertices? If I'm understanding that right? node_list.csv will have columns: name (to identify the vertex, assuming vertex letter, not name?), type (to identify the type), and ...
+igraph::set_vertex_attr(ig, "name", name_list)
 ```
+
+Let's verify we see name and weight in our igraph:
+```{r verify_vertex_attributes}
+print_igraph_attr(ig)
+```
+
 
 Finally, produce a summary of the graph again. You should see that, because you have a column called weight, the summary is now: DNWB 8. This means it is a weighted graph.
 
 ```{r}
-# using my helper function to barf out a nicely formatted gt table of various metrics for the graph
-summary_table(ig)
+# using default summaery and my helper function to barf out a nicely formatted gt table of various metrics for the graph and compare
+igraph::summary(ig)
+print("----------------------------------------------")
+print_metadata_summary_table(ig) # to compare to the default igraph summary (also has is_weighted call in there)
 ```
+
+That looks good to me!
 
 ### 1.e)
 
@@ -316,35 +517,37 @@ plot(ig)
 
 Now, we are going to work on improving the plot, but we actually have a problem. The vertex name of "type" is actually a reserved term. This one is supposed to be a logical of 1 or 0. We need to rename our vertex attribute of "type" to "classification" and then overwrite the "type" variable. I'll give you this code.
 
-```{r}
-#V(graph)$classification <- V(graph)$type
-#V(graph)$type <- ifelse(V(graph)$type == "Fruit", TRUE, FALSE)
+```{r rename_type_to_classification}
+V(ig)$classification <- V(ig)$type
+```
+
+Of note, the edge attribute _type_ still exists at this point, to be overwritten in the next code block:
+
+```{r assign_type_based_on_fruit}
+# so if it's a fruit type, it gets a TRUE, else FALSE
+V(ig)$type <- ifelse(V(ig)$classification == "Fruit", TRUE, FALSE) # so type isn't /really/ a "type" anyone, it's an is_fruit bool flag... Got it.
 ```
 
 Now, start by using the layout_as_bipartite in your plot.
 
-```{r}
-l <- igraph::layout_as_bipartite(graph = ig,
-                                 type = NULL,
-                                 hgap = 5,
-                                 vgap = 5,
-                                 maxiter = 1000
-                                 )
-library(RColorBrewer)
-library(scales)
+```{r setup_bipartite_graph_params}
+l <- igraph::layout_as_bipartite(
+  graph = ig,
+  types = NULL, # NULL => will read vertex.type as type
+  hgap = 5,
+  vgap = 5,
+  maxiter = 1000
+)
+```
 
-#___________________________________________
-## PLOT PROPERTIES
-#___________________________________________
+
+```{r setup_bipartite_graph_plot_params}
 par(mar = c(3,1,4,1))
 #par(oma = c(2,3,5,2))
+```
 
 
-
-#___________________________________________
-## VERTEX PROPERTIES
-#___________________________________________
-
+```{r setup_bipartite_graph_vertex_params}
 # ------------------------
 # VERTEX COLORS 
 # ------------------------
@@ -386,15 +589,10 @@ vertex_colors <- v_pal[v_vals]
 shape_levels <- levels(as.factor(v_vals))
 shape_pal <- setNames(c("circle", "square", "rectangle")[seq_along(shape_levels)], shape_levels)
 vertex_shapes <- shape_pal[v_vals]
+```
 
 
-
-
-#___________________________________________
-## EDGE PROPERTIES
-#___________________________________________
-
-
+```{r setup_bipartite_graph_edge_params}
 # ------------------------
 #  EDGE COLORS 
 # ------------------------
@@ -426,16 +624,12 @@ e_lty_pal <- setNames(
 )
 
 edge_line_types <- e_lty_pal[e_lty_vals]
+```
 
 
-
-
-
-# ------------------------
-# 5. PLOT
-# ------------------------
+```{r plot_the_bipartite_graph}
 plot(
-  g,
+  ig,
   layout = layout_with_lgl,
 
   vertex.sizes = scales::rescale(V(g)$audience.size, to = c(5, 25)),
@@ -457,12 +651,10 @@ plot(
   edge.arrow.size = scales::rescale(E(g)$weight, to = c(0.5, 3))*0.3,
   edge.arrow.mode = 1
 )
-
-# ------------------------
-# 8. LEGENDS
-# ------------------------
+```
 
 
+```{r add_the_legends}
 legend(
   "topright",
   title = "Vertex Type",
@@ -516,19 +708,16 @@ legend(
   bty = "n",
   cex = 0.8
 )
+```
 
-
-# ------------------------
-# 7. TITLES
-# ------------------------
+```{r add_the_title_subtitle_caption}
 title_text <- "Media Networks Link to and Reference Each Other"
 subtitle_text <- "A network plot of networks."
 caption_text <- "Data from: https://kateto.net/network-visualization."
 
-mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text)
+mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text) # 3 = top, adj = 0.5 is centered
 mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
-mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
-
+mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text) # side = 1 is bottom, line = 1 is line 1, away from plot
 ```
 
 You should see a two row format for the results. Now, we need to make this look better.
