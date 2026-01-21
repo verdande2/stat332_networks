@@ -29,7 +29,7 @@ library(igraph)
 library(readr)
 library(data.table)
 library(gt)
-library(RColorBrewer) # color pallettes etc
+library(RColorBrewer) # color palettes etc
 library(scales)
 
 SKIP_TO_PART_3 <- TRUE # bool flag to comment out the ~600 lines of part 1 and 2
