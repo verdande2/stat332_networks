@@ -19,6 +19,7 @@ library(scales)
 library(data.table)
 library(gt)
 library(testit)
+library(testthat)
 ```
 
 ```{r user_configurable_settings}
@@ -69,22 +70,22 @@ print_big_fancy_summary_table <- function(graph) {
       "Average Path Length:"
       ),
     Value = c(
-      is_connected(g), 
-      is_simple(g), 
-      any_loop(g), 
-      any_multiple(g), 
-      is_weighted(g), 
-      is_directed(g), 
-      is_acyclic(g), 
-      is_bipartite(g), 
-      is_tree(g), 
-      is_forest(g),
-      gorder(g), 
-      count_components(g), 
-      sum(degree(g) == 0)/gorder(g), 
-      edge_density(simplify(g)), 
-      diameter(g), 
-      mean_distance(g)
+      is_connected(graph), 
+      is_simple(graph), 
+      any_loop(graph), 
+      any_multiple(graph), 
+      is_weighted(graph), 
+      is_directed(graph), 
+      is_acyclic(graph), 
+      is_bipartite(graph), 
+      is_tree(graph), 
+      is_forest(graph),
+      gorder(graph), 
+      count_components(graph), 
+      sum(degree(graph) == 0)/gorder(graph), 
+      edge_density(simplify(graph)), 
+      diameter(graph), 
+      mean_distance(graph)
       )
   )
   big_fancy_igraph_table |> gt()
@@ -151,6 +152,7 @@ Read in your edgelist. The following code can help.
 
 # Node names:
 # Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
+
 # Apple
 # Banana
 # Carrot
@@ -185,6 +187,7 @@ V(g1) # to see labeled vertices
 E(g1) # to see label vertices in edge pairs
 plot(g1)
 ```
+
 Excellent! Now we create the smaller second component:
 
 ```{r create_the_second_component}
@@ -199,16 +202,20 @@ V(g2)$name <- g2_node_labels # assigning the lettered labels to the name of each
 ```
 
 Now, a quick double check as usual:
+
 ```{r verify_second_component_creation}
 V(g2) # to see labeled nodes
 E(g2) # to see label nodes in edge pairs
 plot(g2)
 ```
+
 Now that we have two suitable looking components, let's merge them into a single igraph object:
 
 ```{r combine_the_components}
 # now that we have the two complete subgraphs, we can combine them 
 graph <- g1 + g2
+
+# TODO graph now has some duplicated attributes like name_1 and name_2, fix me!
 ```
 
 Ensuring our graph looks right after combining the two components into a larger graph, before adding edges between them (we should see two separate and disjoint complete subgraphs):
@@ -217,6 +224,7 @@ Ensuring our graph looks right after combining the two components into a larger 
 graph
 plot(graph)
 ```
+
 Well, that there certainly looks like two disjoint components! Now we add the remaining edges to connect the two components/subgraphs:
 
 ```{r make_multigraph_edges}
@@ -258,7 +266,11 @@ igraph::add_edges(
 
 ```
 
+Let's verify the graph now has edge attribute "name":
 
+```{r}
+E(graph)$name
+```
 
 
 ```{r generate_and_assign_edge_weights}
@@ -288,13 +300,17 @@ testit::assert("There should be no isolates.", {
 
 ```{r load_the_nodes}
 # create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation
-nodes_filename <- "nodes_list.csv"
+
 tbl_nodes <- data.table(
   name = V(graph)$name, # pull the names directly from the vertices of the graph
   # Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
-  type = fruit_or_veg(V(graph)$name) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
+  type = lapply(V(graph)$name, fruit_or_veg) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
 )
 tbl_nodes |> gt()
+
+# create the node file
+#node_filename
+#save csv
 ```
 
 
@@ -321,7 +337,7 @@ ig_from_df <- igraph::graph_from_data_frame(d = edge_list)
 Produce a summary of your graph to make sure the igraph works correctly.
 
 ```{r assert_igraph_class}
-testit::assert(paste0("ig object should be of class: igraph, but returned class: ",class(graph)), {
+testit::assert(paste0("ig object should be of class: igraph, but returned class: ", class(graph)), {
   class(graph) == "igraph"
 })
 ```
@@ -330,37 +346,37 @@ testit::assert(paste0("ig object should be of class: igraph, but returned class:
 ```{r print_ig_as_string}
 print("Printing raw object as string representation:")
 graph
-
-print("---")
 ```
 
+---
 
-```{r print_igraph_summary}
-print("--- igraph Summary ---")
-igraph::summary(graph)
-
-print("---")
+```{r print_summary}
+print("--- Summary ---")
+summary(graph)
 ```
 
+---
 
 ```{r print_metadata_summary}
 print("--- Metadata Summary ---")
 print_metadata_summary_table(graph)
-
-print("---")
 ```
+
+---
 
 ```{r print_graph_vertex_edge_attr}
 print("--- Graph, Vertex and Edge Attributes ---")
 print_igraph_attr(graph)
 ```
 
+---
+
 ```{r print_obnoxiously_long_summary}
 print("--- Graph Summary With All The Things ---")
 print_big_fancy_summary_table(graph)
-
-print("---")
 ```
+
+---
 
 
 ### 1.c)
@@ -409,8 +425,9 @@ print_metadata_summary_w_compare(graph)
 # I feel like this is an appropriate place to employ tests and asserts properly, but I need to delve more into testing in R
 ```
 
+---
 
-```{r set_weighted_and_directed}
+```{r set_weighted_and_directed_attrs}
 graph <- set_graph_attr(graph, name = "Weighted", value = TRUE)
 graph <- set_graph_attr(graph, name = "Directed", value = TRUE)
 ```
@@ -525,14 +542,15 @@ print_igraph_attr(graph)
 
 Also, read in your nodes file the same way you did for the edges file and update the vertex property with the types.
 
-```{r}
+```{r load_dem_nodes}
 # read in your nodes file
-node_list <- readr::read_csv(node_filename), header = TRUE, sep = ",")
+node_list <- readr::read_csv(node_filename, header = TRUE, sep = ",")
 name_list <- node_list[, c("name")]
 type_list <- node_list[, c("type")]
 ```
 
 Now, we have the nodes list csv file loaded, and have pulled out the columns for name and type for later use.
+
 ```{r update_vertex_attributes}
 # update the vertex property with the types
 # assuming this means to use the data inside nodes_list as the type attribute of the vertices? If I'm understanding that right? node_list.csv will have columns: name (to identify the vertex, assuming vertex letter, not name?), type (to identify the type), and ...
@@ -541,23 +559,30 @@ graph <- igraph::set_vertex_attr(graph, "type", type_list)
 ```
 
 Let's verify we see vertex name and vertex type in our igraph:
+
 ```{r verify_vertex_attributes}
 print_igraph_attr(graph)
 ```
 
+---
 
 ```{r verify_vertex_attributes_alternative}
 V(graph)$name
 V(graph)$type
 ```
 
+---
 
 Finally, produce a summary of the graph again. You should see that, because you have a column called weight, the summary is now: DNWB 8. This means it is a weighted graph.
 
-```{r}
-# using default summary and my helper function to barf out a nicely formatted gt table of various metrics for the graph and compare
+```{r igraph_summary_after_adding_vertex_attrs}
+# nicely formatted table of various metrics for the graph and compare:
 igraph::summary(graph)
-print("----------------------------------------------")
+```
+
+---
+
+```{r print_metadata_for_graph_after_attrs}
 print_metadata_summary_table(graph) # to compare to the default igraph summary (also has is_weighted call in there)
 ```
 
@@ -567,7 +592,7 @@ That looks good to me!
 
 Produce a quick plot of the graph to make sure it looks like you expected.
 
-```{r}
+```{r ugly_plot}
 # quick, dirty, ugly plot
 plot(graph)
 ```
@@ -785,21 +810,71 @@ You should see a two row format for the results. Now, we need to make this look 
 
 Your final task on this will be to make this look better based on the lab from class. Create colors, use transparency, label edges, change shapes and thicknesses, etc... The one requirement is that you calculate the in-degree of the nodes, store this as a vertex attribute, and use that to size the vertex. Add a title, subtitle, and caption to the graph, and make sure to use legends.
 
-```{r}
+```{r make_it_colorful}
 # Create colors
 # use transparency
+# in plot_params:
+vertex.color = adjustcolor(node_colors, alpha.f = trans)
+vertex.label.color = adjustcolor(node_label_colors, alpha.f = trans)
+edge.color = adjustcolor(edge_colors, alpha.f = trans)
+edge.label.color = adjustcolor(edge_label_colors, alpha.f = trans)
+```
+
+
+```{r}
 # label edges
+# in plot_params:
+# edge.label = edge_labels # (a vector of string labels)
+```
+
+
+```{r}
 # change shapes
+# in plot_params:
+# vertex.shape = node_shapes # (a vector of shape character codes)
+```
+
+
+```{r}
 # change thicknesses
+# in plot_params:
+# edge.width = edge_widths # (a vector of edge widths)
+```
+
+
+```{r}
 #, etc...
+```
+
+
+```{r}
 # calculate the in-degree of the nodes, store this as a vertex attribute
-# use the indeg of the node to size the vertex
+graph <- set_vertex_attr(graph, name = "degree_in", value = strength(graph, mode = "in"))
+```
 
 
+```{r}
+# use the indegree of the node to size the vertex
+# in plot_params:
+# vertex.label.cex = scales::rescale(V(graph)$degree_in, c(1, 4)) # [1,4] is just a guess, verify and adjust
+```
+
+
+```{r graph_title_final_touches}
 # Add a title
+title = "Media Networks Link to and Reference Eachother"
+mtext(side = 3, line = 3, at = -2, adj = 0, cex = 1.1, title)
+
 # subtitle
+subtitle = "A network plot of networks."
+mtext(side = 3, line = 2, at = -2, adj = 0, cex = 0.7, subtitle)
+
 # caption
-# legend
+caption = "Data from:  https://kateto.net/network-visualization."
+mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption )
+
+# legends
+#legend()
 ```
 
 ```{r}
