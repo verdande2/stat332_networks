@@ -89,13 +89,13 @@ print_big_fancy_summary_table <- function(graph) {
 
 # this was actually quite handy as an utility func
 print_igraph_attr <- function(graph) {
-  print("Graph Attributes")
+  print("--- Graph Attributes ------")
   print(graph_attr(graph))
   
-  print("Vertex Attributes")
+  print("--- Vertex Attributes ------")
   print(vertex_attr(graph))
   
-  print("Edge Attributes")
+  print("--- Edge Attributes ------")
   print(edge_attr(graph))
 }
 
@@ -225,26 +225,24 @@ And now we add the remaining edges to connect the two subgraphs:
 # BUT, the first linkage between A,B let's say is labeled S1, and only the "extra" edges connecting will be named S2 and S3, so we're really only adding 3 vertices.
 
 # provide a names attribute for every edge denoting the edge: S1 if it's the first edge connecting two nodes, S2 if it's the second, and S3 if it's the third
-# first edge connecting... how do I determine who was first? First seen in the edge list I guess? alphabetical order? maybe A->B is "greater" than B->A? Sort it alphabetically, that sounds workable...
+# first edge connecting... how do I determine who was first? First seen in the edge list I guess? alphabetical order? maybe A->B is "greater" than B->A? Sort it alphabetically, that sounds workable... I guess the instructions probably assumed there'd be an "order" in the csv in terms of line numbers, that makes sense... or is the purpose more to aim for each edge with shared start/end points to have a unique name, that makes more sense in my head, so you can identify _which_ A->B edge from the two of them.
 
 # graph is our combined igraph object, let's add those 3 edges and label them!
 # first, setup a df with the edge data
 data <- data.frame(
   from = c("A","E","E"), 
   to = c("B","D","D"), 
-  name = c("S2", "S2", "S3"), # TODO think about this... maybe ask joe...
+  name = c("S2", "S2", "S3"), # TODO this is not right ... think about this... maybe ask joe...
   weight = c(0,0,0)
   )
 
 igraph::add_edges(
   graph,
-  unlist(data[, c("from", "to")])
+  unlist(data[, c("from", "to")]) # hoping to get a list of (from1, to1, from2, to2, ...)
   )
 
-graph <- set_edge_attr(graph, name = "name", value = data[, c("name")])
+#graph <- set_edge_attr(graph, name = "name", value = data[, c("name")]) # note to self: set_edge_attr() sets ALL nodes in one fell swoop, so the dimensions of value vector must match length(E(graph))
 
-# this order won't work. I need to assign the name attribute for edges earlier, with the "first" edge being S1, second S2 and so on, but this is a bidirectional graph, so it's not like A->B is measurable against B->A 
-# lazy programmer method would be to loop over all nodes, get their connected edges, and then number them as they come and deal with it later. I think that seems prudent.
 ```
 
 
@@ -277,11 +275,12 @@ testit::assert("There should be no isolates.", {
 ```{r load_the_nodes}
 # create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation
 nodes_filename <- "nodes_list.csv"
-data.table(
+tbl_nodes <- data.table(
   name = V(graph)$name, # pull the names directly from the vertices of the graph
   # Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
   type = fruit_or_veg(V(graph)$name) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
 )
+tbl_nodes |> gt()
 ```
 
 
