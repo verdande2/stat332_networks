@@ -4,6 +4,23 @@ output: html_document
 ---
 
 ```{r setup, echo = FALSE}
+
+
+
+# TODO
+# - legend node size bullet position is correct, but radii is too large and causing overlap
+# - remove the outline/border of the first/original node size legend in top right
+# - legend for edge weight needs a factor of 3 to match the igraph
+# - legend for edge weight needs bullets to match thickness of edge.size
+# - legend for birthplace bullets need colors
+# - legend for birthplace bullets - need different shape, square with fill?
+# - need to increase opacity for nodes
+# - need to increase plot display size
+# - need to decrease size of all legends
+# - need to increase spacing between nodes - need to figure out how the fuck to do so...
+
+
+
 knitr::opts_chunk$set(cache = FALSE)
 knitr::opts_chunk$set(echo = FALSE)
 
