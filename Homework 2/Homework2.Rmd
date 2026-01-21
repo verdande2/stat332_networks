@@ -1,0 +1,757 @@
+---
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 2 - Prof.
+  Joe Reid"
+author: "Andrew Sparkes"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    self_contained: true
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+library(igraph)
+library(tidyverse)
+library(RColorBrewer)
+library(scales)
+library(data.table)
+library(gt)
+
+
+```
+
+# Instructions:
+
+Please complete this homework assignment by the due data posted on canvas. Please submit your work in an html file with solutions and code presented completely.
+
+# Homework 2: Networks and visualization with igraph
+
+## Question 1:
+
+Create a .csv file using a spreadsheet software or notepad. This file should have four columns: from, to, weight, name. Create a network using an edge-list with two strongly connected components where the whole network is weakly connected. The network will have nodes called Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish (I'll just use letters for the rest of the instructions. A, B, C, D, and E are strongly connected, as are F, G, and H. Furthermore, the graph should be a multigraph where there are two paths from A to B and three paths from E to D. Generate a weights attribute by creating random weights between 0 and 1 for each of the edges. Finally, provide a names attribute for every edge denoting the edge: S1 if it's the first edge connecting two nodes, S2 if it's the second, and S3 if it's the third. The graph should have no isolates. Also, create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation.
+
+### 1.a) 
+
+Read in your edgelist. The following code can help.
+
+```{r}
+# Node names:
+Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
+Apple
+Banana
+Carrot
+Date
+Eggplant
+Fig
+Grapes
+Horseradish
+
+# A, B, C, D, and E are strongly connected.
+# F, G, and H are strongly connected.
+
+# multigraph where there are two paths from A to B and three paths from E to D
+
+# Generate a weights attribute by creating random weights between 0 and 1 for each of the edges
+
+# provide a names attribute for every edge denoting the edge: S1 if it's the first edge connecting two nodes, S2 if it's the second, and S3 if it's the third
+
+# The graph should have no isolates
+
+# create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation
+
+
+
+edges <- readr::read_csv("edge_list.csv",
+                           header = TRUE,
+                           sep = ","
+                         )
+# prune out the edge start and end vertices and dump them in edge_list
+edge_list <- edges[, c("from", "to")]          
+```
+
+Once you have your edgelist, convert it to an igraph object using the graph_from_data_frame() function (you may need the documentation).
+
+```{r}
+ig <- igraph::graph_from_data_frame(d = edge_list)
+```
+
+### 1.b)
+
+Produce a summary of your graph to make sure the igraph works correctly.
+
+```{r}
+ig
+class(ig) # should be igraph
+igraph::summary(ig)
+```
+
+### 1.c)
+
+In Lab 2 we looked at how to create a summary of the metadata for the graph. Use this code as a basis to make sure that the above conditions are met in general (Directed, Weigted, Not Simple, Has Multiple Edges, is weakly connected but not strongly connected, has two components when counting the number of strongly connected components but only one when counting the number of weakly connected components.
+
+```{r}
+metadata_summary <- function(graph) {
+  tbl <- data.table(
+    Label <- c(
+      "Directed?",
+      "Weighted?",
+      "Not Simple?",
+      "Has Multiple Edges?",
+      "Weakly Connected?",
+      "Strongly Connected?",
+      "# of Strongly-connected components:",
+      "# of Weakly-connected components:"
+    ),
+    Value <- c(
+      igraph::is_directed(graph),
+      igraph::is_weighted(graph),
+      !igraph::is_simple(graph),
+      length(E(graph)) > 1,
+      is_connected(graph, mode = "weak"), # mode = weak is the default
+      is_connected(graph, mode = "strong"),
+      components(graph, mode = "strong")$no,
+      components(graph, mode = "weak")$no # mode = weak is the default
+    ),
+    Expected <- c(
+      TRUE, # Directed
+      TRUE, # Weighted
+      TRUE, # Not Simple
+      TRUE, # Has Multiple Edges
+      TRUE, # Weakly Connected
+      FALSE, # Strongly Connected
+      2, # Strongly-Connected Components
+      1 # Weakly-Connected Components
+    )
+  )
+  tbl |> gt()
+}
+
+
+big_fancy_igraph_table <- data.table(
+  label = c(
+    "Connected?", 
+     "Simple?", 
+     "Loops?", 
+     "Multigraph?", 
+     "Weighted?", 
+     "Directed?", 
+     "Acyclic?", 
+     "Bipartite?", 
+     "Tree?", 
+     "Forest?",
+    "Size:", 
+    "Components:", 
+    "Isolate Proportion:", 
+    "Density:", 
+    "Diameter:", 
+    "Average Path Length:",
+    
+    ),
+  value = c(
+    is_connected(g), 
+    is_simple(g), 
+    any_loop(g), 
+    any_multiple(g), 
+    is_weighted(g), 
+    is_directed(g), 
+    is_acyclic(g), 
+    is_bipartite(g), 
+    is_tree(g), 
+    is_forest(g),
+    gorder(g), 
+    count_components(g), 
+    sum(degree(g) == 0)/gorder(g), 
+    edge_density(simplify(g)), 
+    diameter(g), 
+    mean_distance(g)
+    )
+)
+big_fancy_igraph_table |> gt()
+
+
+print_igraph_attr <- function(g) {
+  print("Graph Attributes")
+  print(graph_attr(g))
+  
+  print("Vertex Attributes")
+  print(vertex_attr(g))
+  
+  print("Edge Attributes")
+  print(edge_attr(g))
+}
+
+#g <- set_graph_attr(g, name = "Weighted", value = TRUE)
+#g <- set_graph_attr(g, name = "Directed", value = TRUE)
+
+
+# REFERENCE
+# degree(   
+#   graph,   
+#   v = V(graph),   
+#   mode = c("all", "out", "in", "total"),   
+#   loops = TRUE,   
+#   normalized = FALSE
+#   )
+# strength(   
+#   graph,   
+#   vids = V(graph),   
+#   mode = c("all", "out", "in", "total"),   
+#   loops = TRUE,   
+#   weights = NULL 
+#   )
+# g <- set_vertex_attr(g, name = "degree_in", value = strength(g, mode = "in"))
+# g <- set_vertex_attr(g, name = "degree_out", value = strength(g, mode = "out"))
+# g <- set_vertex_attr(g, name = "degree_total", value = strength(g, mode = "total"))
+# components(g, mode = "strong")
+# components_results <- components(g, mode = "strong")
+# components_results$membership
+# g <- set_vertex_attr(g, 
+#                 name = "component", 
+#                 value = components(g, mode = "strong")$membership)
+# plot(
+#   g,
+#   oma = c(2,3,5,2)
+#   )
+# title = "Media Networks Link to and Reference Eachother"
+# subtitle = "A network plot of networks."
+# caption = "Data from:  https://kateto.net/network-visualization."
+# mtext(side = 3, line = 3, at = -2, adj = 0, cex = 1.1, title)
+# mtext(side = 3, line = 2, at = -2, adj = 0, cex = 0.7, subtitle)
+# mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption )
+# 
+# 
+# 
+# plot_params <- list(
+#   x = g,
+#   layout = layout,
+#   
+#   vertex.size = node_sizes,
+#   vertex.color = adjustcolor(node_colors, alpha.f = transparency),
+#   vertex.frame.width = frame_width,
+#   vertex.frame.color = frame_color,
+#   vertex.shape = node_shapes,
+#   
+#   vertex.label = vertex attribute
+#   vertex.label.cex
+#   vertex.label.color
+#   vertex.label.dist
+#   
+#   edge.width = edge_widths,
+#   edge.color = adjustcolor(edge_colors, alpha.f = transparency),
+#   edge.lty = as.numeric(edge_styles),
+#   edge.curved = a number between -0.5 and 0.5
+#   
+#   edge.label = edge attribute for label
+#   edge.label.cex = edge label size
+#   edge.label.color = edge label color
+#   
+#   edge.arrow.size <- edge.width * 0.35 (this will dynamically adjust them)
+#   edge.arrow.mode <- one of: ">" = 2,"<" = 1, "<>" = 3,"-" = 0)
+#   
+#   rescale = TRUE
+#   
+#   main = "",  # We'll add titles manually for better control
+#   sub = "",
+#   xlab = "",
+#   ylab = ""
+# )
+
+
+
+
+
+
+
+```
+
+Wait a minute. If you used the same work we did in lab, you will find out that this graph is NOT WEIGHTED! That can't be right. Well, I suppose it can because we don't have the right edge properties on this graph.
+
+### 1.d)
+
+I guess we better add the other elements from the edges matrix into our graph as edge attributes.
+
+```{r}
+# add the other elements from the edges matrix into our graph as edge attributes
+
+
+```
+
+Also, read in your nodes file the same way you did for the edges file and update the vertex property with the types.
+
+```{r}
+# read in your nodes file
+nodes <- readr::read_csv("node_list.csv",
+                           header = TRUE,
+                           sep = ","
+                         )
+
+```
+
+```{r}
+# update the vertex property with the types
+
+
+```
+
+Finally, produce a summary of the graph again. You should see that, because you have a column called weight, the summary is now: DNWB 8. This means it is a weighted graph.
+
+```{r}
+# using my helper function to barf out a nicely formatted gt table of various metrics for the graph
+summary_table(ig)
+```
+
+### 1.e)
+
+Produce a quick plot of the graph to make sure it looks like you expected.
+
+```{r}
+# quick, dirty, ugly plot
+plot(ig)
+```
+
+### 2.)  Graphing
+
+Now, we are going to work on improving the plot, but we actually have a problem. The vertex name of "type" is actually a reserved term. This one is supposed to be a logical of 1 or 0. We need to rename our vertex attribute of "type" to "classification" and then overwrite the "type" variable. I'll give you this code.
+
+```{r}
+#V(graph)$classification <- V(graph)$type
+#V(graph)$type <- ifelse(V(graph)$type == "Fruit", TRUE, FALSE)
+```
+
+Now, start by using the layout_as_bipartite in your plot.
+
+```{r}
+l <- igraph::layout_as_bipartite(graph = ig,
+                                 type = NULL,
+                                 hgap = 5,
+                                 vgap = 5,
+                                 maxiter = 1000
+                                 )
+library(RColorBrewer)
+library(scales)
+
+#___________________________________________
+## PLOT PROPERTIES
+#___________________________________________
+par(mar = c(3,1,4,1))
+#par(oma = c(2,3,5,2))
+
+
+
+#___________________________________________
+## VERTEX PROPERTIES
+#___________________________________________
+
+# ------------------------
+# VERTEX COLORS 
+# ------------------------
+v_vals   <- V(g)$type.label
+v_levels <- sort(unique(v_vals))
+
+# Automated Color Identification
+v_pal <- setNames(
+  brewer.pal(length(v_levels), "Paired"),
+  v_levels
+)
+
+# Manual Color Identification
+  ## Example: color-blind friendly Okabe–Ito (first k colors will be used)
+#okabe_ito <- c(
+#  "#000000", "#E69F00", "#56B4E9", "#009E73",
+#  "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
+#)
+
+  ## Build a named palette by aligning colors to the detected levels
+## If there are more levels than colors, we recycle (or you can stop with an error)
+#user_colors <- okabe_ito  # or any vector like c("#AABBCC", "#DDEEFF", ...)
+#v_pal <- setNames(user_colors[seq_along(v_levels)], v_levels)
+
+vertex_colors <- v_pal[v_vals]
+
+
+## ---- (b) Continuous palette (if needed) ----
+# library(scales)
+# pal_cont <- col_numeric("viridis", domain = range(V(g)$some_number))
+# vertex_colors <- pal_cont(V(g)$some_number)
+
+
+
+# ------------------------
+#  VERTEX SHAPES
+# ------------------------
+
+shape_levels <- levels(as.factor(v_vals))
+shape_pal <- setNames(c("circle", "square", "rectangle")[seq_along(shape_levels)], shape_levels)
+vertex_shapes <- shape_pal[v_vals]
+
+
+
+
+#___________________________________________
+## EDGE PROPERTIES
+#___________________________________________
+
+
+# ------------------------
+#  EDGE COLORS 
+# ------------------------
+e_vals   <- E(g)$type
+e_levels <- sort(unique(e_vals))
+
+e_pal <- setNames(
+  brewer.pal(length(e_levels), "Paired"), # Paired is the name of the palette from color brewer. 
+  e_levels
+)
+
+edge_colors <- e_pal[e_vals]
+
+## ---- (b) Continuous palette (if needed) ----
+# pal_cont <- col_numeric("viridis", domain = range(E(g)$some_number))
+# edge_colors <- pal_cont(E(g)$some_number)
+
+# ------------------------
+#  EDGE LINE TYPES (discrete)
+# ------------------------
+e_lty_vals   <- E(g)$type
+e_lty_levels <- sort(unique(e_lty_vals))
+
+# assign linetypes to the levels
+lty_palette <- c(1, 2)  # or however many you want
+e_lty_pal <- setNames(
+  lty_palette[seq_along(e_lty_levels)],
+  e_lty_levels
+)
+
+edge_line_types <- e_lty_pal[e_lty_vals]
+
+
+
+
+
+# ------------------------
+# 5. PLOT
+# ------------------------
+plot(
+  g,
+  layout = layout_with_lgl,
+
+  vertex.sizes = scales::rescale(V(g)$audience.size, to = c(5, 25)),
+  vertex.color = adjustcolor(vertex_colors, alpha.f = 0.5),
+  vertex.shape = vertex_shapes,
+
+  vertex.label = V(g)$media,
+  vertex.label.cex = 0.7,
+  vertex.label.dist = 0.5,
+
+  edge.widths = scales::rescale(E(g)$weight, to = c(0.5, 3)),
+  edge.color = edge_colors,
+  edge.lty = edge_line_types,
+
+  edge.curved = 0.35,
+  edge.label = E(g)$weight,
+  edge.label.cex = 0.6,
+
+  edge.arrow.size = scales::rescale(E(g)$weight, to = c(0.5, 3))*0.3,
+  edge.arrow.mode = 1
+)
+
+# ------------------------
+# 8. LEGENDS
+# ------------------------
+
+
+legend(
+  "topright",
+  title = "Vertex Type",
+  legend = v_levels,
+  fill   = v_pal[v_levels],
+  border = NA,
+  bty = "n",
+  cex = 0.8
+)
+
+
+
+shape_pch_map <- c(
+  circle     = 21,
+  square     = 22,
+  rectangle  = 22,  
+  csquare    = 22,
+  crectangle = 22
+)
+
+legend(
+  "topleft",
+  title = "Vertex Shape",
+  legend = shape_levels,
+  pch    = shape_pch_map[ shape_pal[shape_levels] ],
+  pt.bg  = "gray80",
+  bty = "n",
+  cex = 0.8
+)
+
+
+
+legend(
+  "bottomright",
+  title = "Edge Type",
+  legend = e_levels,
+  col    = e_pal[e_levels],
+  lwd    = 3,
+  bty = "n",
+  cex = 0.8
+)
+
+
+
+legend(
+  "bottomleft",
+  title = "Edge Line Type",
+  legend = e_lty_levels,
+  lty    = unname(e_lty_pal[e_lty_levels]),
+  lwd    = 3,
+  bty = "n",
+  cex = 0.8
+)
+
+
+# ------------------------
+# 7. TITLES
+# ------------------------
+title_text <- "Media Networks Link to and Reference Each Other"
+subtitle_text <- "A network plot of networks."
+caption_text <- "Data from: https://kateto.net/network-visualization."
+
+mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text)
+mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
+mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
+
+```
+
+You should see a two row format for the results. Now, we need to make this look better.
+
+### 1.e)  
+
+Your final task on this will be to make this look better based on the lab from class. Create colors, use transparency, label edges, change shapes and thicknesses, etc... The one requirement is that you calculate the in-degree of the nodes, store this as a vertex attribute, and use that to size the vertex. Add a title, subtitle, and caption to the graph, and make sure to use legends.
+
+```{r}
+# Create colors
+# use transparency
+# label edges
+# change shapes
+# change thicknesses
+#, etc...
+# calculate the in-degree of the nodes, store this as a vertex attribute
+# use the indeg of the node to size the vertex
+
+
+# Add a title
+# subtitle
+# caption
+# legend
+```
+
+```{r}
+# JUST FOR REFERENCE AND COPY/PASTING
+library(RColorBrewer)
+library(scales)
+
+#___________________________________________
+## PLOT PROPERTIES
+#___________________________________________
+par(mar = c(3,1,4,1))
+#par(oma = c(2,3,5,2))
+
+
+
+#___________________________________________
+## VERTEX PROPERTIES
+#___________________________________________
+
+# ------------------------
+# VERTEX COLORS 
+# ------------------------
+v_vals   <- V(g)$type.label
+v_levels <- sort(unique(v_vals))
+
+# Automated Color Identification
+v_pal <- setNames(
+  brewer.pal(length(v_levels), "Paired"),
+  v_levels
+)
+
+# Manual Color Identification
+  ## Example: color-blind friendly Okabe–Ito (first k colors will be used)
+#okabe_ito <- c(
+#  "#000000", "#E69F00", "#56B4E9", "#009E73",
+#  "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
+#)
+
+  ## Build a named palette by aligning colors to the detected levels
+## If there are more levels than colors, we recycle (or you can stop with an error)
+#user_colors <- okabe_ito  # or any vector like c("#AABBCC", "#DDEEFF", ...)
+#v_pal <- setNames(user_colors[seq_along(v_levels)], v_levels)
+
+vertex_colors <- v_pal[v_vals]
+
+
+## ---- (b) Continuous palette (if needed) ----
+# library(scales)
+# pal_cont <- col_numeric("viridis", domain = range(V(g)$some_number))
+# vertex_colors <- pal_cont(V(g)$some_number)
+
+
+
+# ------------------------
+#  VERTEX SHAPES
+# ------------------------
+
+shape_levels <- levels(as.factor(v_vals))
+shape_pal <- setNames(c("circle", "square", "rectangle")[seq_along(shape_levels)], shape_levels)
+vertex_shapes <- shape_pal[v_vals]
+
+
+
+
+#___________________________________________
+## EDGE PROPERTIES
+#___________________________________________
+
+
+# ------------------------
+#  EDGE COLORS 
+# ------------------------
+e_vals   <- E(g)$type
+e_levels <- sort(unique(e_vals))
+
+e_pal <- setNames(
+  brewer.pal(length(e_levels), "Paired"), # Paired is the name of the palette from color brewer. 
+  e_levels
+)
+
+edge_colors <- e_pal[e_vals]
+
+## ---- (b) Continuous palette (if needed) ----
+# pal_cont <- col_numeric("viridis", domain = range(E(g)$some_number))
+# edge_colors <- pal_cont(E(g)$some_number)
+
+# ------------------------
+#  EDGE LINE TYPES (discrete)
+# ------------------------
+e_lty_vals   <- E(g)$type
+e_lty_levels <- sort(unique(e_lty_vals))
+
+# assign linetypes to the levels
+lty_palette <- c(1, 2)  # or however many you want
+e_lty_pal <- setNames(
+  lty_palette[seq_along(e_lty_levels)],
+  e_lty_levels
+)
+
+edge_line_types <- e_lty_pal[e_lty_vals]
+
+
+
+
+
+# ------------------------
+# 5. PLOT
+# ------------------------
+plot(
+  g,
+  layout = layout_with_lgl,
+
+  vertex.sizes = scales::rescale(V(g)$audience.size, to = c(5, 25)),
+  vertex.color = adjustcolor(vertex_colors, alpha.f = 0.5),
+  vertex.shape = vertex_shapes,
+
+  vertex.label = V(g)$media,
+  vertex.label.cex = 0.7,
+  vertex.label.dist = 0.5,
+
+  edge.widths = scales::rescale(E(g)$weight, to = c(0.5, 3)),
+  edge.color = edge_colors,
+  edge.lty = edge_line_types,
+
+  edge.curved = 0.35,
+  edge.label = E(g)$weight,
+  edge.label.cex = 0.6,
+
+  edge.arrow.size = scales::rescale(E(g)$weight, to = c(0.5, 3))*0.3,
+  edge.arrow.mode = 1
+)
+
+# ------------------------
+# 8. LEGENDS
+# ------------------------
+
+
+legend(
+  "topright",
+  title = "Vertex Type",
+  legend = v_levels,
+  fill   = v_pal[v_levels],
+  border = NA,
+  bty = "n",
+  cex = 0.8
+)
+
+
+
+shape_pch_map <- c(
+  circle     = 21,
+  square     = 22,
+  rectangle  = 22,  
+  csquare    = 22,
+  crectangle = 22
+)
+
+legend(
+  "topleft",
+  title = "Vertex Shape",
+  legend = shape_levels,
+  pch    = shape_pch_map[ shape_pal[shape_levels] ],
+  pt.bg  = "gray80",
+  bty = "n",
+  cex = 0.8
+)
+
+
+
+legend(
+  "bottomright",
+  title = "Edge Type",
+  legend = e_levels,
+  col    = e_pal[e_levels],
+  lwd    = 3,
+  bty = "n",
+  cex = 0.8
+)
+
+
+
+legend(
+  "bottomleft",
+  title = "Edge Line Type",
+  legend = e_lty_levels,
+  lty    = unname(e_lty_pal[e_lty_levels]),
+  lwd    = 3,
+  bty = "n",
+  cex = 0.8
+)
+
+
+# ------------------------
+# 7. TITLES
+# ------------------------
+title_text <- "Media Networks Link to and Reference Each Other"
+subtitle_text <- "A network plot of networks."
+caption_text <- "Data from: https://kateto.net/network-visualization."
+
+mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text)
+mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
+mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
+```
