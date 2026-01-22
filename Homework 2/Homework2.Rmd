@@ -141,7 +141,7 @@ Please complete this homework assignment by the due data posted on canvas. Pleas
 
 ## Question 1:
 
-Create a .csv file using a spreadsheet software or notepad. This file should have four columns: from, to, weight, name. Create a network using an edge-list with two strongly connected components where the whole network is weakly connected. The network will have nodes called Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish (I'll just use letters for the rest of the instructions. A, B, C, D, and E are strongly connected, as are F, G, and H. Furthermore, the graph should be a multigraph where there are two paths from A to B and three paths from E to D. Generate a weights attribute by creating random weights between 0 and 1 for each of the edges. Finally, provide a names attribute for every edge denoting the edge: S1 if it's the first edge connecting two nodes, S2 if it's the second, and S3 if it's the third. The graph should have no isolates. Also, create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation.
+Create a .csv file using a spreadsheet software or notepad. This file should have **four** columns: from, to, weight, name. Create a network using an edge-list with **two** **strongly connected** components where the whole network is **weakly connected**. The network will have nodes called Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish (I'll just use letters for the rest of the instructions. A, B, C, D, and E are **strongly connected**, as are F, G, and H. Furthermore, the graph should be a **multigraph** where there are **two** paths from A to B and **three** paths from E to D. Generate a **weights** attribute by creating **random weights** between 0 and 1 for each of the edges. Finally, provide a **names** attribute for every edge denoting the edge: S1 if it's the first edge connecting two nodes, S2 if it's the second, and S3 if it's the third. The graph should have **no isolates**. Also, create a nodes file that has the names of the nodes in a column called **name** and a column called **type** that has values of Fruit and Vegetable depending on the observation.
 
 ### 1.a) 
 
@@ -167,11 +167,11 @@ Read in your edgelist. The following code can help.
 
 Well. I couldn't bring myself to drag out a piece of paper and do these by hand, even though that probably would have been quicker and easier, but then I wouldn't get as much tinkering in with igraph and everything else, so I opted to generate the graph from the ground up using igraph, then spit out an edgelist to a csv, load it in and pretend I just started with an existing csv! So for that, I need to write my own edge_list.csv and node_list.csv. Creating a graph/network with a edge list is trivial with the igraph function, so my first task is to generate some subgraphs to glue together and once I've constructed it in igraph, I can export it as an edge list to a csv, then load it and do whatever from there...
 
-For building up this graph, we'll begin by dividing the problem in half; into two components. The first component/subgraph has 5 nodes and is strongly connected (all nodes are connected bidirectionally to every other node) while the second has 3 nodes and is also strongly connected. We then combine those two graphs together, add in the edges that link the two components/subgraphs, and then verify that our constructed graph meets all the above criteria. Let's begin:
+For building up this graph, we'll begin by dividing the problem in half; into two components. The first component/subgraph has 5 nodes and is strongly connected (all nodes are connected to every other node) while the second has 3 nodes and is also strongly connected. We then combine those two graphs together, add in the edges that link the two components/subgraphs, and then verify that our constructed graph meets all the above criteria. Let's begin:
 
 ```{r create_the_first_component}
 # A, B, C, D, and E are strongly connected.
-# => strongly connected means there are bidirectional paths between all pairs of vertices, so A/B/C/D/E are completely dense 
+# => strongly connected means there are paths between all pairs of vertices, so A/B/C/D/E are completely dense 
 g1_vertex_labels <- c("A", "B", "C", "D", "E")
 g1 <- igraph::make_full_graph(length(g1_vertex_labels), 
                       directed = TRUE, 
@@ -192,7 +192,7 @@ Excellent! Now we create the smaller second component:
 
 ```{r create_the_second_component}
 # F, G, and H are strongly connected.
-# => strongly connected means bidirectional paths between all pairs, so F/G/H are all completely dense in their subgraph
+# => strongly connected means paths between all pairs, so F/G/H are all completely dense in their subgraph
 g2_node_labels <- c("F", "G", "H")
 g2 <- igraph::make_full_graph(length(g2_node_labels), 
                       directed = TRUE, 
@@ -232,37 +232,39 @@ Well, that there certainly looks like two disjoint components! Now we add the re
 
 # multigraph where there are two paths from A to B and three paths from E to D
 # => multigraph means more than one edge between a pair of vertices, so there are multiple entries in the edge list like: 
-# (A, B, blah, blah) <- original edge in graph
-# (A, B, blah2, blah2)
+# (A, B, blah, blah) <- original edge in graph (first path)
+# (A, B, blah2, blah2) <- second path
 # as well as
 # (E, D, blah, blah) <- original edge in graph
 # (E, D, blah2, blah2)
 # (E, D, blah3, blah3)
 # BUT, the first linkage between A,B let's say is labeled S1, and only the "extra" edges connecting will be named S2 and S3, so we're really only adding 3 vertices.
-# also consider that in a bidirectional graph, with all nodes being completely connected, as each component is, So for A and B, we have A->B and B->A (bidirectional) so those already have 2 edges linking them, one in either direction. So what exactly is meant by two paths.... wait a second... path is a path _through_ nodes along edges.... Let's take another fresh look at this...
-
-# 
-
-# provide a names attribute for every edge denoting the edge: S1 if it's the first edge connecting two nodes, S2 if it's the second, and S3 if it's the third
-# first edge connecting... how do I determine who was first? First seen in the edge list I guess? alphabetical order? maybe A->B is "greater" than B->A? Sort it alphabetically, that sounds workable... I guess the instructions probably assumed there'd be an "order" in the csv in terms of line numbers, that makes sense... or is the purpose more to aim for each edge with shared start/end points to have a unique name, that makes more sense in my head, so you can identify _which_ A->B edge from the two of them.
+# also consider that in a bidirectional graph, with all nodes being completely connected, as each component is
+# So for A and B, we have A->B (named S1) and B->A (also named S1) but there will be a /second/ path from A->B (called S2) and 2x more for E->D (S2 and S3 respectively)
 
 # graph is our combined igraph object, let's add those edges and label them!
 # first, setup a df with the new edge data
 data <- data.frame(
   from = c("A","E","E"), 
   to = c("B","D","D"), 
-  name = c("S2", "S2", "S3"), # TODO this is not right ... think about this... maybe ask joe...
-  weight = c(0,0,0)
+  name = c("S2", "S2", "S3"), 
+  weight = runif(3)
   )
 
 # actually add the edges to the graph
 igraph::add_edges(
   graph,
-  unlist(data[, c("from", "to")]) # hoping to get a list of (from1, to1, from2, to2, ...)
+  unlist(data[, c("from", "to")]), # hoping to get a list of (from1, to1, from2, to2, ...)
+  attr = c(name = data[, c("name")], weight = data[, "weight"]) # TODO test this is passing attr properly
   )
 
+# if the above works to set the edge attrs, won't need these next lines:
+
 # set the name attribute for the edges
-#graph <- set_edge_attr(graph, name = "name", value = data[, c("name")]) # note to self: set_edge_attr() sets ALL nodes in one fell swoop, so the dimensions of value vector must match length(E(graph))
+#graph <- set_edge_attr(E(graph), name = "name", value = data[, c("name")]) # note to self: set_edge_attr() sets ALL nodes in one fell swoop, so the dimensions of value vector must match length(E(graph))
+
+
+# set the weight attribute for the edges too
 
 ```
 
@@ -315,7 +317,6 @@ tbl_nodes |> gt()
 
 
 ```{r load_the_edge_list}
-edge_filename <- "edge_list.csv"
 edges <- readr::read_csv(
   edge_filename,
   header = TRUE,
