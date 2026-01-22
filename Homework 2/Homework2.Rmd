@@ -270,7 +270,7 @@ igraph::add_edges(
 
 Let's verify the graph now has edge attribute "name":
 
-```{r}
+```{r verify_name_attrs}
 E(graph)$name
 ```
 
