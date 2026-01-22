@@ -172,17 +172,21 @@ For building up this graph, we'll begin by dividing the problem in half; into tw
 ```{r create_the_first_component}
 # A, B, C, D, and E are strongly connected.
 # => strongly connected means there are paths between all pairs of vertices, so A/B/C/D/E are completely dense 
-g1_vertex_labels <- c("A", "B", "C", "D", "E")
-g1 <- igraph::make_full_graph(length(g1_vertex_labels), 
+g1_vertex_names <- c("A", "B", "C", "D", "E")
+g1_vertex_fullnames <- c("Apple", "Banana", "Carrot", "Date", "Eggplant")
+g1 <- igraph::make_full_graph(length(g1_vertex_names), 
                       directed = TRUE, 
                       loops = FALSE
                       )
-V(g1)$name <- g1_vertex_labels # assigning the lettered labels to the name of each vertex in the subgraph g1
+V(g1)$name <- g1_vertex_names # assigning the lettered labels to the name of each vertex in the subgraph g1
+V(g1)$fullname <- g1_vertex_fullnames # stashing the full string for later use
+E(g1)$name <- "S1" # these are all /first/ edges, so they're all named S1
 ```
 
 Now, let's do a quick verification that we now have vertices with lettered labels:
 
 ```{r verify_first_component_creation}
+g1
 V(g1) # to see labeled vertices
 E(g1) # to see label vertices in edge pairs
 plot(g1)
@@ -193,17 +197,21 @@ Excellent! Now we create the smaller second component:
 ```{r create_the_second_component}
 # F, G, and H are strongly connected.
 # => strongly connected means paths between all pairs, so F/G/H are all completely dense in their subgraph
-g2_node_labels <- c("F", "G", "H")
-g2 <- igraph::make_full_graph(length(g2_node_labels), 
+g2_vertex_names <- c("F", "G", "H")
+g2_vertex_fullnames <- c("Fig", "Grapes", "Horseradish")
+g2 <- igraph::make_full_graph(length(g2_vertex_names), 
                       directed = TRUE, 
                       loops = FALSE
                       )
-V(g2)$name <- g2_node_labels # assigning the lettered labels to the name of each node in the subgraph g2
+V(g2)$name <- g2_vertex_names # assigning the lettered labels to the name of each node in the subgraph g2
+V(g2)$fullname <- g2_vertex_fullnames # stashing the full string for later use
+E(g2)$name <- "S1" # these are all first edges connecting these ordered pairs of nodes, so all are S1
 ```
 
 Now, a quick double check as usual:
 
 ```{r verify_second_component_creation}
+g2
 V(g2) # to see labeled nodes
 E(g2) # to see label nodes in edge pairs
 plot(g2)
@@ -212,20 +220,63 @@ plot(g2)
 Now that we have two suitable looking components, let's merge them into a single igraph object:
 
 ```{r combine_the_components}
-# now that we have the two complete subgraphs, we can combine them 
-graph <- g1 + g2
+# gather all unique vertices
+vertices <- rbind(
+  igraph::as_data_frame(g1, "vertices"), 
+  igraph::as_data_frame(g2, "vertices")
+  ) |> 
+  unique()
 
-# TODO graph now has some duplicated attributes like name_1 and name_2, fix me!
+# pull the edge list from the subgraphs, including the attrs (name)
+edges <- rbind(
+  igraph::as_data_frame(g1), 
+  igraph::as_data_frame(g2)
+  )
+```
+
+Quick verification:
+
+```{r verify_combined_graph_data_frames}
+g1
+g2
+vertices
+edges
+```
+
+
+```{r combine_the_components}
+# make the combined graph:
+graph <- igraph::graph_from_data_frame(
+  edges,
+  directed = FALSE,
+  vertices = vertices
+)
+
+# # now that we have the two complete subgraphs, we can combine them 
+# graph <- g1 + g2
+# 
+# # now we tidy things up, make sure things are properly combined, no duplicate attrs, etc
+# 
+# # graph now has some duplicated attributes like name_1 and name_2, lazily remove those attrs
+# graph <- igraph::delete_graph_attr(graph, "name_1")
+# graph <- igraph::delete_graph_attr(graph, "name_2")
+# graph <- igraph::delete_graph_attr(graph, "loops_1")
+# graph <- igraph::delete_graph_attr(graph, "loops_2")
+# graph <- igraph::delete_edge_attr(graph, "name_1")
+# graph <- igraph::delete_edge_attr(graph, "name_2")
+# 
+# # now, I made those two subgraphs with loops = FALSE, but igraph still added the loops attr to the graph, then when I merged them, igraph renamed them loops_1 and loops_2, I don't /think/ I need the loops graph attr, but just in case, add it back in
+# graph <- igraph::set_graph_attr(graph, "loops", FALSE)
 ```
 
 Ensuring our graph looks right after combining the two components into a larger graph, before adding edges between them (we should see two separate and disjoint complete subgraphs):
 
 ```{r plot_the_combined_graph}
 graph
-plot(graph)
+plot(graph) # TODO why are there so many god damn curved edges when this renders?!?!?!??
 ```
 
-Well, that there certainly looks like two disjoint components! Now we add the remaining edges to connect the two components/subgraphs:
+Well, that there certainly looks like two disjoint components! Now we add the remaining edges to connect the two components/subgraphs in a weakly connected manner:
 
 ```{r make_multigraph_edges}
 # TODO figure this shit out FML
@@ -247,44 +298,45 @@ Well, that there certainly looks like two disjoint components! Now we add the re
 data <- data.frame(
   from = c("A","E","E"), 
   to = c("B","D","D"), 
-  name = c("S2", "S2", "S3"), 
-  weight = runif(3)
+  name = c("S2", "S2", "S3")
   )
 
 # actually add the edges to the graph
-igraph::add_edges(
+graph <- igraph::add_edges(
   graph,
   unlist(data[, c("from", "to")]), # hoping to get a list of (from1, to1, from2, to2, ...)
-  attr = c(name = data[, c("name")], weight = data[, "weight"]) # TODO test this is passing attr properly
+  name = data[, c("name")]
   )
 
 # if the above works to set the edge attrs, won't need these next lines:
 
 # set the name attribute for the edges
 #graph <- set_edge_attr(E(graph), name = "name", value = data[, c("name")]) # note to self: set_edge_attr() sets ALL nodes in one fell swoop, so the dimensions of value vector must match length(E(graph))
-
-
-# set the weight attribute for the edges too
-
 ```
 
-Let's verify the graph now has edge attribute "name":
+Let's verify the graph now has edge attribute "name" properly set:
 
-```{r verify_name_attrs}
+```{r verify_edge_attr_name}
 E(graph)$name
 ```
 
+Cool. On to adding the edge attribute "weight" to a uniformly distributed random decimal in [0, 1]:
 
-```{r generate_and_assign_edge_weights}
+```{r generate_and_assign_edge_weight}
 # Generate a weights attribute by creating random weights between 0 and 1 for each of the edges
 # runif(n) returns a vector of random decimals in [0,1]
 E(graph)$weight = runif(length(E(graph)))
 ```
 
-```{r verifying_added_weights}
-E(graph)$weight
-```
+Verifying...
 
+```{r verify_edge_attr_weight}
+E(graph)$weight
+
+testit::assert("All weights should be in [0, 1].", {
+  sum(E(graph)$weight > 1) + sum(E(graph)$graph < 0) == 0
+})
+```
 
 The graph should have no isolates:
 
@@ -300,19 +352,32 @@ testit::assert("There should be no isolates.", {
 ```
 
 
-```{r load_the_nodes}
+```{r make_nodes_file}
 # create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation
 
+# this tbl_nodes dt is just for display purposes, use fullname, and pass fullname to fruit_or_veg
 tbl_nodes <- data.table(
-  name = V(graph)$name, # pull the names directly from the vertices of the graph
+  name = V(graph)$fullname, # pull the names directly from the vertices of the graph (but these names are just letters, we need the full string, so use fullname)
   # Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
-  type = lapply(V(graph)$name, fruit_or_veg) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
+  type = lapply(V(graph)$fullname, fruit_or_veg) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
 )
 tbl_nodes |> gt()
 
 # create the node file
 #node_filename
 #save csv
+
+# node_type_dt is just for writing to the csv, use name (A, B, C ...) and pass fullname to fruit_or_veg
+node_type_dt <- data.table(
+  name = V(graph)$name, # Letter names
+  
+  # TODO: figure out why this next line is coming out as nested lists
+  type = lapply(unlist(V(graph)$fullname), fruit_or_veg) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
+)
+
+
+write_csv(node_type_dt, node_filename)
+node_type_dt
 ```
 
 
