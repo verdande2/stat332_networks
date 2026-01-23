@@ -147,7 +147,7 @@ Create a .csv file using a spreadsheet software or notepad. This file should hav
 
 Read in your edgelist. The following code can help.
 
-```{r notes, collapse=TRUE}
+```{r various_notes, collapse=TRUE}
 # assorted notes to copy/paste from
 
 # Node names:
@@ -161,13 +161,9 @@ Read in your edgelist. The following code can help.
 # Fig
 # Grapes
 # Horseradish
-
-# Create a network using an edge-list with two strongly connected components where the whole network is weakly connected (any node can reach any other node (ignoring directional edges))
 ```
 
-Well. I couldn't bring myself to drag out a piece of paper and do these by hand, even though that probably would have been quicker and easier, but then I wouldn't get as much tinkering in with igraph and everything else, so I opted to generate the graph from the ground up using igraph, then spit out an edgelist to a csv, load it in and pretend I just started with an existing csv! So for that, I need to write my own edge_list.csv and node_list.csv. Creating a graph/network with a edge list is trivial with the igraph function, so my first task is to generate some subgraphs to glue together and once I've constructed it in igraph, I can export it as an edge list to a csv, then load it and do whatever from there...
-
-For building up this graph, we'll begin by dividing the problem in half; into two components. The first component/subgraph has 5 nodes and is strongly connected (all nodes are connected to every other node) while the second has 3 nodes and is also strongly connected. We then combine those two graphs together, add in the edges that link the two components/subgraphs, and then verify that our constructed graph meets all the above criteria. Let's begin:
+Well, I'm embracing the `igraph` library, so I will build the graph from scratch using the library functions. For building up this graph, we'll begin by dividing the problem in half: into two components or subgraphs. The first component/subgraph has 5 nodes and is strongly connected (all nodes are connected to every other node, but not necessarily in both directions), while the second has 3 nodes and is also strongly connected. We then combine those two graphs together in a weakly connected (nodes are _connected_ but not necessarily reachable via directed path) manner linking the two components/subgraphs, and then verify that our constructed graph meets all the above criteria. Let's begin:
 
 ```{r create_the_first_component}
 # A, B, C, D, and E are strongly connected.
@@ -217,7 +213,7 @@ E(g2) # to see label nodes in edge pairs
 plot(g2)
 ```
 
-Now that we have two suitable looking components, let's merge them into a single igraph object:
+Now that we have two suitable looking components, let's merge them into a single `igraph` object:
 
 ```{r combine_the_components}
 # gather all unique vertices
@@ -242,7 +238,7 @@ g2
 vertices
 edges
 ```
-
+Looks good!
 
 ```{r combine_the_components}
 # make the combined graph:
@@ -251,22 +247,6 @@ graph <- igraph::graph_from_data_frame(
   directed = FALSE,
   vertices = vertices
 )
-
-# # now that we have the two complete subgraphs, we can combine them 
-# graph <- g1 + g2
-# 
-# # now we tidy things up, make sure things are properly combined, no duplicate attrs, etc
-# 
-# # graph now has some duplicated attributes like name_1 and name_2, lazily remove those attrs
-# graph <- igraph::delete_graph_attr(graph, "name_1")
-# graph <- igraph::delete_graph_attr(graph, "name_2")
-# graph <- igraph::delete_graph_attr(graph, "loops_1")
-# graph <- igraph::delete_graph_attr(graph, "loops_2")
-# graph <- igraph::delete_edge_attr(graph, "name_1")
-# graph <- igraph::delete_edge_attr(graph, "name_2")
-# 
-# # now, I made those two subgraphs with loops = FALSE, but igraph still added the loops attr to the graph, then when I merged them, igraph renamed them loops_1 and loops_2, I don't /think/ I need the loops graph attr, but just in case, add it back in
-# graph <- igraph::set_graph_attr(graph, "loops", FALSE)
 ```
 
 Ensuring our graph looks right after combining the two components into a larger graph, before adding edges between them (we should see two separate and disjoint complete subgraphs):
@@ -279,39 +259,42 @@ plot(graph) # TODO why are there so many god damn curved edges when this renders
 Well, that there certainly looks like two disjoint components! Now we add the remaining edges to connect the two components/subgraphs in a weakly connected manner:
 
 ```{r make_multigraph_edges}
-# TODO figure this shit out FML
-
 # multigraph where there are two paths from A to B and three paths from E to D
 # => multigraph means more than one edge between a pair of vertices, so there are multiple entries in the edge list like: 
-# (A, B, blah, blah) <- original edge in graph (first path)
-# (A, B, blah2, blah2) <- second path
+# (A, B, blah, blah) <- original edge in graph (first)
+# (A, B, blah2, blah2) <- second edge
 # as well as
 # (E, D, blah, blah) <- original edge in graph
-# (E, D, blah2, blah2)
-# (E, D, blah3, blah3)
-# BUT, the first linkage between A,B let's say is labeled S1, and only the "extra" edges connecting will be named S2 and S3, so we're really only adding 3 vertices.
-# also consider that in a bidirectional graph, with all nodes being completely connected, as each component is
+# (E, D, blah2, blah2) <- second (S2)
+# (E, D, blah3, blah3) <- third (S3)
+# BUT, the first linkage between A,B let's say is labeled S1, and only the "extra" edges connecting will be named S2 and S3, so we're really only adding 3 edges in this step.
 # So for A and B, we have A->B (named S1) and B->A (also named S1) but there will be a /second/ path from A->B (called S2) and 2x more for E->D (S2 and S3 respectively)
 
 # graph is our combined igraph object, let's add those edges and label them!
 # first, setup a df with the new edge data
-data <- data.frame(
+additional_edges <- data.frame(
   from = c("A","E","E"), 
   to = c("B","D","D"), 
   name = c("S2", "S2", "S3")
   )
 
+weakly_connected_edges <- data.frame(
+  from = c("A","A"), 
+  to = c("F","E"), 
+  name = c("S1", "S1") # these are new edges, so they're called S1
+  )
+
+new_edges <- rbind(additional_edges, weakly_connected_edges)
+
+# TODO resume here, double check graph vs g for variable names
+
 # actually add the edges to the graph
 graph <- igraph::add_edges(
   graph,
-  unlist(data[, c("from", "to")]), # hoping to get a list of (from1, to1, from2, to2, ...)
-  name = data[, c("name")]
+  unlist(new_edges[, c("from", "to")]), # hoping to get a list of (from1, to1, from2, to2, ...)
+  name = new_edges[, c("name")]
   )
 
-# if the above works to set the edge attrs, won't need these next lines:
-
-# set the name attribute for the edges
-#graph <- set_edge_attr(E(graph), name = "name", value = data[, c("name")]) # note to self: set_edge_attr() sets ALL nodes in one fell swoop, so the dimensions of value vector must match length(E(graph))
 ```
 
 Let's verify the graph now has edge attribute "name" properly set:
@@ -320,12 +303,12 @@ Let's verify the graph now has edge attribute "name" properly set:
 E(graph)$name
 ```
 
-Cool. On to adding the edge attribute "weight" to a uniformly distributed random decimal in [0, 1]:
+Cool. On to adding the edge attribute "weight", set to a uniformly distributed random decimal in [0, 1]:
 
 ```{r generate_and_assign_edge_weight}
 # Generate a weights attribute by creating random weights between 0 and 1 for each of the edges
 # runif(n) returns a vector of random decimals in [0,1]
-E(graph)$weight = runif(length(E(graph)))
+E(graph)$weight = runif(length(E(graph))) # all edges
 ```
 
 Verifying...
@@ -338,19 +321,30 @@ testit::assert("All weights should be in [0, 1].", {
 })
 ```
 
-The graph should have no isolates:
+Excellent. Random weights in [0,1] assigned to edge weights! Now, verifying the graph should have no isolates:
 
 ```{r isolates_check}
-# The graph should have no isolates
 graph_degrees <- igraph::degree(graph) # gets all the vertex's degrees in col vector
 num_of_isolates <- sum(graph_degrees == 0) # sum of all the entries that are ==0 aka isolated
-# one of our examples stored the degrees for the nodes as node attributes, I wonder if this is a good default practice? Or only when needed?
 
 testit::assert("There should be no isolates.", {
   num_of_isolates == 0
 })
 ```
 
+```{r}
+# quick verification
+plot(g)
+```
+
+Now the graph is done, we'll write the edge list to file.
+
+```{r write_edge_list}
+df <- igraph::as_data_frame(graph, what = "edges")
+write.csv(df, file = edge_filename, row.names = FALSE)
+```
+
+Of interesting note, our edge_list file does _not_ have the vertex attribute fullname available to it, so hopefully the letters will be good enough!
 
 ```{r make_nodes_file}
 # create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation
@@ -358,44 +352,38 @@ testit::assert("There should be no isolates.", {
 # this tbl_nodes dt is just for display purposes, use fullname, and pass fullname to fruit_or_veg
 tbl_nodes <- data.table(
   name = V(graph)$fullname, # pull the names directly from the vertices of the graph (but these names are just letters, we need the full string, so use fullname)
-  # Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
-  type = lapply(V(graph)$fullname, fruit_or_veg) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
+
+  type = lapply(V(graph)$fullname, fruit_or_veg) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string
 )
 tbl_nodes |> gt()
 
-# create the node file
-#node_filename
-#save csv
+
 
 # node_type_dt is just for writing to the csv, use name (A, B, C ...) and pass fullname to fruit_or_veg
 node_type_dt <- data.table(
   name = V(graph)$name, # Letter names
   
-  # TODO: figure out why this next line is coming out as nested lists
-  type = lapply(unlist(V(graph)$fullname), fruit_or_veg) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string # TODO look up exceptions/error handling/parameter typechecking/validation/etc in R
+  type = unlist(lapply(V(graph)$fullname, fruit_or_veg)) # FUCK this line of code
+  # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string
 )
 
-
 write_csv(node_type_dt, node_filename)
-node_type_dt
+node_type_dt # verify
 ```
 
 
 ```{r load_the_edge_list}
-edges <- readr::read_csv(
-  edge_filename,
-  header = TRUE,
-  sep = ","
-  )
+edges <- readr::read_csv(edge_filename)
 
-# prune out the edge start and end vertices and dump them in edge_list
-edge_list <- edges[, c("from", "to")]          
+# prune out the edge start and end vertices and attrs and dump them in edge_list
+edge_list <- edges[, c("from", "to", "name", "weight")]         
 ```
 
 Once you have your edge list, convert it to an igraph object using the graph_from_data_frame() function (you may need the documentation).
 
-```{r convert_igraph_to_df}
-ig_from_df <- igraph::graph_from_data_frame(d = edge_list)
+```{r convert_df_to_igraph}
+# g is not very descriptive, but it'll save some keystrokes...
+g <- igraph::graph_from_data_frame(d = edge_list)
 ```
 
 ### 1.b)
@@ -403,43 +391,46 @@ ig_from_df <- igraph::graph_from_data_frame(d = edge_list)
 Produce a summary of your graph to make sure the igraph works correctly.
 
 ```{r assert_igraph_class}
-testit::assert(paste0("ig object should be of class: igraph, but returned class: ", class(graph)), {
-  class(graph) == "igraph"
+testit::assert(paste0("ig object should be of class: igraph, but returned class: ", class(g)), {
+  class(g) == "igraph"
 })
 ```
 
 
 ```{r print_ig_as_string}
 print("Printing raw object as string representation:")
-graph
+g
 ```
 
 ---
 
 ```{r print_summary}
 print("--- Summary ---")
-summary(graph)
+summary(g)
 ```
 
 ---
 
 ```{r print_metadata_summary}
 print("--- Metadata Summary ---")
-print_metadata_summary_table(graph)
+print_metadata_summary_table(g)
 ```
 
 ---
 
 ```{r print_graph_vertex_edge_attr}
 print("--- Graph, Vertex and Edge Attributes ---")
-print_igraph_attr(graph)
+print_igraph_attr(g)
 ```
 
 ---
 
 ```{r print_obnoxiously_long_summary}
-print("--- Graph Summary With All The Things ---")
-print_big_fancy_summary_table(graph)
+# print("--- Graph Summary With All The Things ---")
+# print_big_fancy_summary_table(g)
+# Error in adjacent_vertices(x, i, mode = if (directed) "out" else "all") :
+# At vendor/cigraph/src/graph/iterators.c:831 : Cannot create iterator, invalid vertex ID. Invalid vertex ID
+# TODO debug this....
 ```
 
 ---
@@ -450,7 +441,7 @@ print_big_fancy_summary_table(graph)
 In Lab 2 we looked at how to create a summary of the metadata for the graph. Use this code as a basis to make sure that the above conditions are met in general (Directed, Weigted, Not Simple, Has Multiple Edges, is weakly connected but not strongly connected, has two components when counting the number of strongly connected components but only one when counting the number of weakly connected components.
 
 ```{r}
-print_metadata_summary_w_compare <- function(graph) {
+print_metadata_summary_w_compare <- function(g) {
   tbl <- data.table(
     Label <- c(
       "Directed?",
@@ -463,14 +454,14 @@ print_metadata_summary_w_compare <- function(graph) {
       "# of Weakly-connected components:"
     ),
     Value <- c(
-      igraph::is_directed(graph),
-      igraph::is_weighted(graph),
-      !igraph::is_simple(graph),
-      length(E(graph)) > 1,
-      is_connected(graph, mode = "weak"), # mode = weak is the default
-      is_connected(graph, mode = "strong"),
-      components(graph, mode = "strong")$no,
-      components(graph, mode = "weak")$no # mode = weak is the default
+      igraph::is_directed(g),
+      igraph::is_weighted(g),
+      !igraph::is_simple(g),
+      length(E(g)) > 1,
+      is_connected(g, mode = "weak"), # mode = weak is the default
+      is_connected(g, mode = "strong"),
+      components(g, mode = "strong")$no,
+      components(g, mode = "weak")$no # mode = weak is the default
     ),
     Expected <- c(
       TRUE, # Directed
@@ -483,19 +474,21 @@ print_metadata_summary_w_compare <- function(graph) {
       1 # Weakly-Connected Components
     )
   )
+  colnames(tbl) <- c("Test", "Value", "Expected")
   tbl |> gt()
 }
 
 
-print_metadata_summary_w_compare(graph)
-# I feel like this is an appropriate place to employ tests and asserts properly, but I need to delve more into testing in R
+print_metadata_summary_w_compare(g)
+# TODO I feel like this is an appropriate place to employ tests and asserts properly, but I need to delve more into testing in R
+# need moar asssert()s
 ```
 
 ---
 
 ```{r set_weighted_and_directed_attrs}
-graph <- set_graph_attr(graph, name = "Weighted", value = TRUE)
-graph <- set_graph_attr(graph, name = "Directed", value = TRUE)
+graph <- set_graph_attr(g, name = "Weighted", value = TRUE)
+graph <- set_graph_attr(g, name = "Directed", value = TRUE)
 ```
 
 
@@ -579,40 +572,18 @@ Wait a minute. If you used the same work we did in lab, you will find out that t
 
 I guess we better add the other elements from the edges matrix into our graph as edge attributes.
 
-```{r planning_and_thinking}
-# add the other elements from the edges matrix into our graph as edge attributes
-# ig is our igraph object, with the vegetable/fruit names for vertex names, etc
-# add the other elements... from the edges matrix... OHHHHH, I'm dumb... "edges matrix" is the edge list csv... duh...
-```
-
-
 ```{r look_at_existing_attributes}
 # first, let's remind ourselves what attributes are already present in the graph
-print_igraph_attr(graph)
+print_igraph_attr(g)
 ```
-
-```{r adding_edge_attributes}
-# okay, there are 4 columns in the edgelist csv: to, from (both of which are nodes), weight (of the edge), and name (of the edge)
-# therefore, my goal is to add the edge weights and the edge names
-name_list <- edge_list$name # TODO try this. maybe it works? maybe?
-weight_list <- edge_list$weight # TODO to be tested
-graph <- igraph::set_edge_attr(graph, "name", name_list)
-graph <- igraph::set_edge_attr(graph, "weight", weight_list)
-```
-
-Let's verify that those attributes got added onto our igraph object:
-
-```{r verify_added_edge_attributes}
-print_igraph_attr(graph)
-```
+Well, when we read the graph in as a data frame and then used igraph::graph_from_data_frame(), we already added those edge attributes, so we are golden!
 
 Also, read in your nodes file the same way you did for the edges file and update the vertex property with the types.
 
 ```{r load_dem_nodes}
 # read in your nodes file
-node_list <- readr::read_csv(node_filename, header = TRUE, sep = ",")
-name_list <- node_list[, c("name")]
-type_list <- node_list[, c("type")]
+node_list <- readr::read_csv(node_filename)
+node_type_list <- node_list[, c("type")]
 ```
 
 Now, we have the nodes list csv file loaded, and have pulled out the columns for name and type for later use.
@@ -620,21 +591,22 @@ Now, we have the nodes list csv file loaded, and have pulled out the columns for
 ```{r update_vertex_attributes}
 # update the vertex property with the types
 # assuming this means to use the data inside nodes_list as the type attribute of the vertices? If I'm understanding that right? node_list.csv will have columns: name (to identify the vertex, assuming vertex letter, not name?), type (to identify the type), and ...
-graph <- igraph::set_vertex_attr(graph, "name", name_list)
-graph <- igraph::set_vertex_attr(graph, "type", type_list)
+#g <- igraph::set_vertex_attr(g, "name", value = node_name_list)
+#g <- igraph::set_vertex_attr(g, "type", value = node_type_list)
+V(g)$type = unlist(node_type_list)
 ```
 
 Let's verify we see vertex name and vertex type in our igraph:
 
 ```{r verify_vertex_attributes}
-print_igraph_attr(graph)
+print_igraph_attr(g)
 ```
 
 ---
 
 ```{r verify_vertex_attributes_alternative}
-V(graph)$name
-V(graph)$type
+V(g)$name
+V(g)$type
 ```
 
 ---
@@ -643,13 +615,13 @@ Finally, produce a summary of the graph again. You should see that, because you 
 
 ```{r igraph_summary_after_adding_vertex_attrs}
 # nicely formatted table of various metrics for the graph and compare:
-igraph::summary(graph)
+summary(g)
 ```
 
 ---
 
 ```{r print_metadata_for_graph_after_attrs}
-print_metadata_summary_table(graph) # to compare to the default igraph summary (also has is_weighted call in there)
+print_metadata_summary_table(g) # to compare to the default igraph summary (also has is_weighted call in there)
 ```
 
 That looks good to me!
@@ -660,7 +632,7 @@ Produce a quick plot of the graph to make sure it looks like you expected.
 
 ```{r ugly_plot}
 # quick, dirty, ugly plot
-plot(graph)
+plot(g)
 ```
 
 ### 2.)  Graphing
@@ -668,21 +640,21 @@ plot(graph)
 Now, we are going to work on improving the plot, but we actually have a problem. The vertex name of "type" is actually a reserved term. This one is supposed to be a logical of 1 or 0. We need to rename our vertex attribute of "type" to "classification" and then overwrite the "type" variable. I'll give you this code.
 
 ```{r rename_type_to_classification}
-V(ig)$classification <- V(ig)$type
+V(g)$classification <- V(g)$type
 ```
 
 Of note, the edge attribute _type_ still exists at this point, to be overwritten in the next code block:
 
 ```{r assign_type_based_on_fruit}
 # so if it's a fruit type, it gets a TRUE, else FALSE
-V(ig)$type <- ifelse(V(ig)$classification == "Fruit", TRUE, FALSE) # so type isn't /really/ a "type" anyone, it's an is_fruit bool flag... Got it.
+V(g)$type <- ifelse(V(g)$classification == "Fruit", TRUE, FALSE) # so type isn't /really/ a "type" anyone, it's an is_fruit bool flag... Got it.
 ```
 
 Now, start by using the layout_as_bipartite in your plot.
 
 ```{r setup_bipartite_graph_params}
 l <- igraph::layout_as_bipartite(
-  graph = ig,
+  graph = g,
   types = NULL, # NULL => will read vertex.type as type
   hgap = 5,
   vgap = 5,
