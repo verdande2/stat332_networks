@@ -27,6 +27,11 @@ node_filename <- "node_list.csv"
 edge_filename <- "edge_list.csv"
 ```
 
+```{r make_CSVs_if_needed, echo = FALSE}
+# TODO suppress R console and data.frame output
+rmarkdown::render("make_graph_csvs.Rmd") # will spit out edge_list and node_list in CWD, and a html file with verbose creation output
+```
+
 ```{r utility_functions}
 # various utility functions, will inevitably put these in a utils.R library at some point
 fruit_or_veg <- function(thing) {
@@ -147,231 +152,6 @@ Create a .csv file using a spreadsheet software or notepad. This file should hav
 
 Read in your edgelist. The following code can help.
 
-```{r various_notes, collapse=TRUE}
-# assorted notes to copy/paste from
-
-# Node names:
-# Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish
-
-# Apple
-# Banana
-# Carrot
-# Date
-# Eggplant
-# Fig
-# Grapes
-# Horseradish
-```
-
-Well, I'm embracing the `igraph` library, so I will build the graph from scratch using the library functions. For building up this graph, we'll begin by dividing the problem in half: into two components or subgraphs. The first component/subgraph has 5 nodes and is strongly connected (all nodes are connected to every other node, but not necessarily in both directions), while the second has 3 nodes and is also strongly connected. We then combine those two graphs together in a weakly connected (nodes are _connected_ but not necessarily reachable via directed path) manner linking the two components/subgraphs, and then verify that our constructed graph meets all the above criteria. Let's begin:
-
-```{r create_the_first_component}
-# A, B, C, D, and E are strongly connected.
-# => strongly connected means there are paths between all pairs of vertices, so A/B/C/D/E are completely dense 
-g1_vertex_names <- c("A", "B", "C", "D", "E")
-g1_vertex_fullnames <- c("Apple", "Banana", "Carrot", "Date", "Eggplant")
-g1 <- igraph::make_full_graph(length(g1_vertex_names), 
-                      directed = TRUE, 
-                      loops = FALSE
-                      )
-V(g1)$name <- g1_vertex_names # assigning the lettered labels to the name of each vertex in the subgraph g1
-V(g1)$fullname <- g1_vertex_fullnames # stashing the full string for later use
-E(g1)$name <- "S1" # these are all /first/ edges, so they're all named S1
-```
-
-Now, let's do a quick verification that we now have vertices with lettered labels:
-
-```{r verify_first_component_creation}
-g1
-V(g1) # to see labeled vertices
-E(g1) # to see label vertices in edge pairs
-plot(g1)
-```
-
-Excellent! Now we create the smaller second component:
-
-```{r create_the_second_component}
-# F, G, and H are strongly connected.
-# => strongly connected means paths between all pairs, so F/G/H are all completely dense in their subgraph
-g2_vertex_names <- c("F", "G", "H")
-g2_vertex_fullnames <- c("Fig", "Grapes", "Horseradish")
-g2 <- igraph::make_full_graph(length(g2_vertex_names), 
-                      directed = TRUE, 
-                      loops = FALSE
-                      )
-V(g2)$name <- g2_vertex_names # assigning the lettered labels to the name of each node in the subgraph g2
-V(g2)$fullname <- g2_vertex_fullnames # stashing the full string for later use
-E(g2)$name <- "S1" # these are all first edges connecting these ordered pairs of nodes, so all are S1
-```
-
-Now, a quick double check as usual:
-
-```{r verify_second_component_creation}
-g2
-V(g2) # to see labeled nodes
-E(g2) # to see label nodes in edge pairs
-plot(g2)
-```
-
-Now that we have two suitable looking components, let's merge them into a single `igraph` object:
-
-```{r combine_the_components}
-# gather all unique vertices
-vertices <- rbind(
-  igraph::as_data_frame(g1, "vertices"), 
-  igraph::as_data_frame(g2, "vertices")
-  ) |> 
-  unique()
-
-# pull the edge list from the subgraphs, including the attrs (name)
-edges <- rbind(
-  igraph::as_data_frame(g1), 
-  igraph::as_data_frame(g2)
-  )
-```
-
-Quick verification:
-
-```{r verify_combined_graph_data_frames}
-g1
-g2
-vertices
-edges
-```
-Looks good!
-
-```{r combine_the_components}
-# make the combined graph:
-graph <- igraph::graph_from_data_frame(
-  edges,
-  directed = FALSE,
-  vertices = vertices
-)
-```
-
-Ensuring our graph looks right after combining the two components into a larger graph, before adding edges between them (we should see two separate and disjoint complete subgraphs):
-
-```{r plot_the_combined_graph}
-graph
-plot(graph) # TODO why are there so many god damn curved edges when this renders?!?!?!??
-```
-
-Well, that there certainly looks like two disjoint components! Now we add the remaining edges to connect the two components/subgraphs in a weakly connected manner:
-
-```{r make_multigraph_edges}
-# multigraph where there are two paths from A to B and three paths from E to D
-# => multigraph means more than one edge between a pair of vertices, so there are multiple entries in the edge list like: 
-# (A, B, blah, blah) <- original edge in graph (first)
-# (A, B, blah2, blah2) <- second edge
-# as well as
-# (E, D, blah, blah) <- original edge in graph
-# (E, D, blah2, blah2) <- second (S2)
-# (E, D, blah3, blah3) <- third (S3)
-# BUT, the first linkage between A,B let's say is labeled S1, and only the "extra" edges connecting will be named S2 and S3, so we're really only adding 3 edges in this step.
-# So for A and B, we have A->B (named S1) and B->A (also named S1) but there will be a /second/ path from A->B (called S2) and 2x more for E->D (S2 and S3 respectively)
-
-# graph is our combined igraph object, let's add those edges and label them!
-# first, setup a df with the new edge data
-additional_edges <- data.frame(
-  from = c("A","E","E"), 
-  to = c("B","D","D"), 
-  name = c("S2", "S2", "S3")
-  )
-
-weakly_connected_edges <- data.frame(
-  from = c("A","A"), 
-  to = c("F","E"), 
-  name = c("S1", "S1") # these are new edges, so they're called S1
-  )
-
-new_edges <- rbind(additional_edges, weakly_connected_edges)
-
-# TODO resume here, double check graph vs g for variable names
-
-# actually add the edges to the graph
-graph <- igraph::add_edges(
-  graph,
-  unlist(new_edges[, c("from", "to")]), # hoping to get a list of (from1, to1, from2, to2, ...)
-  name = new_edges[, c("name")]
-  )
-
-```
-
-Let's verify the graph now has edge attribute "name" properly set:
-
-```{r verify_edge_attr_name}
-E(graph)$name
-```
-
-Cool. On to adding the edge attribute "weight", set to a uniformly distributed random decimal in [0, 1]:
-
-```{r generate_and_assign_edge_weight}
-# Generate a weights attribute by creating random weights between 0 and 1 for each of the edges
-# runif(n) returns a vector of random decimals in [0,1]
-E(graph)$weight = runif(length(E(graph))) # all edges
-```
-
-Verifying...
-
-```{r verify_edge_attr_weight}
-E(graph)$weight
-
-testit::assert("All weights should be in [0, 1].", {
-  sum(E(graph)$weight > 1) + sum(E(graph)$graph < 0) == 0
-})
-```
-
-Excellent. Random weights in [0,1] assigned to edge weights! Now, verifying the graph should have no isolates:
-
-```{r isolates_check}
-graph_degrees <- igraph::degree(graph) # gets all the vertex's degrees in col vector
-num_of_isolates <- sum(graph_degrees == 0) # sum of all the entries that are ==0 aka isolated
-
-testit::assert("There should be no isolates.", {
-  num_of_isolates == 0
-})
-```
-
-```{r}
-# quick verification
-plot(g)
-```
-
-Now the graph is done, we'll write the edge list to file.
-
-```{r write_edge_list}
-df <- igraph::as_data_frame(graph, what = "edges")
-write.csv(df, file = edge_filename, row.names = FALSE)
-```
-
-Of interesting note, our edge_list file does _not_ have the vertex attribute fullname available to it, so hopefully the letters will be good enough!
-
-```{r make_nodes_file}
-# create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation
-
-# this tbl_nodes dt is just for display purposes, use fullname, and pass fullname to fruit_or_veg
-tbl_nodes <- data.table(
-  name = V(graph)$fullname, # pull the names directly from the vertices of the graph (but these names are just letters, we need the full string, so use fullname)
-
-  type = lapply(V(graph)$fullname, fruit_or_veg) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string
-)
-tbl_nodes |> gt()
-
-
-
-# node_type_dt is just for writing to the csv, use name (A, B, C ...) and pass fullname to fruit_or_veg
-node_type_dt <- data.table(
-  name = V(graph)$name, # Letter names
-  
-  type = unlist(lapply(V(graph)$fullname, fruit_or_veg)) # FUCK this line of code
-  # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string
-)
-
-write_csv(node_type_dt, node_filename)
-node_type_dt # verify
-```
-
-
 ```{r load_the_edge_list}
 edges <- readr::read_csv(edge_filename)
 
@@ -397,44 +177,13 @@ testit::assert(paste0("ig object should be of class: igraph, but returned class:
 ```
 
 
-```{r print_ig_as_string}
-print("Printing raw object as string representation:")
-g
-```
-
----
-
-```{r print_summary}
-print("--- Summary ---")
-summary(g)
-```
-
----
-
-```{r print_metadata_summary}
-print("--- Metadata Summary ---")
-print_metadata_summary_table(g)
-```
-
----
-
-```{r print_graph_vertex_edge_attr}
-print("--- Graph, Vertex and Edge Attributes ---")
+```{r print_ig_details}
+print("Printing information about graph:")
+g # default print output is actually preferable to summary(g)... interesting.
 print_igraph_attr(g)
 ```
 
 ---
-
-```{r print_obnoxiously_long_summary}
-# print("--- Graph Summary With All The Things ---")
-# print_big_fancy_summary_table(g)
-# Error in adjacent_vertices(x, i, mode = if (directed) "out" else "all") :
-# At vendor/cigraph/src/graph/iterators.c:831 : Cannot create iterator, invalid vertex ID. Invalid vertex ID
-# TODO debug this....
-```
-
----
-
 
 ### 1.c)
 
@@ -487,83 +236,8 @@ print_metadata_summary_w_compare(g)
 ---
 
 ```{r set_weighted_and_directed_attrs}
-graph <- set_graph_attr(g, name = "Weighted", value = TRUE)
-graph <- set_graph_attr(g, name = "Directed", value = TRUE)
-```
-
-
-```{r reference_code}
-# REFERENCE
-# degree(   
-#   graph,   
-#   v = V(graph),   
-#   mode = c("all", "out", "in", "total"),   
-#   loops = TRUE,   
-#   normalized = FALSE
-#   )
-# strength(   
-#   graph,   
-#   vids = V(graph),   
-#   mode = c("all", "out", "in", "total"),   
-#   loops = TRUE,   
-#   weights = NULL 
-#   )
-# g <- set_vertex_attr(g, name = "degree_in", value = strength(g, mode = "in"))
-# g <- set_vertex_attr(g, name = "degree_out", value = strength(g, mode = "out"))
-# g <- set_vertex_attr(g, name = "degree_total", value = strength(g, mode = "total"))
-# components(g, mode = "strong")
-# components_results <- components(g, mode = "strong")
-# components_results$membership
-# g <- set_vertex_attr(g, 
-#                 name = "component", 
-#                 value = components(g, mode = "strong")$membership)
-# plot(
-#   g,
-#   oma = c(2,3,5,2)
-#   )
-# title = "Media Networks Link to and Reference Eachother"
-# subtitle = "A network plot of networks."
-# caption = "Data from:  https://kateto.net/network-visualization."
-# mtext(side = 3, line = 3, at = -2, adj = 0, cex = 1.1, title)
-# mtext(side = 3, line = 2, at = -2, adj = 0, cex = 0.7, subtitle)
-# mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption )
-# 
-# 
-# 
-# plot_params <- list(
-#   x = g,
-#   layout = layout,
-#   
-#   vertex.size = node_sizes,
-#   vertex.color = adjustcolor(node_colors, alpha.f = transparency),
-#   vertex.frame.width = frame_width,
-#   vertex.frame.color = frame_color,
-#   vertex.shape = node_shapes,
-#   
-#   vertex.label = vertex attribute
-#   vertex.label.cex
-#   vertex.label.color
-#   vertex.label.dist
-#   
-#   edge.width = edge_widths,
-#   edge.color = adjustcolor(edge_colors, alpha.f = transparency),
-#   edge.lty = as.numeric(edge_styles),
-#   edge.curved = a number between -0.5 and 0.5
-#   
-#   edge.label = edge attribute for label
-#   edge.label.cex = edge label size
-#   edge.label.color = edge label color
-#   
-#   edge.arrow.size <- edge.width * 0.35 (this will dynamically adjust them)
-#   edge.arrow.mode <- one of: ">" = 2,"<" = 1, "<>" = 3,"-" = 0)
-#   
-#   rescale = TRUE
-#   
-#   main = "",  # We'll add titles manually for better control
-#   sub = "",
-#   xlab = "",
-#   ylab = ""
-# )
+g <- set_graph_attr(g, name = "Weighted", value = TRUE)
+g <- set_graph_attr(g, name = "Directed", value = TRUE)
 ```
 
 Wait a minute. If you used the same work we did in lab, you will find out that this graph is NOT WEIGHTED! That can't be right. Well, I suppose it can because we don't have the right edge properties on this graph.
@@ -590,9 +264,6 @@ Now, we have the nodes list csv file loaded, and have pulled out the columns for
 
 ```{r update_vertex_attributes}
 # update the vertex property with the types
-# assuming this means to use the data inside nodes_list as the type attribute of the vertices? If I'm understanding that right? node_list.csv will have columns: name (to identify the vertex, assuming vertex letter, not name?), type (to identify the type), and ...
-#g <- igraph::set_vertex_attr(g, "name", value = node_name_list)
-#g <- igraph::set_vertex_attr(g, "type", value = node_type_list)
 V(g)$type = unlist(node_type_list)
 ```
 
@@ -604,27 +275,15 @@ print_igraph_attr(g)
 
 ---
 
-```{r verify_vertex_attributes_alternative}
-V(g)$name
-V(g)$type
-```
-
----
-
 Finally, produce a summary of the graph again. You should see that, because you have a column called weight, the summary is now: DNWB 8. This means it is a weighted graph.
 
-```{r igraph_summary_after_adding_vertex_attrs}
-# nicely formatted table of various metrics for the graph and compare:
-summary(g)
-```
-
----
 
 ```{r print_metadata_for_graph_after_attrs}
-print_metadata_summary_table(g) # to compare to the default igraph summary (also has is_weighted call in there)
+g
+print_igraph_attr(g)
 ```
 
-That looks good to me!
+IGRAPH a82ac7f DNWB 8 31 --! Check! Got that W! That looks good to me!
 
 ### 1.e)
 
@@ -652,8 +311,8 @@ V(g)$type <- ifelse(V(g)$classification == "Fruit", TRUE, FALSE) # so type isn't
 
 Now, start by using the layout_as_bipartite in your plot.
 
-```{r setup_bipartite_graph_params}
-l <- igraph::layout_as_bipartite(
+```{r setup_bipartite_graph_layout}
+layout <- igraph::layout_as_bipartite(
   graph = g,
   types = NULL, # NULL => will read vertex.type as type
   hgap = 5,
@@ -662,457 +321,103 @@ l <- igraph::layout_as_bipartite(
 )
 ```
 
-
-```{r setup_bipartite_graph_plot_params}
-par(mar = c(3,1,4,1))
-#par(oma = c(2,3,5,2))
-```
-
-
-```{r setup_bipartite_graph_vertex_params}
-# ------------------------
-# VERTEX COLORS 
-# ------------------------
-v_vals   <- V(g)$type.label
-v_levels <- sort(unique(v_vals))
-
-# Automated Color Identification
-v_pal <- setNames(
-  brewer.pal(length(v_levels), "Paired"),
-  v_levels
-)
-
-# Manual Color Identification
-  ## Example: color-blind friendly Okabe–Ito (first k colors will be used)
-#okabe_ito <- c(
-#  "#000000", "#E69F00", "#56B4E9", "#009E73",
-#  "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
-#)
-
-  ## Build a named palette by aligning colors to the detected levels
-## If there are more levels than colors, we recycle (or you can stop with an error)
-#user_colors <- okabe_ito  # or any vector like c("#AABBCC", "#DDEEFF", ...)
-#v_pal <- setNames(user_colors[seq_along(v_levels)], v_levels)
-
-vertex_colors <- v_pal[v_vals]
-
-
-## ---- (b) Continuous palette (if needed) ----
-# library(scales)
-# pal_cont <- col_numeric("viridis", domain = range(V(g)$some_number))
-# vertex_colors <- pal_cont(V(g)$some_number)
-
-
-
-# ------------------------
-#  VERTEX SHAPES
-# ------------------------
-
-shape_levels <- levels(as.factor(v_vals))
-shape_pal <- setNames(c("circle", "square", "rectangle")[seq_along(shape_levels)], shape_levels)
-vertex_shapes <- shape_pal[v_vals]
-```
-
-
-```{r setup_bipartite_graph_edge_params}
-# ------------------------
-#  EDGE COLORS 
-# ------------------------
-e_vals   <- E(g)$type
-e_levels <- sort(unique(e_vals))
-
-e_pal <- setNames(
-  brewer.pal(length(e_levels), "Paired"), # Paired is the name of the palette from color brewer. 
-  e_levels
-)
-
-edge_colors <- e_pal[e_vals]
-
-## ---- (b) Continuous palette (if needed) ----
-# pal_cont <- col_numeric("viridis", domain = range(E(g)$some_number))
-# edge_colors <- pal_cont(E(g)$some_number)
-
-# ------------------------
-#  EDGE LINE TYPES (discrete)
-# ------------------------
-e_lty_vals   <- E(g)$type
-e_lty_levels <- sort(unique(e_lty_vals))
-
-# assign linetypes to the levels
-lty_palette <- c(1, 2)  # or however many you want
-e_lty_pal <- setNames(
-  lty_palette[seq_along(e_lty_levels)],
-  e_lty_levels
-)
-
-edge_line_types <- e_lty_pal[e_lty_vals]
-```
-
-
-```{r plot_the_bipartite_graph}
-plot(
-  ig,
-  layout = layout_with_lgl,
-
-  vertex.sizes = scales::rescale(V(g)$audience.size, to = c(5, 25)),
-  vertex.color = adjustcolor(vertex_colors, alpha.f = 0.5),
-  vertex.shape = vertex_shapes,
-
-  vertex.label = V(g)$media,
-  vertex.label.cex = 0.7,
-  vertex.label.dist = 0.5,
-
-  edge.widths = scales::rescale(E(g)$weight, to = c(0.5, 3)),
-  edge.color = edge_colors,
-  edge.lty = edge_line_types,
-
-  edge.curved = 0.35,
-  edge.label = E(g)$weight,
-  edge.label.cex = 0.6,
-
-  edge.arrow.size = scales::rescale(E(g)$weight, to = c(0.5, 3))*0.3,
-  edge.arrow.mode = 1
-)
-```
-
-
-```{r add_the_legends}
-legend(
-  "topright",
-  title = "Vertex Type",
-  legend = v_levels,
-  fill   = v_pal[v_levels],
-  border = NA,
-  bty = "n",
-  cex = 0.8
-)
-
-
-
-shape_pch_map <- c(
-  circle     = 21,
-  square     = 22,
-  rectangle  = 22,  
-  csquare    = 22,
-  crectangle = 22
-)
-
-legend(
-  "topleft",
-  title = "Vertex Shape",
-  legend = shape_levels,
-  pch    = shape_pch_map[ shape_pal[shape_levels] ],
-  pt.bg  = "gray80",
-  bty = "n",
-  cex = 0.8
-)
-
-
-
-legend(
-  "bottomright",
-  title = "Edge Type",
-  legend = e_levels,
-  col    = e_pal[e_levels],
-  lwd    = 3,
-  bty = "n",
-  cex = 0.8
-)
-
-
-
-legend(
-  "bottomleft",
-  title = "Edge Line Type",
-  legend = e_lty_levels,
-  lty    = unname(e_lty_pal[e_lty_levels]),
-  lwd    = 3,
-  bty = "n",
-  cex = 0.8
-)
-```
-
-```{r add_the_title_subtitle_caption}
-title_text <- "Media Networks Link to and Reference Each Other"
-subtitle_text <- "A network plot of networks."
-caption_text <- "Data from: https://kateto.net/network-visualization."
-
-mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text) # 3 = top, adj = 0.5 is centered
-mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
-mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text) # side = 1 is bottom, line = 1 is line 1, away from plot
-```
-
 You should see a two row format for the results. Now, we need to make this look better.
 
 ### 1.e)  
 
 Your final task on this will be to make this look better based on the lab from class. Create colors, use transparency, label edges, change shapes and thicknesses, etc... The one requirement is that you calculate the in-degree of the nodes, store this as a vertex attribute, and use that to size the vertex. Add a title, subtitle, and caption to the graph, and make sure to use legends.
 
-```{r make_it_colorful}
-# Create colors
-# use transparency
-# in plot_params:
-vertex.color = adjustcolor(node_colors, alpha.f = trans)
-vertex.label.color = adjustcolor(node_label_colors, alpha.f = trans)
-edge.color = adjustcolor(edge_colors, alpha.f = trans)
-edge.label.color = adjustcolor(edge_label_colors, alpha.f = trans)
+```{r setup_bipartite_graph_plot_params}
+par(mar = c(3,1,4,1)) # margins
 ```
 
 
-```{r}
-# label edges
-# in plot_params:
-# edge.label = edge_labels # (a vector of string labels)
-```
-
-
-```{r}
-# change shapes
-# in plot_params:
-# vertex.shape = node_shapes # (a vector of shape character codes)
-```
-
-
-```{r}
-# change thicknesses
-# in plot_params:
-# edge.width = edge_widths # (a vector of edge widths)
-```
-
-
-```{r}
-#, etc...
-```
-
-
-```{r}
-# calculate the in-degree of the nodes, store this as a vertex attribute
-graph <- set_vertex_attr(graph, name = "degree_in", value = strength(graph, mode = "in"))
-```
-
-
-```{r}
-# use the indegree of the node to size the vertex
-# in plot_params:
-# vertex.label.cex = scales::rescale(V(graph)$degree_in, c(1, 4)) # [1,4] is just a guess, verify and adjust
-```
-
-
-```{r graph_title_final_touches}
-# Add a title
-title = "Media Networks Link to and Reference Eachother"
-mtext(side = 3, line = 3, at = -2, adj = 0, cex = 1.1, title)
-
-# subtitle
-subtitle = "A network plot of networks."
-mtext(side = 3, line = 2, at = -2, adj = 0, cex = 0.7, subtitle)
-
-# caption
-caption = "Data from:  https://kateto.net/network-visualization."
-mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption )
-
-# legends
-#legend()
-```
-
-```{r}
-# JUST FOR REFERENCE AND COPY/PASTING
-library(RColorBrewer)
-library(scales)
-
-#___________________________________________
-## PLOT PROPERTIES
-#___________________________________________
-par(mar = c(3,1,4,1))
-#par(oma = c(2,3,5,2))
-
-
-
-#___________________________________________
-## VERTEX PROPERTIES
-#___________________________________________
-
-# ------------------------
-# VERTEX COLORS 
-# ------------------------
-v_vals   <- V(g)$type.label
-v_levels <- sort(unique(v_vals))
-
-# Automated Color Identification
-v_pal <- setNames(
-  brewer.pal(length(v_levels), "Paired"),
-  v_levels
-)
-
-# Manual Color Identification
-  ## Example: color-blind friendly Okabe–Ito (first k colors will be used)
-#okabe_ito <- c(
-#  "#000000", "#E69F00", "#56B4E9", "#009E73",
-#  "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
-#)
-
-  ## Build a named palette by aligning colors to the detected levels
-## If there are more levels than colors, we recycle (or you can stop with an error)
-#user_colors <- okabe_ito  # or any vector like c("#AABBCC", "#DDEEFF", ...)
-#v_pal <- setNames(user_colors[seq_along(v_levels)], v_levels)
-
-vertex_colors <- v_pal[v_vals]
-
-
-## ---- (b) Continuous palette (if needed) ----
-# library(scales)
-# pal_cont <- col_numeric("viridis", domain = range(V(g)$some_number))
-# vertex_colors <- pal_cont(V(g)$some_number)
-
-
-
-# ------------------------
-#  VERTEX SHAPES
-# ------------------------
-
-shape_levels <- levels(as.factor(v_vals))
-shape_pal <- setNames(c("circle", "square", "rectangle")[seq_along(shape_levels)], shape_levels)
-vertex_shapes <- shape_pal[v_vals]
-
-
-
-
-#___________________________________________
-## EDGE PROPERTIES
-#___________________________________________
-
-
-# ------------------------
-#  EDGE COLORS 
-# ------------------------
-e_vals   <- E(g)$type
-e_levels <- sort(unique(e_vals))
-
-e_pal <- setNames(
-  brewer.pal(length(e_levels), "Paired"), # Paired is the name of the palette from color brewer. 
-  e_levels
-)
-
-edge_colors <- e_pal[e_vals]
-
-## ---- (b) Continuous palette (if needed) ----
-# pal_cont <- col_numeric("viridis", domain = range(E(g)$some_number))
-# edge_colors <- pal_cont(E(g)$some_number)
-
-# ------------------------
-#  EDGE LINE TYPES (discrete)
-# ------------------------
-e_lty_vals   <- E(g)$type
-e_lty_levels <- sort(unique(e_lty_vals))
-
-# assign linetypes to the levels
-lty_palette <- c(1, 2)  # or however many you want
-e_lty_pal <- setNames(
-  lty_palette[seq_along(e_lty_levels)],
-  e_lty_levels
-)
-
-edge_line_types <- e_lty_pal[e_lty_vals]
-
-
-
-
-
-# ------------------------
-# 5. PLOT
-# ------------------------
+```{r plot_the_bipartite_graph}
 plot(
   g,
-  layout = layout_with_lgl,
+  layout = layout,
 
-  vertex.sizes = scales::rescale(V(g)$audience.size, to = c(5, 25)),
-  vertex.color = adjustcolor(vertex_colors, alpha.f = 0.5),
-  vertex.shape = vertex_shapes,
+  vertex.sizes = 10, #scales::rescale(V(g)$audience.size, to = c(5, 25)),
+  vertex.color = adjustcolor(brewer.pal(length(V(g)), "Paired"), alpha.f = 0.5),
+  vertex.shape = "circle",
 
-  vertex.label = V(g)$media,
-  vertex.label.cex = 0.7,
-  vertex.label.dist = 0.5,
+  vertex.label = V(g)$fullname,
+  vertex.label.cex = 1,
+  vertex.label.dist = 0.5, # ctr
 
-  edge.widths = scales::rescale(E(g)$weight, to = c(0.5, 3)),
-  edge.color = edge_colors,
-  edge.lty = edge_line_types,
+  edge.widths = 5 * E(g)$weight, # 5 * [0,1]
+  edge.color = "black",
+  edge.lty = 1, # solid lines
 
-  edge.curved = 0.35,
-  edge.label = E(g)$weight,
+  edge.curved = 0.35, # mild curve
+  edge.label = round(E(g)$weight, 4), # edges have weights labeled (and rounded)
   edge.label.cex = 0.6,
 
-  edge.arrow.size = scales::rescale(E(g)$weight, to = c(0.5, 3))*0.3,
-  edge.arrow.mode = 1
+  edge.arrow.mode = 1 # normal arrows
 )
 
-# ------------------------
-# 8. LEGENDS
-# ------------------------
+# omitting legend, as this is just a set of letters and random decimals, with fruit/vegetable strings attached to the vertices
 
+title_text <- "Bipartite Graph"
+mtext(side = 3, line = 0, at = 0, adj = 0.5, cex = 1, title_text) # 3 = top, adj = 0.5 is centered
+```
 
+Well, it's a bit ugly still, but we'll try to improve that by adding color and adjusting some parameters...
+
+```{r make_it_colorful_and_stuff}
+# calculate the in-degree of the nodes, store this as a vertex attribute for later vertex sizing
+#g <- set_vertex_attr(g, name = "degree_in", value = strength(g, mode = "in"))
+g <- set_vertex_attr(g, name = "degree_in", value = degree(g, mode = "in")) # switched to using degree() over strength(), because multiplying by the random weights (in [0,1]) yields bleh decimals to use for scaling below
+
+plot.new()
+
+plot(
+  g,
+  layout = layout,
+
+  vertex.size = scales::rescale(V(g)$degree_in, c(10, 50)),
+  vertex.color = adjustcolor(brewer.pal(length(V(g)), "Paired"), alpha.f = 0.5), # semi-transparent, from Paired palette
+  vertex.shape = "circle", # changed shapes
+
+  vertex.label = V(g)$fullname,
+  # use the indegree of the node to size the vertex
+  vertex.label.cex = scales::rescale(V(g)$degree_in, c(1, 3)),
+  vertex.label.dist = 0.5, # ctr
+  vertex.label.color = "black", # change vertex label color, no transparency
+
+  edge.width = 3 * E(g)$weight, # 3 * [0,1] # change thicknesses
+  edge.color = "blue", # change edge color
+  edge.lty = 1, # solid lines
+
+  edge.curved = 0.35, # mild curve
+  edge.label = round(E(g)$weight, 4), # edges have weights labeled (and rounded)
+  edge.label.color = "red", # change edge label color
+
+  edge.arrow.mode = 1 # normal arrows
+)
+
+# Add a title
+title_text <- "Bipartite Graph"
+mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 1, title_text) # 3 = top, adj = 0.5 is centered
+
+# subtitle
+subtitle = "Nodes A-H represent fruits and vegetables. The weighted edges represent ???."
+mtext(side = 1, line = 1, at = -2, adj = 0, cex = 0.7, subtitle)
+
+# caption
+caption = paste0("Graph data from ", edge_filename, " and ", node_filename)
+mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption)
+
+# legends
+# indicates vertex size being based on in-degree
+v_levels <- 1:7 # legend levels
 legend(
   "topright",
-  title = "Vertex Type",
+  title = "Vertex Size",
   legend = v_levels,
-  fill   = v_pal[v_levels],
+  fill   = "orange",
   border = NA,
   bty = "n",
-  cex = 0.8
-)
-
-
-
-shape_pch_map <- c(
-  circle     = 21,
-  square     = 22,
-  rectangle  = 22,  
-  csquare    = 22,
-  crectangle = 22
-)
-
-legend(
-  "topleft",
-  title = "Vertex Shape",
-  legend = shape_levels,
-  pch    = shape_pch_map[ shape_pal[shape_levels] ],
-  pt.bg  = "gray80",
-  bty = "n",
-  cex = 0.8
-)
-
-
-
-legend(
-  "bottomright",
-  title = "Edge Type",
-  legend = e_levels,
-  col    = e_pal[e_levels],
-  lwd    = 3,
-  bty = "n",
-  cex = 0.8
-)
-
-
-
-legend(
-  "bottomleft",
-  title = "Edge Line Type",
-  legend = e_lty_levels,
-  lty    = unname(e_lty_pal[e_lty_levels]),
-  lwd    = 3,
-  bty = "n",
-  cex = 0.8
-)
-
-
-# ------------------------
-# 7. TITLES
-# ------------------------
-title_text <- "Media Networks Link to and Reference Each Other"
-subtitle_text <- "A network plot of networks."
-caption_text <- "Data from: https://kateto.net/network-visualization."
-
-mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text)
-mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
-mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
+  cex = scales::rescale(v_levels, c(0.2, 1.2)) # need to scale based on in_degree of node
+) # TODO fix the scaling of the legend!
 ```
