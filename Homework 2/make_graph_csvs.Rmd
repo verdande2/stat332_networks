@@ -1,0 +1,292 @@
+---
+title: "Making a network graph into CSV files"
+output: html_document
+---
+
+
+```{r setup}
+library(readr)
+library(igraph)
+library(tidyverse)
+library(data.table)
+library(gt)
+library(testit)
+library(testthat)
+```
+
+```{r user_configurable_settings}
+node_filename <- "node_list.csv"
+edge_filename <- "edge_list.csv"
+```
+
+```{r utility_functions}
+# various utility functions
+fruit_or_veg <- function(thing) {
+  switch(thing,
+         Apple = "Fruit", 
+         Banana = "Fruit", 
+         Carrot = "Vegetable",
+         Date = "Fruit",
+         Eggplant = "Fruit",
+         Fig = "Fruit",
+         Grapes = "Fruit",
+         Horseradish = "Vegetable",
+         "Unknown Frui-egetable!" # default case
+         )
+}
+
+# after taking the time to make a pretty switch call in the previous function, it appears I don't need to classify, just test if fruit is true or false with a whitelist. Oh well, another quick utility function
+is_fruit <- function(thing) {
+  return(thing %in% c("Apple", "Banana", "Date", "Eggplant", "Fig", "Grapes"))
+}
+
+# this was actually quite handy as an utility func
+print_igraph_attr <- function(graph) {
+  print("--- Graph Attributes ------")
+  print(graph_attr(graph))
+  
+  print("--- Vertex Attributes ------")
+  print(vertex_attr(graph))
+  
+  print("--- Edge Attributes ------")
+  print(edge_attr(graph))
+}
+```
+
+Well, I'm embracing the `igraph` library, so I will build the graph from scratch using the library functions. For building up this graph, we'll begin by dividing the problem in half: into two components or subgraphs. The first component/subgraph has 5 nodes and is strongly connected (all nodes are connected to every other node, but not necessarily in both directions), while the second has 3 nodes and is also strongly connected. We then combine those two graphs together in a weakly connected (nodes are _connected_ but not necessarily reachable via directed path) manner linking the two components/subgraphs, and then verify that our constructed graph meets all the above criteria. Let's begin:
+
+```{r create_the_first_component}
+# A, B, C, D, and E are strongly connected.
+# => strongly connected means there are paths between all pairs of vertices, so A/B/C/D/E are completely dense 
+g1_vertex_names <- c("A", "B", "C", "D", "E")
+g1_vertex_fullnames <- c("Apple", "Banana", "Carrot", "Date", "Eggplant")
+g1 <- igraph::make_full_graph(length(g1_vertex_names), 
+                      directed = TRUE, 
+                      loops = FALSE
+                      ) # starting with a 5 node fully connected bidirectional graph
+V(g1)$name <- g1_vertex_names # assigning the lettered labels to the name of each vertex in the subgraph g1
+V(g1)$fullname <- g1_vertex_fullnames # stashing the full string for later use
+E(g1)$name <- "S1" # these are all /first/ edges, so they're all named S1
+```
+
+Now, let's do a quick verification that we now have vertices with lettered labels:
+
+```{r verify_first_component_creation}
+g1
+V(g1) # to see labeled vertices
+E(g1) # to see label vertices in edge pairs
+plot(g1)
+```
+
+Excellent! Now we create the smaller second component:
+
+```{r create_the_second_component}
+# F, G, and H are strongly connected.
+# => strongly connected means paths between all pairs, so F/G/H are all completely dense in their subgraph
+g2_vertex_names <- c("F", "G", "H")
+g2_vertex_fullnames <- c("Fig", "Grapes", "Horseradish")
+g2 <- igraph::make_full_graph(length(g2_vertex_names), 
+                      directed = TRUE, 
+                      loops = FALSE
+                      )
+V(g2)$name <- g2_vertex_names # assigning the lettered labels to the name of each node in the subgraph g2
+V(g2)$fullname <- g2_vertex_fullnames # stashing the full string for later use
+E(g2)$name <- "S1" # these are all first edges connecting these ordered pairs of nodes, so all are S1
+```
+
+Now, a quick double check as usual:
+
+```{r verify_second_component_creation}
+g2
+V(g2) # to see labeled nodes
+E(g2) # to see label nodes in edge pairs
+plot(g2)
+```
+
+Now that we have two suitable looking components, let's merge them into a single `igraph` object:
+
+```{r combine_the_components}
+# gather all unique vertices
+vertices <- rbind(
+  igraph::as_data_frame(g1, "vertices"), 
+  igraph::as_data_frame(g2, "vertices")
+  ) |> 
+  unique()
+
+# pull the edge list from the subgraphs, including the attrs (name)
+edges <- rbind(
+  igraph::as_data_frame(g1), 
+  igraph::as_data_frame(g2)
+  )
+```
+
+Quick verification:
+
+```{r verify_combined_graph_data_frames}
+g1
+g2
+vertices
+edges
+```
+Looks good!
+
+```{r make_into_igraph}
+# make the combined graph:
+g <- igraph::graph_from_data_frame(
+  edges,
+  directed = TRUE,
+  vertices = vertices
+)
+```
+
+Ensuring our graph looks right after combining the two components into a larger graph, before adding edges between them (we should see two separate and disjoint complete subgraphs):
+
+```{r plot_the_combined_graph}
+g
+plot(g) # TODO why are there so many god damn curved edges when this renders?!?!?!??
+```
+
+Well, that there certainly looks like two disjoint components! Now we add the remaining edges to connect the two components/subgraphs in a weakly connected manner:
+
+```{r make_multigraph_edges}
+# multigraph where there are two paths from A to B and three paths from E to D
+# => multigraph means more than one edge between a pair of vertices, so there are multiple entries in the edge list like: 
+# (A, B, blah, blah) <- original edge in graph (first)
+# (A, B, blah2, blah2) <- second edge
+# as well as
+# (E, D, blah, blah) <- original edge in graph
+# (E, D, blah2, blah2) <- second (S2)
+# (E, D, blah3, blah3) <- third (S3)
+# BUT, the first linkage between A,B let's say is labeled S1, and only the "extra" edges connecting will be named S2 and S3, so we're really only adding 3 edges in this step.
+# So for A and B, we have A->B (named S1) and B->A (also named S1) but there will be a /second/ path from A->B (called S2) and 2x more for E->D (S2 and S3 respectively)
+
+# graph is our combined igraph object, let's add those edges and label them!
+# first, setup a df with the new edge data
+additional_edges <- data.frame(
+  from = c("A","E","E"), 
+  to = c("B","D","D"), 
+  name = c("S2", "S2", "S3")
+  )
+
+# making up some random edges to weakly connect: A->F and C->H
+weakly_connected_edges <- data.frame(
+  from = c("A","C"), 
+  to = c("F","H"), 
+  name = c("S1", "S1") # these are new edges, so they're called S1
+  )
+
+# combining edges to add
+new_edges <- rbind(additional_edges, weakly_connected_edges)
+edge_pairs <- new_edges[,c("from","to")] # this df holds from, to pairs comprising edges
+
+# now, we need to convert it to consecutive mated pairs like (from1, to1, from2, to2, ...)
+edge_pairs_concat <- NULL # interesting. Instead of starting with a blank string, "", I have to start with NULL, else "" gets put into the variable. Hmmm
+
+
+# I couldn't figure out a better way to take two lists and merge them by concat'ing rows, defaulted to old school C style for loop
+# TODO: research better way to do this, there has to be a better way to flatten a df. Google and SO didn't lead to anything promising...
+for (i in 1:length(edge_pairs[[1]])) {
+  edge_pairs_concat <- c(edge_pairs_concat, edge_pairs[i, "from"], edge_pairs[i, "to"]) # should concat from, to onto existing 
+}
+
+# actually add the edges to the graph
+g <- igraph::add_edges(
+  g,
+  edge_pairs_concat,
+  name = new_edges[, c("name")]
+  )
+
+```
+
+Let's verify the graph attributes:
+
+```{r verify_attributes}
+g
+print_igraph_attr(g)
+```
+
+Cool. On to adding the edge attribute "weight", set to a uniformly distributed random decimal in [0, 1]:
+
+```{r generate_and_assign_edge_weight}
+# Generate a weights attribute by creating random weights between 0 and 1 for each of the edges
+# runif(n) returns a vector of random decimals in [0,1]
+E(g)$weight = runif(length(E(g))) # all edges
+```
+
+Verifying...
+
+```{r verify_edge_attr_weight}
+E(g)$weight
+```
+
+Excellent. Random weights in [0,1] assigned to edge weights! Now, a final plot to take a look!
+
+```{r final_plot}
+plot(g)
+```
+
+And a final barrage of tests to ensure we've met the graph criteria:
+
+```{r tests}
+testit::assert("All weights should be in [0, 1].", {
+  sum(E(g)$weight > 1) + sum(E(g)$weight < 0) == 0
+})
+
+graph_degrees <- igraph::degree(g) # gets all the vertex's degrees in col vector
+num_of_isolates <- sum(graph_degrees == 0) # sum of all the entries that are ==0 aka isolated
+
+testit::assert("There should be no isolates.", {
+  num_of_isolates == 0
+})
+
+testit::assert("The graph should be weakly connected.", {
+  is_connected(g, mode = "weak") == TRUE # mode = weak is the default
+})
+
+testit::assert("The graph should be a multigraph.", {
+  igraph::any_multiple(g) == TRUE
+})
+
+testit::assert("The weakly connected edge: A->F should exist.", {
+  length(E(g)["A" %--% "F"]) == 1
+})
+
+testit::assert("The weakly connected edge: C->H should exist.", {
+  length(E(g)["C" %--% "H"]) == 1
+})
+
+
+```
+
+Now the graph is done and meets all our criteria, we'll write the edge list and node list to files.
+
+```{r write_edge_list}
+df <- igraph::as_data_frame(g, what = "edges")
+write.csv(df, file = edge_filename, row.names = FALSE)
+```
+
+Of interesting note, our edge_list file does _not_ have the vertex attribute fullname available to it, so hopefully the letters will be good enough!
+
+```{r make_nodes_file}
+# create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation
+
+# this tbl_nodes dt is just for display purposes, use fullname, and pass fullname to fruit_or_veg
+tbl_nodes <- data.table(
+  name = V(g)$fullname, # pull the names directly from the vertices of the graph (but these names are just letters, we need the full string, so use fullname)
+
+  type = lapply(V(g)$fullname, fruit_or_veg) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string
+)
+tbl_nodes |> gt()
+
+
+
+# node_type_dt is just for writing to the csv, use name (A, B, C ...) and pass fullname to fruit_or_veg
+node_type_dt <- data.table(
+  name = V(g)$name, # Letter names
+  type = unlist(lapply(V(g)$fullname, fruit_or_veg)) # Why does this need to be unlisted, but in the previous df, it doesn't? wtf
+  # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string
+)
+
+write_csv(node_type_dt, node_filename)
+node_type_dt # verify
+```
