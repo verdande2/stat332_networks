@@ -12,6 +12,20 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r extra_functions}
+print_igraph_attr <- function(graph) {
+  print("--- Graph Attributes ------")
+  print(graph_attr(graph))
+  
+  print("--- Vertex Attributes ------")
+  print(vertex_attr(graph))
+  
+  print("--- Edge Attributes ------")
+  print(edge_attr(graph))
+}
+```
+
+
 # Instructions:
 
 Please complete this homework assignment by the due data posted on canvas. Please submit your work in an html file with solutions and code presented completely.
@@ -57,7 +71,7 @@ g2 <- as_tbl_graph(g)
 
 Now, these objects are interesting because we can activate either the nodes or the edges (whatever we want to work with.) When we work with one set (for example, by applying filtering), the other set is also affected. We have to be careful though, because edge filtering won't necessarily remove all corresponding nodes, but removing a node will absolutely remove all edges attached to that node. We should note that there are 55 total countries represented here. This is going to be a bit much to draw, so we're going to limit our dataset.
 
-```{r}
+```{r display_num_unique_countries}
 length(unique(V(g2)$country))
 ```
 
@@ -85,7 +99,10 @@ Now, it's time to do our work::
 Your job is to produce the code/graph which reproduces or improves on this graph using the ggraph and visNetwork packages. Good luck!
 
 ```{r}
+library(visNetwork)
+library(ggraph)
 
+# make graph happen!
 ```
 
 # 3.) Graph with visNetwork

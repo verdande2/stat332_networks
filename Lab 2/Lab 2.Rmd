@@ -4,23 +4,6 @@ output: html_document
 ---
 
 ```{r setup, echo = FALSE}
-
-
-
-# TODO
-# - legend node size bullet position is correct, but radii is too large and causing overlap
-# - remove the outline/border of the first/original node size legend in top right
-# - legend for edge weight needs a factor of 3 to match the igraph
-# - legend for edge weight needs bullets to match thickness of edge.size
-# - legend for birthplace bullets need colors
-# - legend for birthplace bullets - need different shape, square with fill?
-# - need to increase opacity for nodes
-# - need to increase plot display size
-# - need to decrease size of all legends
-# - need to increase spacing between nodes - need to figure out how the fuck to do so...
-
-
-
 knitr::opts_chunk$set(cache = FALSE)
 knitr::opts_chunk$set(echo = FALSE)
 
@@ -32,11 +15,12 @@ library(gt)
 library(RColorBrewer) # color palettes etc
 library(scales)
 
-SKIP_TO_PART_3 <- TRUE # bool flag to comment out the ~600 lines of part 1 and 2
+SKIP_TO_PART_3 <- TRUE # bool flag to comment out the ~600 lines of part 1 and 2, set to FALSE to output parts 1 and 2
 
 ```
 
 Copying over the table function we used recently, might prove to be useful:
+
 ```{r func_defs, echo=TRUE}
 make_table_happen <- function(graph) {
   data.table(
@@ -659,19 +643,20 @@ knitr::opts_chunk$set(echo = TRUE) # in case echo was previously disabled, defau
 
 ## 3.) Your turn:
 
-The London Gang Network has been made available to you in the course shell. I would like you to use the information in this lab to give your best shot to reproducing the following graph.\
-\
+The London Gang Network has been made available to you in the course shell. I would like you to use the information in this lab to give your best shot to reproducing the following graph.
+
 ![London Gang Network Visualization](London%20Gang%20Network.png)
+
 Well, taking an initial look at the network graph picture, I see 3 legends at 3 of the 4 corners (missing top left), showing:
- - legend for node size to top right, ranging from min to max of values
- - legend for node color to bottom right, categorical based on 4 different birthplace values
- - legend for edge width to bottom left, ranging from min to max of values
+ - legend for node size to top right, ranging from min to max of values in V(g)$Arrests
+ - legend for node color to bottom right, categorical based on 4 different birthplace values = c("1", "2", "3", "4")
+ - legend for edge width to bottom left, ranging from min to max of values for thickness
  - title above, centered, labeled "London Gang Network", looks like 2-3 lines above, title on line ~2, in the outer margin (just to the top)
  - no caption, subtitle, etc
- - legend titles are centered in their bounding boxes
+ - legend titles are centered in their bounding boxes # adj = .5 # ctr
  - nodes appear to have a semitransparent opacity set
- - edges also appear to have some transparency set
- - looking to margins, it seems that outer margins are zero'd, and inner margins are minimal, so starting with 0
+ - edges also appear to have some transparency set (let's assume 0.5)
+ - looking to margins, it seems that outer margins are zero'd, and inner margins are minimal, so starting with 0 for all
  
 Now, listing those all out like that makes them easy to cannabalize and turn into psuedocode comments below, used to guide my process...
  
@@ -684,7 +669,7 @@ gangs <- read_rds("London Gang Network.rds")
 
 Make sure we know what we just imported:
 
-```{r test_the_thing}
+```{r check_the_thing}
 class(gangs)
 gangs
 ```
@@ -704,76 +689,69 @@ Well, I see some circles and numbers and lines, looks about right to me! That wa
 library(RColorBrewer) # color palettes etc
 library(scales) # scales pkg for scaling ranges of values for legends, etc
 
-#___________________________________________
 ## PLOT PROPERTIES
-#___________________________________________
 par(mar = c(0,0,0,0)) # bottom, left, top and right margins (in that order)
 
-#___________________________________________
 ## VERTEX PROPERTIES
-#___________________________________________
-
 
 # V(gangs)$Birthplace shows that Birthplace is stored as a string, but is actually numbers "1" - "4", which appears to color AND label the vertices
 
-v_vals   <- V(gangs)$Birthplace
-v_levels <- sort(unique(v_vals)) # will look like c("1", "2", "3", "4")
+vertex_labels <- V(gangs)$Birthplace
+vertex_levels <- sort(unique(vertex_labels)) # will look like c("1", "2", "3", "4")
 
-# keeping the rest of this as is for now... Paired pallette is fine, only choosing four colors anyway...
+# keeping the rest of this as is for now... Paired palette is fine, only choosing four colors anyway...
 
 # Automated Color Identification
-v_pal <- setNames(
-  brewer.pal(length(v_levels), "Paired"),
-  v_levels
+vertex_palette <- setNames(
+  brewer.pal(length(vertex_levels), "Paired"),
+  vertex_levels
 )
 
-vertex_colors <- v_pal[v_vals]
+vertex_colors <- vertex_palette[vertex_labels]
 
-vertex_shapes <- c("circle") # let the vertices be circles, and circles they shall be!
+vertex_shapes <- "circle" # let the vertices be circles, and circles they shall be!
 
-
-#___________________________________________
 ## EDGE PROPERTIES
-#___________________________________________
 
 # weights to set width/size/etc
-e_vals   <- E(gangs)$weight # Lesson learned. w != W...
-edge_colors <- c("#000000") # back in black...
-edge_line_types <- c(1) # 1 = solid
-
+edge_weights   <- E(gangs)$weight # Lesson learned. w != W...
+edge_colors <- "#000000" # back in black...
+edge_line_types <- 1 # 1 = solid
 ```
 
 ```{r segregated_plot_chunk}
+# begin output to png file
 png("LondonGangNetwork.png", width = 1920, height = 1200, res = 300) # saving to file
+# TODO
 
-# ------------------------
+
+
+
+
+
+# - need to increase spacing between nodes - need to figure out how the fuck to do so...
 # 5. PLOT
-# ------------------------
+custom_layout <- layout_with_lgl(
+  graph = g,
+  maxiter = 10000
+  )
+
+# - need to increase plot display size
 plot(
   gangs,
-  # layout = layout_with_lgl,
-  layout = layout_with_lgl(
-    graph = gangs,
-    maxiter = 200,
-    area = 10000
-    ),
+  layout = custom_layout,
 
-  vertex.size = scales::rescale(V(gangs)$Arrests, to = c(1, 25)), # even with 0 arrests, min size is 1 so we still see vertex
+  vertex.size = scales::rescale(V(gangs)$Arrests, to = c(10, 50)), # even with 0 arrests, min size is 10 so we still see vertex
   
   # - nodes appear to have a semitransparent opacity set
   vertex.color = adjustcolor(vertex_colors, alpha.f = 0.75), # VERTEX ALPHA HERE
   vertex.shape = vertex_shapes,
 
   vertex.label = V(gangs)$Birthplace,
-  vertex.label.cex = 0,
+  vertex.label.cex = 1.0,
   vertex.label.dist = 0,
 
-  edge.width = 3 * scales::rescale(
-    E(gangs)$weight,
-    to = c(min(E(gangs)$weight),
-           max(E(gangs)$weight)
-           )
-    ), # scale factor of 3? Seems enough
+  edge.width = 3 * E(gangs)$weight, # scale factor of 3? Seems enough
   
   #  - edges also appear to have some transparency set
   edge.color = adjustcolor(edge_colors, alpha.f = 0.75), # EDGE ALPHA HERE
@@ -781,20 +759,19 @@ plot(
 
   edge.curved = 0, # straight lines
   edge.label = "", # edges are unlabeled for this plot, guess I technically could comment it out and it should default to blank
-  #edge.label.cex = 0.6, don't need
+  #edge.label.cex = 0.6, don't need edge label size
 
   edge.arrow.size = 0, # zero'd, no arrows in network, it's undirected
   edge.arrow.mode = 0, # zero for no arrows, 1 for backward, 2 for forward, 3 for both
   
-  rescale = TRUE
+  rescale = TRUE # TODO look into rescale behavior
 )
 
-# ------------------------
 # 8. LEGENDS
-# ------------------------
 
 
 # TODO FIX ALL LEGENDS
+# - need to decrease size of all legends
 
 # TODO this legend has the legend vector being passed correctly, just needs the bullet sizes to reflect the value
 # see https://stackoverflow.com/a/47308865
@@ -811,15 +788,19 @@ legend_TR_base <- legend(
   legend = arrest_count_cutoffs, # should have min, max and 5-2 = 3 evenly spaced intermediate sizes for the legend
   pt.cex = scales::rescale(
     arrest_count_cutoffs,
-    to = c(0, 1) # normalize to between 0-1
+    to = c(1, 3) # normalize
   ),
-  bty = "n", # TODO look into what this param does in src
+  bty = "n",
   col = "black"
 )
+# - remove the outline/border of the first/original node size legend in top right
 legend_TR_circles <- legend(
   "topright",
   legend = arrest_count_cutoffs,
-  pt.cex = arrest_count_cutoffs,
+  pt.cex = scales::rescale(
+    arrest_count_cutoffs,
+    to = c(1, 3) # normalize
+  ),
   col = "white",
   pch = 21, # circle
   pt.bg = "white"
@@ -829,18 +810,18 @@ legend_TR_circles <- legend(
 x <- (legend_TR_circles$text$x + legend_TR_circles$rect$left) / 2 # average of label's x-coord and its rect's x-coord = midpoint between left edge of legend rect box and left edge of text label. Excellent.
 y <- legend_TR_circles$text$y # same y value as the text itself, checks out
 
+# - legend node size bullet position is correct, but radii is too large and causing overlap
 symbols(x, y, # symbols coordinates
-        circles = arrest_count_cutoffs / 200, # vector of circle radii - Circles of radius zero are plotted at radius one pixel
+        circles = scales::rescale(
+          arrest_count_cutoffs,
+          to = c(1, 15) # normalize
+        ), # vector of circle radii - Circles of radius zero are plotted at radius one pixel
         inches = FALSE, # units are taken to be those of the appropriate axes, 
         add = TRUE, # adding to existing plot, yep
         bg = "orange" # background color of orange? for now TODO: make these equal to the symbol color palette matching birthplace, can be lazy and just pulled color of the first entry in the palette
         ) # see https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/symbols
 
 # see https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/legend
-
-shape_pch_map <- c(
-  circle     = 21 # only circles for this network
-)
 
  # - legend for edge width to bottom left, ranging from min to max of values
 legend(
@@ -855,6 +836,8 @@ legend(
 
 
  # - legend for node color to bottom right, categorical based on 4 different birthplace values
+# - legend for birthplace bullets - need different shape, square with fill?
+# - legend for birthplace bullets need colors
 legend(
   "bottomright",
   title = "Node Birthplace",
@@ -865,10 +848,10 @@ legend(
   cex = 0.8 # expansion factor
 )
 
-# ------------------------
-# 7. TITLES
-# ------------------------
+# - legend for edge weight needs a factor of 3 to match the igraph
+# - legend for edge weight needs bullets to match thickness of edge.size
 
+# 7. TITLES
  # - title above, centered, labeled "London Gang Network", looks like 2-3 lines above, title on line ~2, in the outer margin (just to the top)
  # - no caption, subtitle, etc
 title_text <- "London Gang Network"

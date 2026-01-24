@@ -18,7 +18,7 @@ We're going to be using the same data as lab 2 and trying to reproduce the same 
 
 Using ctrl-alt-i you can create a section where you are going to embed R code. We're going to start by loading in the igraph library.
 
-```{r}
+```{r setup}
 library(igraph)       # Our standard graph object.
 library(readr)        # Reading in the data
 library(ggraph)       # Plotting
@@ -27,7 +27,23 @@ library(RColorBrewer) # Getting Colors
 library(scales)       # scaling factors
 library(grid)         # for unit()
 library(ggrepel)      # for stronger label repel
+library(visNetwork)   # for network graphs
+library(ggraph)       # for graphs
+library(ggplot2)      # for ploots
+library(grid)         # 
+```
 
+```{r utility_functions}
+print_igraph_attr <- function(graph) {
+  print("--- Graph Attributes ------")
+  print(graph_attr(graph))
+  
+  print("--- Vertex Attributes ------")
+  print(vertex_attr(graph))
+  
+  print("--- Edge Attributes ------")
+  print(edge_attr(graph))
+}
 ```
 
 ```{r}
@@ -37,10 +53,8 @@ g <- read_rds("Media Network.rds")
 Just to remind ourselves of what we're working with, let's make sure we print out our vertex and edge attributes
 
 ```{r}
-print("Vertex Attributes")
-print(vertex_attr(g))
-print("Edge Attributes")
-print(edge_attr(g))
+g
+print_igraph_attr(g)
 ```
 
 ### 2b.) Adding degree strength as attributes
@@ -98,15 +112,11 @@ g %>%
     subtitle = "A network plot of networks.",
     caption  = "Data from: https://kateto.net/network-visualization."
    )
-
-
 ```
 
 Okay, it's not perfect. We can do better, but the format is just so much better. Let's fix the scales next:
 
 ```{r}
-
-
 library(ggraph)
 library(ggplot2)
 library(grid)
@@ -117,12 +127,10 @@ shape_vals <- c(21, 22, 24)[seq_along(node_types)]
 shape_map  <- setNames(shape_vals, node_types)
 
 p <- ggraph(g, layout = "lgl") +
-
   geom_node_point(
     aes(size = audience.size, fill = type.label, shape = type.label),
     alpha  = 0.6
   ) +
-  
   geom_node_text(
     aes(label = media),
     repel = TRUE,
@@ -165,14 +173,11 @@ If you're paying attention, you might notice that I stored the graph as the vari
 \
 
 ```{r}
-
 p + theme(
     plot.title = element_text(face = "bold", size = 14),
     legend.box.background = element_rect(color = "black", size = 0.5),
     legend.box.margin = margin(1, 1, 1, 1),
   ) 
-  
-
 ```
 
 ## 3.) Your turn:
@@ -180,7 +185,18 @@ p + theme(
 In the data for this lab, there are two files (and a paper describing where they came from.) The Actor Roles provides the list of nodes and their corresponding attributes. The "Table 2" file provides a matrix of associations and their strengths that you can read in as a matrix and extract the edglist from. Please create a graph which uses shapes, colors, and edge-widths to represent this network. Also, please make sure to use both color and type on edges to denote any edge relationships between Command Team members and any other members in the network. Use GGRAPH to produce this plot. Be certain to add titles, subtitles, and footnotes/captions as appropriate and include a corresponding legend.
 
 ```{r}
-
+# read in data file
+# extract edge list
+# create graph using ggraph
+# custom shapes
+# custom colors
+# custom edge widths
+# use custom color AND type on edges to denote Command Team members
+# title
+# subtitle
+# footnotes
+# captions
+# legend
 ```
 
 ## 4.)  visNetwork
@@ -192,8 +208,6 @@ library(visNetwork)
 As opposed to the ggplot framework where most of the plot information is taken care of within the plot code, visNetwork is generally done by taking care of most of the information outside of the plotting code. This is done by creating data frames for the nodes and edges separately and then adding attributes with special names to them. For example, a node or edge attribute of "title" will be the information for the tooltip which pops up on hover-over by the mouse. The "group" is specifically used for the legend.
 
 ```{r}
-
-
 # Build nodes
 nodes <- igraph::as_data_frame(g, what = "vertices") %>%
   tibble::rownames_to_column("id") %>%
@@ -236,9 +250,6 @@ edges$color <- edge_colors[edges$type]
 edges$dashes <- edges$type == edge_types[2]   # example: second type dashed
 
 edges$title <- paste("Reference Type: ", edges$type)
-
-
-
 ```
 
 There are disadvantages to storing data this way (for example, what if the title attribute was natural in the dataset to represent the a political title?) But, once the data is in, it becomes very easy to produce a really good plot automatically.
@@ -272,13 +283,23 @@ vis
 Reproduce the same graph as above (or close to it, showing the same information) using visNetwork. Make the tooltip display the individual's name and their role. Don't worry about a legend on this plot.
 
 ```{r}
+# make graph with visNetwork
 
+# tooltip w/ individual's name and role
+
+# no legend
 
 ```
 
 #### Something to think about.
 
 How centralized is this network? Are there any key players that could be removed to make the network fail in their goals? Centralized networks are highly resilient but also insecure, which can play into strategies when analyzing these networks. We'll talk about a number of measures of network structure next week.
+
+Centrality measures stuff here!
+
+```{r}
+
+```
 
 ## 6.) Results
 
