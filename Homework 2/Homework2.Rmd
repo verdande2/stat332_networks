@@ -391,7 +391,8 @@ plot(
   edge.label = round(E(g)$weight, 4), # edges have weights labeled (and rounded)
   edge.label.color = "red", # change edge label color
 
-  edge.arrow.mode = 1 # normal arrows
+  edge.arrow.mode = 1, # normal arrows
+  edge.arrow.size = 0.5
 )
 
 # Add a title
