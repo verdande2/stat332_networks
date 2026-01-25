@@ -6,6 +6,7 @@ output:
   html_document:
     self_contained: true
     df_print: paged
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -27,10 +28,7 @@ node_filename <- "node_list.csv"
 edge_filename <- "edge_list.csv"
 ```
 
-```{r make_CSVs_if_needed, echo = FALSE}
-# TODO suppress R console and data.frame output
-rmarkdown::render("make_graph_csvs.Rmd") # will spit out edge_list and node_list in CWD, and a html file with verbose creation output
-```
+To produce the CSV edge and node list files, please run `rmarkdown::render("make_graph_csvs.Rmd")` and they'll be created in the current working directory!
 
 ```{r utility_functions}
 # various utility functions, will inevitably put these in a utils.R library at some point
@@ -334,10 +332,10 @@ par(mar = c(3,1,4,1)) # margins
 
 ```{r plot_the_bipartite_graph}
 plot(
-  g,
+  x = g,
   layout = layout,
 
-  vertex.sizes = 10, #scales::rescale(V(g)$audience.size, to = c(5, 25)),
+  vertex.sizes = 10,
   vertex.color = adjustcolor(brewer.pal(length(V(g)), "Paired"), alpha.f = 0.5),
   vertex.shape = "circle",
 
@@ -348,8 +346,8 @@ plot(
   edge.widths = 5 * E(g)$weight, # 5 * [0,1]
   edge.color = "black",
   edge.lty = 1, # solid lines
-
   edge.curved = 0.35, # mild curve
+  
   edge.label = round(E(g)$weight, 4), # edges have weights labeled (and rounded)
   edge.label.cex = 0.6,
 
@@ -364,32 +362,32 @@ mtext(side = 3, line = 0, at = 0, adj = 0.5, cex = 1, title_text) # 3 = top, adj
 
 Well, it's a bit ugly still, but we'll try to improve that by adding color and adjusting some parameters...
 
-```{r make_it_colorful_and_stuff}
+```{r make_it_colorful_and_stuff, fig.dim=c(8,5)}
 # calculate the in-degree of the nodes, store this as a vertex attribute for later vertex sizing
 #g <- set_vertex_attr(g, name = "degree_in", value = strength(g, mode = "in"))
 g <- set_vertex_attr(g, name = "degree_in", value = degree(g, mode = "in")) # switched to using degree() over strength(), because multiplying by the random weights (in [0,1]) yields bleh decimals to use for scaling below
 
-plot.new()
+plot.new() # clear the canvas
 
 plot(
-  g,
+  x = g,
   layout = layout,
 
-  vertex.size = scales::rescale(V(g)$degree_in, c(10, 50)),
+  # use the indegree of the node to size the vertex
+  vertex.size = scales::rescale(V(g)$degree_in, c(10, 50)), # rescale vertices by their in-degree between 10 and 50px radius
   vertex.color = adjustcolor(brewer.pal(length(V(g)), "Paired"), alpha.f = 0.5), # semi-transparent, from Paired palette
   vertex.shape = "circle", # changed shapes
 
   vertex.label = V(g)$fullname,
-  # use the indegree of the node to size the vertex
-  vertex.label.cex = scales::rescale(V(g)$degree_in, c(1, 3)),
+  vertex.label.cex = scales::rescale(V(g)$degree_in, c(1, 3)), # scale the vertex label as well, from 1.0 to 3.0 based on in-degree
   vertex.label.dist = 0.5, # ctr
   vertex.label.color = "black", # change vertex label color, no transparency
 
   edge.width = 3 * E(g)$weight, # 3 * [0,1] # change thicknesses
   edge.color = "blue", # change edge color
   edge.lty = 1, # solid lines
-
   edge.curved = 0.35, # mild curve
+  
   edge.label = round(E(g)$weight, 4), # edges have weights labeled (and rounded)
   edge.label.color = "red", # change edge label color
 
@@ -398,26 +396,44 @@ plot(
 
 # Add a title
 title_text <- "Bipartite Graph"
-mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 1, title_text) # 3 = top, adj = 0.5 is centered
+mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1, title_text) # 3 = top, adj = 0.5 is centered
 
 # subtitle
 subtitle = "Nodes A-H represent fruits and vegetables. The weighted edges represent ???."
-mtext(side = 1, line = 1, at = -2, adj = 0, cex = 0.7, subtitle)
+mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.7, subtitle)
 
 # caption
 caption = paste0("Graph data from ", edge_filename, " and ", node_filename)
-mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption)
+mtext(side = 1, line = 2, at = 1, adj = 0, cex = 0.5, caption)
 
 # legends
-# indicates vertex size being based on in-degree
-v_levels <- 1:7 # legend levels
+# reference: https://stackoverflow.com/questions/38451431/add-legend-in-igraph-to-annotate-difference-vertices-size
+
+# first take:
+# takes the quantiles (min, 25%, 50%, 75%, max)x(degree_in of vertices)
+# => strips names => round to int => remove duplicates
+legend_labels <- unique(round(unname(quantile(V(g)$degree_in)), 0)) # round each quantile to nearest int, at max 5 legend entries
+
+# Well, that technically works, but is... not very nice looking and doesn't feel very R-ish, let's refactor with the glorious pipe!
+
+legend_labels <- V(g)$degree_in |> # gather all the vertices' degree in attributes
+  quantile() |> # produces 5-length vector of (min, 25% quantile, 50% quantile, 75% quantile, and max for passed in data)
+  round(digits = 0) |> # round to integer
+  unique() # prune any duplicates due to rounding to same integer
+
+# I must say, utilizing the pipe sure does make that flow look more easily understandable and clear. Pretty nifty! Learning happened here today.
+
 legend(
   "topright",
-  title = "Vertex Size",
-  legend = v_levels,
-  fill   = "orange",
-  border = NA,
-  bty = "n",
-  cex = scales::rescale(v_levels, c(0.2, 1.2)) # need to scale based on in_degree of node
-) # TODO fix the scaling of the legend!
+  title = "Vertex In-degree",
+  legend = paste0(legend_labels, " nodes"), #sort(unique(scales::rescale(V(g)$degree_in, c(10, 50)))),
+  bty = "n", # n = no border # couldn't figure out how to increase padding between border rect and legend items, so screw the border
+  pch = 21, # circle
+  pt.bg = "purple", # purple is best color
+  pt.cex = legend_labels, # scale the pts directly from the label values
+  x.intersp = 2, # double space widths
+  y.intersp = 2, # double space heights
+  inset = 0.0, # percentage
+  cex = 1 # general scaling factor
+)
 ```
