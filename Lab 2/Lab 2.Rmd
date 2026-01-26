@@ -1,6 +1,12 @@
 ---
-title: "Andrew Sparkes - STAT332 Statistical Analysis of Networks Sec 01 - Lab 2"
-output: html_document
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Lab 2 - Prof. Joe Reid"
+author: "Andrew Sparkes"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    self_contained: true
+    df_print: paged
+  pdf_document: default
 ---
 
 ```{r setup, echo = FALSE}
@@ -856,7 +862,6 @@ dev.off()
 ```
 
 ![London Gang Network](LondonGangNetwork.png){width=100%, height=100%}
-
 
 ## 5.) Results
 
