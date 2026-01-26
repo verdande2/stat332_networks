@@ -35,7 +35,7 @@ make_table_happen <- function(graph) {
 # STAT 332: Lab 2
 
 ---
-`r if(SKIP_TO_PART_3) {"Commenting out parts 1 and 2 to skip to the relevant bits!\\n\\n... snip ... \\n\\begin{comment}"}`
+`r if(SKIP_TO_PART_3) {"Commenting out parts 1 and 2 to skip to the relevant bits!\\n\\n... snip ...\\n\\begin{comment}"}`
 
 
 ## 1.) Setup
@@ -295,8 +295,6 @@ plot(g,
 
 Vertex parameters begin with the term "vertex." For example, vertex.size will be used to set the vertex size. vertex.label is used to set the vertex label. Rather than going through them one at a time, here's a generic code:
 
-,
-
 ```         
 plot_params <- list(
   x = g,
@@ -337,7 +335,8 @@ plot_params <- list(
 Setting parameters equal to constants applies to the entire graph.
 
 ```{r}
-plot(g,
+plot(
+  g,
      layout = layout_with_lgl,
      vertex.size = 30,
      vertex.color = adjustcolor("blue", alpha.f = 0.5),
@@ -355,17 +354,16 @@ In the graph we are shooting for, node shape is based on the type label, size is
 
 ```{r}
 plot.new()
-plot(g,
+plot(
+  g,
   layout = layout_with_lgl,
   
   vertex.size = V(g)$audience.size,
-
   
   vertex.label = V(g)$media,
 
   
   edge.width = E(g)$weight,
-
   edge.curved = 0.3,
   
   edge.label = E(g)$weight,
@@ -377,6 +375,7 @@ plot(g,
   rescale = TRUE,
   oma = c(2,3,5,2)
   )
+
 title = "Media Networks Link to and Reference Eachother"
 subtitle = "A network plot of networks."
 caption = "Data from:  https://kateto.net/network-visualization."
@@ -392,24 +391,21 @@ Wow! And now we have something interesting. Our size parameters scale us complet
 par(mar = c(3,1,4,1))
 
 # Calculate edge widths for reuse
-edge_widths <- E(g)$weight/max(E(g)$weight)*2
+edge_widths <- 2 * E(g)$weight / max(E(g)$weight)
 
-plot(g,
+plot(
+  g,
   layout = layout_with_lgl,
   
-  vertex.size = V(g)$audience.size/max(V(g)$audience.size)*20,
-#  vertex.color = adjustcolor(node_colors, alpha.f = transparency),
-#  vertex.shape = node_shapes,
+  vertex.size = 20 * V(g)$audience.size / max(V(g)$audience.size),
 
   vertex.label = V(g)$media,
   vertex.label.cex = 0.7,
   vertex.label.dist = 0.5,
   
   edge.width = edge_widths,
-# edge.color = adjustcolor(edge_colors, alpha.f = transparency),
-# edge.lty = as.numeric(edge_styles), #edge styles
-
   edge.curved = 0.35,
+  
   edge.label = E(g)$weight,
   edge.label.cex = 0.6,
   
@@ -552,12 +548,12 @@ plot(
   edge.widths = scales::rescale(E(g)$weight, to = c(0.5, 3)),
   edge.color = edge_colors,
   edge.lty = edge_line_types,
-
   edge.curved = 0.35,
+  
   edge.label = E(g)$weight,
   edge.label.cex = 0.6,
 
-  edge.arrow.size = scales::rescale(E(g)$weight, to = c(0.5, 3))*0.3,
+  edge.arrow.size = 0.3 * scales::rescale(E(g)$weight, to = c(0.5, 3)),
   edge.arrow.mode = 1
 )
 
@@ -673,14 +669,14 @@ Make sure we know what we just imported:
 class(gangs)
 gangs
 ```
+
 Looks good to me! We pulled a igraph object directly out of the rds binary. Excellent. Let's make sure there isn't anything obviously awry by throwing it to plot with default parameters...
 
-```{r prob4_plot_the_ugly_network}
+```{r prob3_plot_the_ugly_network}
 plot(gangs)
 ```
-Well, I see some circles and numbers and lines, looks about right to me! That was easy enough... On to customizing the plot code...
 
-### 
+Well, I see some circles and numbers and lines, looks about right to me! That was easy enough... On to customizing the plot code...
 
 ## 4.) My turn (code and plot)
 
@@ -723,16 +719,11 @@ edge_line_types <- 1 # 1 = solid
 # begin output to png file
 png("LondonGangNetwork.png", width = 1920, height = 1200, res = 300) # saving to file
 # TODO
-
-
-
-
-
-
 # - need to increase spacing between nodes - need to figure out how the fuck to do so...
+
 # 5. PLOT
 custom_layout <- layout_with_lgl(
-  graph = g,
+  graph = gangs,
   maxiter = 10000
   )
 
@@ -759,7 +750,6 @@ plot(
 
   edge.curved = 0, # straight lines
   edge.label = "", # edges are unlabeled for this plot, guess I technically could comment it out and it should default to blank
-  #edge.label.cex = 0.6, don't need edge label size
 
   edge.arrow.size = 0, # zero'd, no arrows in network, it's undirected
   edge.arrow.mode = 0, # zero for no arrows, 1 for backward, 2 for forward, 3 for both
@@ -835,7 +825,7 @@ legend(
 )
 
 
- # - legend for node color to bottom right, categorical based on 4 different birthplace values
+# - legend for node color to bottom right, categorical based on 4 different birthplace values
 # - legend for birthplace bullets - need different shape, square with fill?
 # - legend for birthplace bullets need colors
 legend(
