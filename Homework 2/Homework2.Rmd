@@ -20,7 +20,6 @@ library(scales)
 library(data.table)
 library(gt)
 library(testit)
-library(testthat)
 ```
 
 ```{r user_configurable_settings}
