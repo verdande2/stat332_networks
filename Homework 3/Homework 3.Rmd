@@ -94,19 +94,20 @@ Now, it's time to do our work::
 
 # 2.) Graph with ggraph
 
-![](igraph%20plot.png)
+![](igraph plot.png){width = 200%, height = 200%}
 
 Your job is to produce the code/graph which reproduces or improves on this graph using the ggraph and visNetwork packages. Good luck!
 
 ```{r}
-library(visNetwork)
 library(ggraph)
 
-# make graph happen!
+# TODO make graph happen!
 ```
 
 # 3.) Graph with visNetwork
 
 ```{r}
+library(visNetwork)
 
+# TODO make graph happen!
 ```
