@@ -1,6 +1,12 @@
 ---
-title: "Making a network graph into CSV files"
-output: html_document
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 2 Supplemental code: Making a network graph into CSV files"
+author: "Andrew Sparkes"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    self_contained: true
+    df_print: paged
+  pdf_document: default
 ---
 
 
@@ -11,7 +17,6 @@ library(tidyverse)
 library(data.table)
 library(gt)
 library(testit)
-library(testthat)
 ```
 
 ```{r user_configurable_settings}
@@ -128,6 +133,7 @@ g2
 vertices
 edges
 ```
+
 Looks good!
 
 ```{r make_into_igraph}
@@ -195,7 +201,6 @@ g <- igraph::add_edges(
   edge_pairs_concat,
   name = new_edges[, c("name")]
   )
-
 ```
 
 Let's verify the graph attributes:
@@ -277,8 +282,6 @@ tbl_nodes <- data.table(
   type = lapply(V(g)$fullname, fruit_or_veg) # type will be Fruit, Vegetable, or Unknown Frui-egetable! in the case of an unknown string
 )
 tbl_nodes |> gt()
-
-
 
 # node_type_dt is just for writing to the csv, use name (A, B, C ...) and pass fullname to fruit_or_veg
 node_type_dt <- data.table(

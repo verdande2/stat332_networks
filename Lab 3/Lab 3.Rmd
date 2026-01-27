@@ -1,6 +1,12 @@
 ---
-title: "Lab 3"
-output: html_document
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Lab 3 - Prof. Joe Reid"
+author: "Andrew Sparkes"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    self_contained: true
+    df_print: paged
+  pdf_document: default
 ---
 
 # STAT 332: Lab 3
@@ -46,13 +52,13 @@ print_igraph_attr <- function(graph) {
 }
 ```
 
-```{r}
+```{r read_data_file}
 g <- read_rds("Media Network.rds")
 ```
 
 Just to remind ourselves of what we're working with, let's make sure we print out our vertex and edge attributes
 
-```{r}
+```{r graph_summary}
 g
 print_igraph_attr(g)
 ```
@@ -61,7 +67,7 @@ print_igraph_attr(g)
 
 Just like last week, we want to add a few more attributes.
 
-```{r}
+```{r set_vertex_strength_attrs}
 g <- set_vertex_attr(g, name = "strength_in", value = strength(g, mode = "in"))
 g <- set_vertex_attr(g, name = "strength_out", value = strength(g, mode = "out"))
 g <- set_vertex_attr(g, name = "strength_total", value = strength(g, mode = "total"))
@@ -69,7 +75,7 @@ g <- set_vertex_attr(g, name = "strength_total", value = strength(g, mode = "tot
 
 Let's make sure we have our new attributes.
 
-```{r}
+```{r summarize_again}
 summary(g)
 ```
 
@@ -77,7 +83,7 @@ summary(g)
 
 This time, we're going to use
 
-```{r}
+```{r plot_the_graph}
 g %>%  #Start with the graph object
   ggraph(layout = "lgl") + # initializes the plot
   geom_node_point() + #adds the nodes to the plot
@@ -86,7 +92,7 @@ g %>%  #Start with the graph object
 
 Alright, that's the basics.
 
-```{r}
+```{r make_more_graph}
 g %>%
   ggraph(layout = "lgl") +
   geom_node_point(
@@ -116,7 +122,7 @@ g %>%
 
 Okay, it's not perfect. We can do better, but the format is just so much better. Let's fix the scales next:
 
-```{r}
+```{r fixing_scales}
 library(ggraph)
 library(ggplot2)
 library(grid)
@@ -172,7 +178,7 @@ p <- ggraph(g, layout = "lgl") +
 If you're paying attention, you might notice that I stored the graph as the variable p and then called it by just using "p" at the end of the code cell. I did this for a reason. In ggplot, we can theme our graphs. <https://ggplot2.tidyverse.org/reference/theme.html>\
 \
 
-```{r}
+```{r adding_theme}
 p + theme(
     plot.title = element_text(face = "bold", size = 14),
     legend.box.background = element_rect(color = "black", size = 0.5),
@@ -185,7 +191,14 @@ p + theme(
 In the data for this lab, there are two files (and a paper describing where they came from.) The Actor Roles provides the list of nodes and their corresponding attributes. The "Table 2" file provides a matrix of associations and their strengths that you can read in as a matrix and extract the edglist from. Please create a graph which uses shapes, colors, and edge-widths to represent this network. Also, please make sure to use both color and type on edges to denote any edge relationships between Command Team members and any other members in the network. Use GGRAPH to produce this plot. Be certain to add titles, subtitles, and footnotes/captions as appropriate and include a corresponding legend.
 
 ```{r}
+# user configurable settings
+actor_role_filename <- "Actor Roles.csv"
+table_2_filename <- "2006 Korschade Table 2.csv"
+
 # read in data file
+actor_roles <- readr::read_csv(actor_roles_filename)
+table_2 <- readr::read_csv(table_2_filename)
+
 # extract edge list
 # create graph using ggraph
 # custom shapes
@@ -203,6 +216,7 @@ In the data for this lab, there are two files (and a paper describing where they
 
 ```{r}
 library(visNetwork)
+
 ```
 
 As opposed to the ggplot framework where most of the plot information is taken care of within the plot code, visNetwork is generally done by taking care of most of the information outside of the plotting code. This is done by creating data frames for the nodes and edges separately and then adding attributes with special names to them. For example, a node or edge attribute of "title" will be the information for the tooltip which pops up on hover-over by the mouse. The "group" is specifically used for the legend.
