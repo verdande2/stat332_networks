@@ -861,7 +861,7 @@ dev.off()
 # now that we've written to file, include it in the markdown:
 ```
 
-![London Gang Network](LondonGangNetwork.png){width=100%, height=100%}
+![London Gang Network](LondonGangNetwork.png){width = 100%, height = 100%}
 
 ## 5.) Results
 
