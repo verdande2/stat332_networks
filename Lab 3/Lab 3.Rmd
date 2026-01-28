@@ -89,7 +89,7 @@ summary(g)
 This time, we're going to use
 
 ```{r plot_the_graph}
-g %>% # Start with the graph object
+g |> # Start with the graph object
   ggraph(layout = "lgl") + # initializes the plot
   geom_node_point() + # adds the nodes to the plot
   geom_edge_link() # adds the edges to the plot
@@ -98,7 +98,7 @@ g %>% # Start with the graph object
 Alright, that's the basics.
 
 ```{r make_more_graph}
-g %>%
+g |>
   ggraph(layout = "lgl") +
   geom_node_point(
     aes(size = audience.size, fill = type.label, shape = type.label),
@@ -164,13 +164,13 @@ p <- ggraph(g, layout = "lgl") +
   scale_edge_linetype(guide = "none") +
 
   guides(
-    size = guide_legend(nrow = 2, byrow = T),
+    size = guide_legend(nrow = 2, byrow = TRUE),
     fill = guide_legend(
-      nrow = 1, byrow = T, title = "Verex Color/Shape",
+      nrow = 1, byrow = TRUE, title = "Verex Color/Shape",
       override.aes = list(shape = shape_vals)
     ),
     edge_colour = guide_legend(
-      ncol = 2, byrow = T,
+      ncol = 2, byrow = TRUE,
       title = "Reference Type"
     )
   ) +
@@ -231,8 +231,8 @@ As opposed to the ggplot framework where most of the plot information is taken c
 
 ```{r}
 # Build nodes
-nodes <- igraph::as_data_frame(g, what = "vertices") %>%
-  tibble::rownames_to_column("id") %>%
+nodes <- igraph::as_data_frame(g, what = "vertices") |>
+  tibble::rownames_to_column("id") %|>
   mutate(
     id    = as.character(id),
     label = media,
@@ -254,7 +254,7 @@ nodes$color.border <- "#444444"
 nodes$title <- paste("Media Name: ", nodes$media, "<br>Media Type: ", nodes$type.label, "<br>Audience Size: ", nodes$audience.size)
 
 # Build edges
-edges <- igraph::as_data_frame(g, what = "edges") %>%
+edges <- igraph::as_data_frame(g, what = "edges") |>
   mutate(
     from   = as.character(from),
     to     = as.character(to),
@@ -282,19 +282,19 @@ vis <- visNetwork(nodes, edges,
   submain = "A network plot of networks.",
   footer = "Data from: https://kateto.net/network-visualization.",
   width = "100%"
-) %>%
-  visNodes(scaling = list(min = 5, max = 30)) %>%
-  visEdges(smooth = list(enabled = TRUE, type = "dynamic")) %>%
+) |>
+  visNodes(scaling = list(min = 5, max = 30)) |>
+  visEdges(smooth = list(enabled = TRUE, type = "dynamic")) |>
   visOptions(
     highlightNearest = TRUE,
     nodesIdSelection = TRUE,
     collapse = TRUE
-  ) %>%
+  ) %|>
   visInteraction(
     dragNodes = TRUE,
     dragView  = TRUE,
     zoomView  = TRUE
-  ) %>%
+  ) |>
   visPhysics(stabilization = TRUE)
 
 vis
@@ -318,7 +318,7 @@ How centralized is this network? Are there any key players that could be removed
 
 Centrality measures stuff here!
 
-```{r}
+```{r centrality_time}
 ```
 
 ## 6.) Results

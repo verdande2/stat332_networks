@@ -44,7 +44,7 @@ fruit_or_veg <- function(thing) {
 
 # after taking the time to make a pretty switch call in the previous function, it appears I don't need to classify, just test if fruit is true or false with a whitelist. Oh well, another quick utility function
 is_fruit <- function(thing) {
-  return(thing %in% c("Apple", "Banana", "Date", "Eggplant", "Fig", "Grapes"))
+  thing %in% c("Apple", "Banana", "Date", "Eggplant", "Fig", "Grapes")
 }
 
 # this was actually quite handy as an utility func
@@ -193,7 +193,7 @@ edge_pairs_concat <- NULL # interesting. Instead of starting with a blank string
 
 # I couldn't figure out a better way to take two lists and merge them by concat'ing rows, defaulted to old school C style for loop
 # TODO: research better way to do this, there has to be a better way to flatten a df. Google and SO didn't lead to anything promising...
-for (i in 1:length(edge_pairs[[1]])) {
+for (i in seq_along(edge_pairs[[1]])) {
   edge_pairs_concat <- c(edge_pairs_concat, edge_pairs[i, "from"], edge_pairs[i, "to"]) # should concat from, to onto existing
 }
 

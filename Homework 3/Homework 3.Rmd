@@ -81,9 +81,9 @@ length(unique(V(g2)$country))
 In order to perform operations on this, we need to activate either nodes or edges and then apply our filter operations using "filter". This works exactly the same as it does in the tidyverse methodology and can be found easily online.
 
 ```{r}
-g3 <- g2 %>%
-  activate("nodes") %>%
-  filter(country %in% c("USA", "GBR", "AUS")) %>%
+g3 <- g2 |>
+  activate("nodes") |>
+  filter(country %in% c("USA", "GBR", "AUS")) |>
   filter(!node_is_isolated())
 ```
 

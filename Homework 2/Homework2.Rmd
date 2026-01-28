@@ -48,7 +48,7 @@ fruit_or_veg <- function(thing) {
 
 # after taking the time to make a pretty switch call in the previous function, it appears I don't need to classify, just test if fruit is true or false with a whitelist. Oh well, another quick utility function
 is_fruit <- function(thing) {
-  return(thing %in% c("Apple", "Banana", "Date", "Eggplant", "Fig", "Grapes"))
+  thing %in% c("Apple", "Banana", "Date", "Eggplant", "Fig", "Grapes")
 }
 
 print_big_fancy_summary_table <- function(graph) {
@@ -108,7 +108,7 @@ print_igraph_attr <- function(graph) {
 # generic version of this function, without the third col of expected values
 print_metadata_summary_table <- function(graph) {
   tbl <- data.table(
-    Label <- c(
+    label <- c(
       "Directed?",
       "Weighted?",
       "Not Simple?",
@@ -118,7 +118,7 @@ print_metadata_summary_table <- function(graph) {
       "# of Strongly-connected components:",
       "# of Weakly-connected components:"
     ),
-    Value <- c(
+    value <- c(
       igraph::is_directed(graph),
       igraph::is_weighted(graph),
       !igraph::is_simple(graph),
@@ -186,7 +186,7 @@ In Lab 2 we looked at how to create a summary of the metadata for the graph. Use
 ```{r}
 print_metadata_summary_w_compare <- function(g) {
   tbl <- data.table(
-    Label <- c(
+    label <- c(
       "Directed?",
       "Weighted?",
       "Not Simple?",
@@ -196,7 +196,7 @@ print_metadata_summary_w_compare <- function(g) {
       "# of Strongly-connected components:",
       "# of Weakly-connected components:"
     ),
-    Value <- c(
+    value <- c(
       igraph::is_directed(g),
       igraph::is_weighted(g),
       !igraph::is_simple(g),
@@ -206,7 +206,7 @@ print_metadata_summary_w_compare <- function(g) {
       components(g, mode = "strong")$no,
       components(g, mode = "weak")$no # mode = weak is the default
     ),
-    Expected <- c(
+    expected <- c(
       TRUE, # Directed
       TRUE, # Weighted
       TRUE, # Not Simple

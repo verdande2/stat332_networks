@@ -92,7 +92,7 @@ table <- data.table(
   Value = c(gorder(g), count_components(g), sum(degree(g) == 0) / gorder(g), edge_density(simplify(g)), diameter(g), mean_distance(g))
 )
 library(gt)
-table %>% gt()
+table |> gt()
 ```
 
 Okay, that gives us some of the statistics; however, there's another set of information that would be more critical before we know the statistics. These are be basic properties of the graph. For example, is this a simple graph? Does this graph have loops? Is this a multigraph? Is it Directed? Is it acyclic? Are there edge Weights? The number of components above tells us that this graph is connected, but that's one we can include in our next table. Is the graph bipartite? Is the graph a tree or a forest?\
@@ -103,7 +103,7 @@ table <- data.table(
   Value = c(is_connected(g), is_simple(g), any_loop(g), any_multiple(g), is_weighted(g), is_directed(g), is_acyclic(g), is_bipartite(g), is_tree(g), is_forest(g))
 )
 library(gt)
-table %>% gt()
+table |> gt()
 ```
 
 So, as we already knew, this graph is connected but now we find out that it is not a simple graph. While it is not a multigraph, it does have loops. It has edge weights and is also directed but not acyclic. Furthermore, it is not a bipartite graph, nor is it a tree or a forest. Realistically, this information (along with citation information) could be stored as attributes of the graph. if we want to store something as an attribute of the graph, we need to use the set_graph_attr() function. First, let's check the graph attributes.
