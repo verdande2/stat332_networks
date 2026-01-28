@@ -2,6 +2,7 @@
 title: "STAT332 Statistical Analysis of Networks Sec 01 - Lab 3 - Prof. Joe Reid"
 author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
+due: "30-01-2026"
 output:
   html_document:
     self_contained: true
@@ -10,6 +11,11 @@ output:
 ---
 
 # STAT 332: Lab 3
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 
 ## 1.) Setup
 
@@ -25,27 +31,27 @@ We're going to be using the same data as lab 2 and trying to reproduce the same 
 Using ctrl-alt-i you can create a section where you are going to embed R code. We're going to start by loading in the igraph library.
 
 ```{r setup}
-library(igraph)       # Our standard graph object.
-library(readr)        # Reading in the data
-library(ggraph)       # Plotting
-library(tidygraph)    # Managing our graph object
+library(igraph) # Our standard graph object.
+library(readr) # Reading in the data
+library(ggraph) # Plotting
+library(tidygraph) # Managing our graph object
 library(RColorBrewer) # Getting Colors
-library(scales)       # scaling factors
-library(grid)         # for unit()
-library(ggrepel)      # for stronger label repel
-library(visNetwork)   # for network graphs
-library(ggraph)       # for graphs
-library(ggplot2)      # for ploots
+library(scales) # scaling factors
+library(grid) # for unit()
+library(ggrepel) # for stronger label repel
+library(visNetwork) # for network graphs
+library(ggraph) # for graphs
+library(ggplot2) # for ploots
 ```
 
 ```{r utility_functions}
 print_igraph_attr <- function(graph) {
   print("--- Graph Attributes ------")
   print(graph_attr(graph))
-  
+
   print("--- Vertex Attributes ------")
   print(vertex_attr(graph))
-  
+
   print("--- Edge Attributes ------")
   print(edge_attr(graph))
 }
@@ -83,10 +89,10 @@ summary(g)
 This time, we're going to use
 
 ```{r plot_the_graph}
-g %>%  #Start with the graph object
+g %>% # Start with the graph object
   ggraph(layout = "lgl") + # initializes the plot
-  geom_node_point() + #adds the nodes to the plot
-  geom_edge_link()  #adds the edges to the plot
+  geom_node_point() + # adds the nodes to the plot
+  geom_edge_link() # adds the edges to the plot
 ```
 
 Alright, that's the basics.
@@ -96,27 +102,27 @@ g %>%
   ggraph(layout = "lgl") +
   geom_node_point(
     aes(size = audience.size, fill = type.label, shape = type.label),
-    colour = "grey30", 
-    alpha = 0.5, 
+    colour = "grey30",
+    alpha = 0.5,
     stroke = 0.4
-    ) +
+  ) +
   geom_node_text(
-    aes(label = media), 
-    repel = TRUE, 
+    aes(label = media),
+    repel = TRUE,
     size = 3
-    ) + 
+  ) +
   geom_edge_link(
     aes(colour = type, linetype = type, width = weight),
-    alpha = 0.5, 
+    alpha = 0.5,
     lineend = "round",
     arrow = arrow(type = "closed"),
     end_cap = circle()
-    ) + 
+  ) +
   labs(
     title    = "Media Networks Link to and Reference Each Other",
     subtitle = "A network plot of networks.",
     caption  = "Data from: https://kateto.net/network-visualization."
-   )
+  )
 ```
 
 Okay, it's not perfect. We can do better, but the format is just so much better. Let's fix the scales next:
@@ -129,49 +135,53 @@ library(grid)
 # Shape mapping (3 shapes)
 node_types <- sort(unique(V(g)$type.label))
 shape_vals <- c(21, 22, 24)[seq_along(node_types)]
-shape_map  <- setNames(shape_vals, node_types)
+shape_map <- setNames(shape_vals, node_types)
 
 p <- ggraph(g, layout = "lgl") +
   geom_node_point(
     aes(size = audience.size, fill = type.label, shape = type.label),
-    alpha  = 0.6
+    alpha = 0.6
   ) +
   geom_node_text(
     aes(label = media),
     repel = TRUE,
-    size  = 3
+    size = 3
   ) +
-  
+
   geom_edge_arc(
     aes(colour = type, linetype = type, width = weight),
-    alpha   = 0.4,
+    alpha = 0.4,
     lineend = "round",
-    arrow   = arrow(length = unit(3, "mm"), type = "closed"),
-    end_cap = circle(2, "mm"), 
+    arrow = arrow(length = unit(3, "mm"), type = "closed"),
+    end_cap = circle(2, "mm"),
     strength = 0.3
   ) +
-  
-  
+
+
   scale_size_continuous(name = "Audience Size", range = c(1, 8)) +
   scale_shape_manual(values = shape_map, guide = "none") +
   scale_edge_width(range = c(0.5, 1.5), guide = "none") +
-  scale_edge_linetype(guide = "none") + 
-  
+  scale_edge_linetype(guide = "none") +
+
   guides(
-    size  = guide_legend(nrow = 2, byrow = T),
-    fill = guide_legend(nrow = 1, byrow = T, title = "Verex Color/Shape",
-      override.aes = list(shape = shape_vals)),
-    edge_colour = guide_legend(ncol = 2, byrow = T, 
-                               title = "Reference Type")
-    ) + 
-  
+    size = guide_legend(nrow = 2, byrow = T),
+    fill = guide_legend(
+      nrow = 1, byrow = T, title = "Verex Color/Shape",
+      override.aes = list(shape = shape_vals)
+    ),
+    edge_colour = guide_legend(
+      ncol = 2, byrow = T,
+      title = "Reference Type"
+    )
+  ) +
+
   labs(
     title    = "Media Networks Link to and Reference Each Other",
     subtitle = "A network plot of networks.",
     caption  = "Data from: https://kateto.net/network-visualization."
-  ) 
+  )
 
-  p
+p
 ```
 
 If you're paying attention, you might notice that I stored the graph as the variable p and then called it by just using "p" at the end of the code cell. I did this for a reason. In ggplot, we can theme our graphs. <https://ggplot2.tidyverse.org/reference/theme.html>\
@@ -179,10 +189,10 @@ If you're paying attention, you might notice that I stored the graph as the vari
 
 ```{r adding_theme}
 p + theme(
-    plot.title = element_text(face = "bold", size = 14),
-    legend.box.background = element_rect(color = "black", size = 0.5),
-    legend.box.margin = margin(1, 1, 1, 1),
-  ) 
+  plot.title = element_text(face = "bold", size = 14),
+  legend.box.background = element_rect(color = "black", size = 0.5),
+  legend.box.margin = margin(1, 1, 1, 1),
+)
 ```
 
 ## 3.) Your turn:
@@ -215,7 +225,6 @@ table_2 <- readr::read_csv(table_2_filename)
 
 ```{r}
 library(visNetwork)
-
 ```
 
 As opposed to the ggplot framework where most of the plot information is taken care of within the plot code, visNetwork is generally done by taking care of most of the information outside of the plotting code. This is done by creating data frames for the nodes and edges separately and then adding attributes with special names to them. For example, a node or edge attribute of "title" will be the information for the tooltip which pops up on hover-over by the mouse. The "group" is specifically used for the legend.
@@ -234,7 +243,7 @@ nodes <- igraph::as_data_frame(g, what = "vertices") %>%
 # Shape mapping
 node_types <- sort(unique(nodes$group))
 shape_vals <- c("dot", "square", "triangle")[seq_along(node_types)]
-shape_map  <- setNames(shape_vals, node_types)
+shape_map <- setNames(shape_vals, node_types)
 nodes$shape <- shape_map[nodes$group]
 
 # Node colors (background)
@@ -260,7 +269,7 @@ edge_colors <- setNames(scales::hue_pal()(length(edge_types)), edge_types)
 edges$color <- edge_colors[edges$type]
 
 # Dash mapping (linetype analogue)
-edges$dashes <- edges$type == edge_types[2]   # example: second type dashed
+edges$dashes <- edges$type == edge_types[2] # example: second type dashed
 
 edges$title <- paste("Reference Type: ", edges$type)
 ```
@@ -269,11 +278,11 @@ There are disadvantages to storing data this way (for example, what if the title
 
 ```{r}
 vis <- visNetwork(nodes, edges,
-    main    = "Media Networks Link to and Reference Each Other",
-    submain = "A network plot of networks.",
-    footer  = "Data from: https://kateto.net/network-visualization.",
-    width = "100%"
-    )%>%
+  main = "Media Networks Link to and Reference Each Other",
+  submain = "A network plot of networks.",
+  footer = "Data from: https://kateto.net/network-visualization.",
+  width = "100%"
+) %>%
   visNodes(scaling = list(min = 5, max = 30)) %>%
   visEdges(smooth = list(enabled = TRUE, type = "dynamic")) %>%
   visOptions(
@@ -301,7 +310,6 @@ Reproduce the same graph as above (or close to it, showing the same information)
 # tooltip w/ individual's name and role
 
 # no legend
-
 ```
 
 #### Something to think about.
@@ -311,7 +319,6 @@ How centralized is this network? Are there any key players that could be removed
 Centrality measures stuff here!
 
 ```{r}
-
 ```
 
 ## 6.) Results

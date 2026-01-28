@@ -11,6 +11,8 @@ output:
 
 
 ```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+
 library(readr)
 library(igraph)
 library(tidyverse)
@@ -28,16 +30,16 @@ edge_filename <- "edge_list.csv"
 # various utility functions
 fruit_or_veg <- function(thing) {
   switch(thing,
-         Apple = "Fruit", 
-         Banana = "Fruit", 
-         Carrot = "Vegetable",
-         Date = "Fruit",
-         Eggplant = "Fruit",
-         Fig = "Fruit",
-         Grapes = "Fruit",
-         Horseradish = "Vegetable",
-         "Unknown Frui-egetable!" # default case
-         )
+    Apple = "Fruit",
+    Banana = "Fruit",
+    Carrot = "Vegetable",
+    Date = "Fruit",
+    Eggplant = "Fruit",
+    Fig = "Fruit",
+    Grapes = "Fruit",
+    Horseradish = "Vegetable",
+    "Unknown Frui-egetable!" # default case
+  )
 }
 
 # after taking the time to make a pretty switch call in the previous function, it appears I don't need to classify, just test if fruit is true or false with a whitelist. Oh well, another quick utility function
@@ -49,10 +51,10 @@ is_fruit <- function(thing) {
 print_igraph_attr <- function(graph) {
   print("--- Graph Attributes ------")
   print(graph_attr(graph))
-  
+
   print("--- Vertex Attributes ------")
   print(vertex_attr(graph))
-  
+
   print("--- Edge Attributes ------")
   print(edge_attr(graph))
 }
@@ -62,13 +64,13 @@ Well, I'm embracing the `igraph` library, so I will build the graph from scratch
 
 ```{r create_the_first_component}
 # A, B, C, D, and E are strongly connected.
-# => strongly connected means there are paths between all pairs of vertices, so A/B/C/D/E are completely dense 
+# => strongly connected means there are paths between all pairs of vertices, so A/B/C/D/E are completely dense
 g1_vertex_names <- c("A", "B", "C", "D", "E")
 g1_vertex_fullnames <- c("Apple", "Banana", "Carrot", "Date", "Eggplant")
-g1 <- igraph::make_full_graph(length(g1_vertex_names), 
-                      directed = TRUE, 
-                      loops = FALSE
-                      ) # starting with a 5 node fully connected bidirectional graph
+g1 <- igraph::make_full_graph(length(g1_vertex_names),
+  directed = TRUE,
+  loops = FALSE
+) # starting with a 5 node fully connected bidirectional graph
 V(g1)$name <- g1_vertex_names # assigning the lettered labels to the name of each vertex in the subgraph g1
 V(g1)$fullname <- g1_vertex_fullnames # stashing the full string for later use
 E(g1)$name <- "S1" # these are all /first/ edges, so they're all named S1
@@ -90,10 +92,10 @@ Excellent! Now we create the smaller second component:
 # => strongly connected means paths between all pairs, so F/G/H are all completely dense in their subgraph
 g2_vertex_names <- c("F", "G", "H")
 g2_vertex_fullnames <- c("Fig", "Grapes", "Horseradish")
-g2 <- igraph::make_full_graph(length(g2_vertex_names), 
-                      directed = TRUE, 
-                      loops = FALSE
-                      )
+g2 <- igraph::make_full_graph(length(g2_vertex_names),
+  directed = TRUE,
+  loops = FALSE
+)
 V(g2)$name <- g2_vertex_names # assigning the lettered labels to the name of each node in the subgraph g2
 V(g2)$fullname <- g2_vertex_fullnames # stashing the full string for later use
 E(g2)$name <- "S1" # these are all first edges connecting these ordered pairs of nodes, so all are S1
@@ -113,16 +115,16 @@ Now that we have two suitable looking components, let's merge them into a single
 ```{r combine_the_components}
 # gather all unique vertices
 vertices <- rbind(
-  igraph::as_data_frame(g1, "vertices"), 
+  igraph::as_data_frame(g1, "vertices"),
   igraph::as_data_frame(g2, "vertices")
-  ) |> 
+) |>
   unique()
 
 # pull the edge list from the subgraphs, including the attrs (name)
 edges <- rbind(
-  igraph::as_data_frame(g1), 
+  igraph::as_data_frame(g1),
   igraph::as_data_frame(g2)
-  )
+)
 ```
 
 Quick verification:
@@ -156,7 +158,7 @@ Well, that there certainly looks like two disjoint components! Now we add the re
 
 ```{r make_multigraph_edges}
 # multigraph where there are two paths from A to B and three paths from E to D
-# => multigraph means more than one edge between a pair of vertices, so there are multiple entries in the edge list like: 
+# => multigraph means more than one edge between a pair of vertices, so there are multiple entries in the edge list like:
 # (A, B, blah, blah) <- original edge in graph (first)
 # (A, B, blah2, blah2) <- second edge
 # as well as
@@ -169,21 +171,21 @@ Well, that there certainly looks like two disjoint components! Now we add the re
 # graph is our combined igraph object, let's add those edges and label them!
 # first, setup a df with the new edge data
 additional_edges <- data.frame(
-  from = c("A","E","E"), 
-  to = c("B","D","D"), 
+  from = c("A", "E", "E"),
+  to = c("B", "D", "D"),
   name = c("S2", "S2", "S3")
-  )
+)
 
 # making up some random edges to weakly connect: A->F and C->H
 weakly_connected_edges <- data.frame(
-  from = c("A","C"), 
-  to = c("F","H"), 
+  from = c("A", "C"),
+  to = c("F", "H"),
   name = c("S1", "S1") # these are new edges, so they're called S1
-  )
+)
 
 # combining edges to add
 new_edges <- rbind(additional_edges, weakly_connected_edges)
-edge_pairs <- new_edges[,c("from","to")] # this df holds from, to pairs comprising edges
+edge_pairs <- new_edges[, c("from", "to")] # this df holds from, to pairs comprising edges
 
 # now, we need to convert it to consecutive mated pairs like (from1, to1, from2, to2, ...)
 edge_pairs_concat <- NULL # interesting. Instead of starting with a blank string, "", I have to start with NULL, else "" gets put into the variable. Hmmm
@@ -192,7 +194,7 @@ edge_pairs_concat <- NULL # interesting. Instead of starting with a blank string
 # I couldn't figure out a better way to take two lists and merge them by concat'ing rows, defaulted to old school C style for loop
 # TODO: research better way to do this, there has to be a better way to flatten a df. Google and SO didn't lead to anything promising...
 for (i in 1:length(edge_pairs[[1]])) {
-  edge_pairs_concat <- c(edge_pairs_concat, edge_pairs[i, "from"], edge_pairs[i, "to"]) # should concat from, to onto existing 
+  edge_pairs_concat <- c(edge_pairs_concat, edge_pairs[i, "from"], edge_pairs[i, "to"]) # should concat from, to onto existing
 }
 
 # actually add the edges to the graph
@@ -200,7 +202,7 @@ g <- igraph::add_edges(
   g,
   edge_pairs_concat,
   name = new_edges[, c("name")]
-  )
+)
 ```
 
 Let's verify the graph attributes:
@@ -215,7 +217,7 @@ Cool. On to adding the edge attribute "weight", set to a uniformly distributed r
 ```{r generate_and_assign_edge_weight}
 # Generate a weights attribute by creating random weights between 0 and 1 for each of the edges
 # runif(n) returns a vector of random decimals in [0,1]
-E(g)$weight = runif(length(E(g))) # all edges
+E(g)$weight <- runif(length(E(g))) # all edges
 ```
 
 Verifying...
@@ -259,8 +261,6 @@ testit::assert("The weakly connected edge: A->F should exist.", {
 testit::assert("The weakly connected edge: C->H should exist.", {
   length(E(g)["C" %--% "H"]) == 1
 })
-
-
 ```
 
 Now the graph is done and meets all our criteria, we'll write the edge list and node list to files.

@@ -2,6 +2,7 @@
 title: 'STAT332 Statistical Analysis of Networks Sec 01 - Homework 3 - Prof. Joe Reid'
 author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
+due: "30-01-2026"
 output:
   html_document:
     self_contained: true
@@ -20,10 +21,10 @@ library(igraph)
 print_igraph_attr <- function(graph) {
   print("--- Graph Attributes ------")
   print(graph_attr(graph))
-  
+
   print("--- Vertex Attributes ------")
   print(vertex_attr(graph))
-  
+
   print("--- Edge Attributes ------")
   print(edge_attr(graph))
 }
@@ -81,7 +82,7 @@ In order to perform operations on this, we need to activate either nodes or edge
 
 ```{r}
 g3 <- g2 %>%
-  activate("nodes") %>% 
+  activate("nodes") %>%
   filter(country %in% c("USA", "GBR", "AUS")) %>%
   filter(!node_is_isolated())
 ```

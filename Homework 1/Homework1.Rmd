@@ -1,15 +1,18 @@
 ---
-title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 1 - Prof.
-  Joe Reid"
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 1 - Prof. Joe Reid"
 author: "Andrew Sparkes"
-date: "January 16, 2026"
+date: "`r Sys.Date()`"
+due: "16-01-2026"
 output:
-  html_document: 
+  html_document:
     self_contained: true
+    df_print: paged
   pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
 library(igraph)
 library(readr)
 ```
@@ -17,16 +20,17 @@ library(readr)
 
 ## 1) Problem 1
 
-![Problem 1 graph](problem1.png){width=200%, height=200%}
+![Problem 1 graph](problem1.png){width = 200%, height = 200%}
 
 ## 1.a) Create and report the adjacency matrix associated with this graph.
+
 ```{r}
 # NOTE: first param to matrix call is row vector of all elements of A
 # Skipping the waste of paper and making the adjacency matrix in comments:
 # A_{i,j} i is row, j is col, A_{i,j} = 1 => Node i -> Node j
-#   1 2 3 4 5 6 7 8 9 0 
+#   1 2 3 4 5 6 7 8 9 0
 # ---------------------
-# 1|0 0 0 0 0 0 0 0 0 0 
+# 1|0 0 0 0 0 0 0 0 0 0
 # 2|0 0 0 0 0 0 0 0 0 0
 # 3|0 0 0 0 0 0 0 0 0 0
 # 4|0 0 0 0 0 0 0 1 0 0
@@ -36,29 +40,32 @@ library(readr)
 # 8|0 0 0 1 0 0 1 0 0 1
 # 9|0 0 0 1 0 0 0 1 0 0
 # 0|1 1 1 0 0 0 0 1 0 0
+
 A <- matrix(
   c(
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 
-    0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 
-    0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 
-    0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+    0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 0, 0, 0, 1,
+    0, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+    0, 0, 0, 1, 0, 0, 0, 1, 0, 0,
     1, 1, 1, 0, 0, 0, 0, 1, 0, 0
-  ), 
+  ),
   nrow = 10,
   ncol = 10,
   byrow = TRUE
 )
+
 knitr::kable(A) # TODO look into better ways of printing matrices. Some stackoverflow posts re: printing LaTeX from a R matrix that are similar
 ```
 
 Well, `kable` didn't exactly output a *pretty* table (why does it have 3 miles of margin-bottom, urgh), but there it is in its 10x10 adjacency matrix glory, take your pick of the various forms above for easiest to read.
 
 ## 1.b) Create and report the edgelist associated with this graph.
+
 ```{r}
 # well, I just went through the tedium of typing the adjacency matrix out, so I might as well use it while I have it here...
 g1 <- graph_from_adjacency_matrix(A, mode = "directed")
@@ -79,21 +86,23 @@ E(g1) # this spits out the 13 directed edges
 > 9 -> 8 -> 7 -> 6
 
 ### 1.c.c) Report the size of this graph.
+
 ```{r}
 g1_size <- igraph::gsize(g1) # size = # of edges according to igraph...
 
-# but, our notes say size = # of vertices... 
+# but, our notes say size = # of vertices...
 g1_size <- length(igraph::V(g1))
 g1_size # going with this one as my final answer!
 ```
 
 ### 1.c.d) Report the density of this directed graph.
+
 ```{r}
 g1_density <- edge_density(g1)
 g1_density
 ```
 
-
+---
 
 ## 2) Problem 2
 
@@ -108,6 +117,7 @@ g1_density
 > 19, 20 are both isolates. Total: 2 Vertices
 
 ### 2.c) Calculate the density of this undrected graph.
+
 ```{r}
 # Well, damn, how do I calculate the density of a 20 node graph by hand, or do I take the time to type up a giant ugly sparse adjacency matrix and use igraph::edge_density like a lazy person... Well... a true mathy lazy person would have the wherewithal to realize that it's a simple arithmetic problem... 20 nodes at full density would be 20 nCr 2 at a time... so full density is = n(n-1)/2 = 20*19/2 = 190. Now, I can be lazy and just count the existing edges in the graph, and take the proportion to get the density! I count 4 to the bottom right in that component, and 19 in the large component. Hopefully I counted right!
 ```
@@ -123,6 +133,7 @@ g1_density
 > Looking at the cluster to the left, we see the diameter of this component to be: 5
 > A path such as 14 -> 4 -> 3 -> 10 -> 9 -> 12 (geodesic also) should be an example of longest shortest path. I think. I definitely need to review terminology for this before we get deeper.
 
+---
 
 ## 3) Problem 3
 
@@ -130,12 +141,14 @@ Describe, in words and with real world examples, the three different levels of a
 
 > **_ANSWER:_** The main areas of interest for analysis of networks span global patterns, segregation patterns and local patterns. Global patterns focus the analysis on the entire network at the macro level, looking for overall trends, groupings, patterns, etc. A real world example could be analysis of degrees of separation between any given two humans on Earth and how many connections (edges) it would take to make a path to connect them. Segregation patterns focus on determining the differences in similar-attribute nodes and how they cluster or segregate based on those attributes. A real world example of segregation patterns would be determining how nodes cluster regarding certain attributes and other nodes grow farther away (lower chance of edge connection). Local patterns focus more on tight clustering, transitivity and common relationships. Local pattern real world example would be analyzing friends of friends on a social network. 
 
+---
 
 ## 4) Problem 4
 
 From the file “Question4Edgelist.csv” please load in the network. This is an undirected graph.
 
 For this question, please report the size, density, and number of components for this graph.
+
 ```{r}
 # load it on up!
 filename <- "Question4Edgelist.csv"
@@ -144,6 +157,7 @@ raw_csv <- readr::read_csv(filename)
 g4 <- igraph::graph_from_edgelist(as.matrix(raw_csv), directed = FALSE)
 g4
 ```
+
 100 Edges loaded!
 
 ```{r}
@@ -151,7 +165,6 @@ g4
 g4_size <- length(V(g4))
 g4_size
 ```
-
 
 ```{r}
 # density
@@ -164,4 +177,3 @@ g4_density
 g4_components <- igraph::components(g4)
 g4_components$no
 ```
-

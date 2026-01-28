@@ -2,6 +2,7 @@
 title: "STAT332 Statistical Analysis of Networks Sec 01 - Project 1 - Prof. Joe Reid"
 author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
+due: "16-02-2026"
 output:
   html_document:
     self_contained: true
@@ -10,6 +11,11 @@ output:
 ---
 
 # STAT 332: Project 1
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 
 For your midterm project, I would like you use use the data from the igraphdata package. You need to use the US airport network, 2010 December dataset (which has 755 nodes and 23473 edges) to write your report.  This network has a number of node and edge attributes.
 
@@ -27,16 +33,15 @@ You DO NOT need to use the full network.  You may subset or aggregate the data a
 
 
 ```{r setup}
-library(igraph)       # Our standard graph object.
-library(readr)        # Reading in the data
-library(ggraph)       # Plotting
-library(tidygraph)    # Managing our graph object
+library(igraph) # Our standard graph object.
+library(readr) # Reading in the data
+library(ggraph) # Plotting
+library(tidygraph) # Managing our graph object
 library(RColorBrewer) # Getting Colors
-library(scales)       # scaling factors
-library(grid)         # for unit()
-library(ggrepel)      # for stronger label repel
-library(visNetwork)   # for network graphs
-library(ggraph)       # for graphs
-library(ggplot2)      # for ploots
+library(scales) # scaling factors
+library(grid) # for unit()
+library(ggrepel) # for stronger label repel
+library(visNetwork) # for network graphs
+library(ggraph) # for graphs
+library(ggplot2) # for ploots
 ```
-

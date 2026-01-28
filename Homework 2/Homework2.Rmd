@@ -2,6 +2,7 @@
 title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 2 - Prof. Joe Reid"
 author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
+due: "23-01-2026"
 output:
   html_document:
     self_contained: true
@@ -33,16 +34,16 @@ To produce the CSV edge and node list files, please run `rmarkdown::render("make
 # various utility functions, will inevitably put these in a utils.R library at some point
 fruit_or_veg <- function(thing) {
   switch(thing,
-         Apple = "Fruit", 
-         Banana = "Fruit", 
-         Carrot = "Vegetable",
-         Date = "Fruit",
-         Eggplant = "Fruit",
-         Fig = "Fruit",
-         Grapes = "Fruit",
-         Horseradish = "Vegetable",
-         "Unknown Frui-egetable!" # default case
-         )
+    Apple = "Fruit",
+    Banana = "Fruit",
+    Carrot = "Vegetable",
+    Date = "Fruit",
+    Eggplant = "Fruit",
+    Fig = "Fruit",
+    Grapes = "Fruit",
+    Horseradish = "Vegetable",
+    "Unknown Frui-egetable!" # default case
+  )
 }
 
 # after taking the time to make a pretty switch call in the previous function, it appears I don't need to classify, just test if fruit is true or false with a whitelist. Oh well, another quick utility function
@@ -50,58 +51,56 @@ is_fruit <- function(thing) {
   return(thing %in% c("Apple", "Banana", "Date", "Eggplant", "Fig", "Grapes"))
 }
 
-
 print_big_fancy_summary_table <- function(graph) {
   big_fancy_igraph_table <- data.table(
     Label = c(
-      "Connected?", 
-      "Simple?", 
-      "Loops?", 
-      "Multigraph?", 
-      "Weighted?", 
-      "Directed?", 
-      "Acyclic?", 
-      "Bipartite?", 
-      "Tree?", 
+      "Connected?",
+      "Simple?",
+      "Loops?",
+      "Multigraph?",
+      "Weighted?",
+      "Directed?",
+      "Acyclic?",
+      "Bipartite?",
+      "Tree?",
       "Forest?",
-      "Size:", 
+      "Size:",
       "Components:",
-      "Isolate Proportion:", 
-      "Density:", 
-      "Diameter:", 
+      "Isolate Proportion:",
+      "Density:",
+      "Diameter:",
       "Average Path Length:"
-      ),
+    ),
     Value = c(
-      is_connected(graph), 
-      is_simple(graph), 
-      any_loop(graph), 
-      any_multiple(graph), 
-      is_weighted(graph), 
-      is_directed(graph), 
-      is_acyclic(graph), 
-      is_bipartite(graph), 
-      is_tree(graph), 
+      is_connected(graph),
+      is_simple(graph),
+      any_loop(graph),
+      any_multiple(graph),
+      is_weighted(graph),
+      is_directed(graph),
+      is_acyclic(graph),
+      is_bipartite(graph),
+      is_tree(graph),
       is_forest(graph),
-      gorder(graph), 
-      count_components(graph), 
-      sum(degree(graph) == 0)/gorder(graph), 
-      edge_density(simplify(graph)), 
-      diameter(graph), 
+      gorder(graph),
+      count_components(graph),
+      sum(degree(graph) == 0) / gorder(graph),
+      edge_density(simplify(graph)),
+      diameter(graph),
       mean_distance(graph)
-      )
+    )
   )
   big_fancy_igraph_table |> gt()
 }
-
 
 # this was actually quite handy as an utility func
 print_igraph_attr <- function(graph) {
   print("--- Graph Attributes ------")
   print(graph_attr(graph))
-  
+
   print("--- Vertex Attributes ------")
   print(vertex_attr(graph))
-  
+
   print("--- Edge Attributes ------")
   print(edge_attr(graph))
 }
@@ -132,7 +131,6 @@ print_metadata_summary_table <- function(graph) {
   )
   tbl |> gt()
 }
-
 ```
 
 # Instructions:
@@ -153,7 +151,7 @@ Read in your edgelist. The following code can help.
 edges <- readr::read_csv(edge_filename)
 
 # prune out the edge start and end vertices and attrs and dump them in edge_list
-edge_list <- edges[, c("from", "to", "name", "weight")]         
+edge_list <- edges[, c("from", "to", "name", "weight")]
 ```
 
 Once you have your edge list, convert it to an igraph object using the graph_from_data_frame() function (you may need the documentation).
@@ -173,7 +171,6 @@ testit::assert(paste0("ig object should be of class: igraph, but returned class:
 })
 ```
 
-
 ```{r print_ig_details}
 print("Printing information about graph:")
 g # default print output is actually preferable to summary(g)... interesting.
@@ -184,7 +181,7 @@ print_igraph_attr(g)
 
 ### 1.c)
 
-In Lab 2 we looked at how to create a summary of the metadata for the graph. Use this code as a basis to make sure that the above conditions are met in general (Directed, Weigted, Not Simple, Has Multiple Edges, is weakly connected but not strongly connected, has two components when counting the number of strongly connected components but only one when counting the number of weakly connected components.
+In Lab 2 we looked at how to create a summary of the metadata for the graph. Use this code as a basis to make sure that the above conditions are met in general (Directed, Weighted, Not Simple, Has Multiple Edges, is weakly connected but not strongly connected, has two components when counting the number of strongly connected components but only one when counting the number of weakly connected components.
 
 ```{r}
 print_metadata_summary_w_compare <- function(g) {
@@ -227,7 +224,7 @@ print_metadata_summary_w_compare <- function(g) {
 
 print_metadata_summary_w_compare(g)
 # TODO I feel like this is an appropriate place to employ tests and asserts properly, but I need to delve more into testing in R
-# need moar asssert()s
+# TODO need moar asssert()s
 ```
 
 ---
@@ -247,6 +244,7 @@ I guess we better add the other elements from the edges matrix into our graph as
 # first, let's remind ourselves what attributes are already present in the graph
 print_igraph_attr(g)
 ```
+
 Well, when we read the graph in as a data frame and then used igraph::graph_from_data_frame(), we already added those edge attributes, so we are golden!
 
 Also, read in your nodes file the same way you did for the edges file and update the vertex property with the types.
@@ -261,7 +259,7 @@ Now, we have the nodes list csv file loaded, and have pulled out the columns for
 
 ```{r update_vertex_attributes}
 # update the vertex property with the types
-V(g)$type = unlist(node_type_list)
+V(g)$type <- unlist(node_type_list)
 ```
 
 Let's verify we see vertex name and vertex type in our igraph:
@@ -325,7 +323,7 @@ You should see a two row format for the results. Now, we need to make this look 
 Your final task on this will be to make this look better based on the lab from class. Create colors, use transparency, label edges, change shapes and thicknesses, etc... The one requirement is that you calculate the in-degree of the nodes, store this as a vertex attribute, and use that to size the vertex. Add a title, subtitle, and caption to the graph, and make sure to use legends.
 
 ```{r setup_bipartite_graph_plot_params}
-par(mar = c(3,1,4,1)) # margins
+par(mar = c(3, 1, 4, 1)) # margins
 ```
 
 
@@ -333,11 +331,9 @@ par(mar = c(3,1,4,1)) # margins
 plot(
   x = g,
   layout = layout,
-
   vertex.sizes = 10,
   vertex.color = adjustcolor(brewer.pal(length(V(g)), "Paired"), alpha.f = 0.5),
   vertex.shape = "circle",
-
   vertex.label = V(g)$fullname,
   vertex.label.cex = 1,
   vertex.label.dist = 0.5, # ctr
@@ -346,10 +342,9 @@ plot(
   edge.color = "black",
   edge.lty = 1, # solid lines
   edge.curved = 0.35, # mild curve
-  
+
   edge.label = round(E(g)$weight, 4), # edges have weights labeled (and rounded)
   edge.label.cex = 0.6,
-
   edge.arrow.mode = 1 # normal arrows
 )
 
@@ -363,7 +358,7 @@ Well, it's a bit ugly still, but we'll try to improve that by adding color and a
 
 ```{r make_it_colorful_and_stuff, fig.dim=c(8,5)}
 # calculate the in-degree of the nodes, store this as a vertex attribute for later vertex sizing
-#g <- set_vertex_attr(g, name = "degree_in", value = strength(g, mode = "in"))
+# g <- set_vertex_attr(g, name = "degree_in", value = strength(g, mode = "in"))
 g <- set_vertex_attr(g, name = "degree_in", value = degree(g, mode = "in")) # switched to using degree() over strength(), because multiplying by the random weights (in [0,1]) yields bleh decimals to use for scaling below
 
 plot.new() # clear the canvas
@@ -386,7 +381,7 @@ plot(
   edge.color = "blue", # change edge color
   edge.lty = 1, # solid lines
   edge.curved = 0.35, # mild curve
-  
+
   edge.label = round(E(g)$weight, 4), # edges have weights labeled (and rounded)
   edge.label.color = "red", # change edge label color
 
@@ -399,11 +394,11 @@ title_text <- "Bipartite Graph"
 mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1, title_text) # 3 = top, adj = 0.5 is centered
 
 # subtitle
-subtitle = "Nodes A-H represent fruits and vegetables. The weighted edges represent ???."
+subtitle <- "Nodes A-H represent fruits and vegetables. The weighted edges represent ???."
 mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.7, subtitle)
 
 # caption
-caption = paste0("Graph data from ", edge_filename, " and ", node_filename)
+caption <- paste0("Graph data from ", edge_filename, " and ", node_filename)
 mtext(side = 1, line = 2, at = 1, adj = 0, cex = 0.5, caption)
 
 # legends
@@ -426,7 +421,7 @@ legend_labels <- V(g)$degree_in |> # gather all the vertices' degree in attribut
 legend(
   "topright",
   title = "Vertex In-degree",
-  legend = paste0(legend_labels, " nodes"), #sort(unique(scales::rescale(V(g)$degree_in, c(10, 50)))),
+  legend = paste0(legend_labels, " nodes"),
   bty = "n", # n = no border # couldn't figure out how to increase padding between border rect and legend items, so screw the border
   pch = 21, # circle
   pt.bg = "purple", # purple is best color

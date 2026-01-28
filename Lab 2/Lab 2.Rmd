@@ -2,6 +2,7 @@
 title: "STAT332 Statistical Analysis of Networks Sec 01 - Lab 2 - Prof. Joe Reid"
 author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
+due: "23-01-2026"
 output:
   html_document:
     self_contained: true
@@ -22,7 +23,6 @@ library(RColorBrewer) # color palettes etc
 library(scales)
 
 SKIP_TO_PART_3 <- TRUE # bool flag to comment out the ~600 lines of part 1 and 2, set to FALSE to output parts 1 and 2
-
 ```
 
 Copying over the table function we used recently, might prove to be useful:
@@ -64,7 +64,7 @@ Using ctrl-alt-i you can create a section where you are going to embed R code. W
 
 ```{r}
 library(igraph)
-library(readr) #This library is used for reading the data.
+library(readr) # This library is used for reading the data.
 ```
 
 ```{r}
@@ -88,8 +88,8 @@ I may not have mentioned this before, but igraph objects can have graph attribut
 ```{r}
 library(data.table)
 table <- data.table(
-  ID = c("Size", "Components", "Isolate Proportion", "Density", "Diameter", "Average Path Length"), 
-  Value = c(gorder(g), count_components(g), sum(degree(g) == 0)/gorder(g), edge_density(simplify(g)), diameter(g), mean_distance(g))
+  ID = c("Size", "Components", "Isolate Proportion", "Density", "Diameter", "Average Path Length"),
+  Value = c(gorder(g), count_components(g), sum(degree(g) == 0) / gorder(g), edge_density(simplify(g)), diameter(g), mean_distance(g))
 )
 library(gt)
 table %>% gt()
@@ -99,7 +99,7 @@ Okay, that gives us some of the statistics; however, there's another set of info
 
 ```{r}
 table <- data.table(
-  ID = c("Connected", "Simple", "Loops", "Multigraph", "Weighted", "Directed", "Acyclic", "Bipartite", "Tree", "Forest"), 
+  ID = c("Connected", "Simple", "Loops", "Multigraph", "Weighted", "Directed", "Acyclic", "Bipartite", "Tree", "Forest"),
   Value = c(is_connected(g), is_simple(g), any_loop(g), any_multiple(g), is_weighted(g), is_directed(g), is_acyclic(g), is_bipartite(g), is_tree(g), is_forest(g))
 )
 library(gt)
@@ -239,9 +239,10 @@ components_results$membership
 Obviously, we can store this separate from the graph if we want to (like we did here), but there's really no reason to do so unless we want to waste RAM. What we should do here is to store these as a vertex attribute.
 
 ```{r}
-g <- set_vertex_attr(g, 
-                name = "component", 
-                value = components(g, mode = "strong")$membership)
+g <- set_vertex_attr(g,
+  name = "component",
+  value = components(g, mode = "strong")$membership
+)
 ```
 
 A final summary can verify that this has worked.
@@ -267,14 +268,14 @@ The critical fact is that there are two parameters that matter. Margins are cont
 ```{r}
 plot(
   g,
-  oma = c(2,3,5,2)
-  )
-title = "Media Networks Link to and Reference Eachother"
-subtitle = "A network plot of networks."
-caption = "Data from:  https://kateto.net/network-visualization."
+  oma = c(2, 3, 5, 2)
+)
+title <- "Media Networks Link to and Reference Eachother"
+subtitle <- "A network plot of networks."
+caption <- "Data from:  https://kateto.net/network-visualization."
 mtext(side = 3, line = 3, at = -2, adj = 0, cex = 1.1, title)
 mtext(side = 3, line = 2, at = -2, adj = 0, cex = 0.7, subtitle)
-mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption )
+mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption)
 ```
 
 You might notice that the information for the title, subtitle, caption, (and eventually our legends appear outside of the plot() function. These are actually added onto the canvas after the grah object has been created.
@@ -285,16 +286,16 @@ The notes from class give us a lot of different layouts that can be used. Let's 
 
 ```{r}
 plot(g,
-     layout = layout_with_fr
-     )
+  layout = layout_with_fr
+)
 ```
 
 That doesn't mean you can't change the parameters within the plot function.
 
 ```{r}
 plot(g,
-     layout = layout_with_lgl(graph = g, maxiter = 200)
-    )
+  layout = layout_with_lgl(graph = g, maxiter = 200)
+)
 ```
 
 **Vertex and edge Parameters**
@@ -343,11 +344,11 @@ Setting parameters equal to constants applies to the entire graph.
 ```{r}
 plot(
   g,
-     layout = layout_with_lgl,
-     vertex.size = 30,
-     vertex.color = adjustcolor("blue", alpha.f = 0.5),
-     vertex.shape = "square"
-     )
+  layout = layout_with_lgl,
+  vertex.size = 30,
+  vertex.color = adjustcolor("blue", alpha.f = 0.5),
+  vertex.shape = "square"
+)
 ```
 
 Let's remind ourselves of our attributes and the legends from the above plot:
@@ -363,38 +364,31 @@ plot.new()
 plot(
   g,
   layout = layout_with_lgl,
-  
   vertex.size = V(g)$audience.size,
-  
   vertex.label = V(g)$media,
-
-  
   edge.width = E(g)$weight,
   edge.curved = 0.3,
-  
   edge.label = E(g)$weight,
-
-  
   edge.arrow.size = 0.35,
-  edge.arrow.mode = 3, #one of: ">" = 2,"<" = 1, "<>" = 3,"-" = 0)
-  
-  rescale = TRUE,
-  oma = c(2,3,5,2)
-  )
+  edge.arrow.mode = 3, # one of: ">" = 2,"<" = 1, "<>" = 3,"-" = 0)
 
-title = "Media Networks Link to and Reference Eachother"
-subtitle = "A network plot of networks."
-caption = "Data from:  https://kateto.net/network-visualization."
+  rescale = TRUE,
+  oma = c(2, 3, 5, 2)
+)
+
+title <- "Media Networks Link to and Reference Eachother"
+subtitle <- "A network plot of networks."
+caption <- "Data from:  https://kateto.net/network-visualization."
 mtext(side = 3, line = 3, at = -2, adj = 0, cex = 1.1, title)
 mtext(side = 3, line = 2, at = -2, adj = 0, cex = 0.7, subtitle)
-mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption )
+mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption)
 ```
 
 Wow! And now we have something interesting. Our size parameters scale us completely off the graph.
 
 ```{r}
 # Set margins
-par(mar = c(3,1,4,1))
+par(mar = c(3, 1, 4, 1))
 
 # Calculate edge widths for reuse
 edge_widths <- 2 * E(g)$weight / max(E(g)$weight)
@@ -402,22 +396,16 @@ edge_widths <- 2 * E(g)$weight / max(E(g)$weight)
 plot(
   g,
   layout = layout_with_lgl,
-  
   vertex.size = 20 * V(g)$audience.size / max(V(g)$audience.size),
-
   vertex.label = V(g)$media,
   vertex.label.cex = 0.7,
   vertex.label.dist = 0.5,
-  
   edge.width = edge_widths,
   edge.curved = 0.35,
-  
   edge.label = E(g)$weight,
   edge.label.cex = 0.6,
-  
   edge.arrow.size = edge_widths * 0.35,
   edge.arrow.mode = 1,
-  
   rescale = TRUE
 )
 
@@ -429,7 +417,6 @@ caption_text <- "Data from: https://kateto.net/network-visualization."
 mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text)
 mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
 mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
-
 ```
 
 Alright, this is a lot better, and we are getting there. Now we need to deal with colors, shapes, styles, and legends.
@@ -438,22 +425,21 @@ Alright, this is a lot better, and we are getting there. Now we need to deal wit
 library(RColorBrewer)
 library(scales)
 
-#___________________________________________
+# ___________________________________________
 ## PLOT PROPERTIES
-#___________________________________________
-par(mar = c(3,1,4,1))
-#par(oma = c(2,3,5,2))
+# ___________________________________________
+par(mar = c(3, 1, 4, 1))
+# par(oma = c(2,3,5,2))
 
 
-
-#___________________________________________
+# ___________________________________________
 ## VERTEX PROPERTIES
-#___________________________________________
+# ___________________________________________
 
 # ------------------------
-# VERTEX COLORS 
+# VERTEX COLORS
 # ------------------------
-v_vals   <- V(g)$type.label
+v_vals <- V(g)$type.label
 v_levels <- sort(unique(v_vals))
 
 # Automated Color Identification
@@ -463,16 +449,16 @@ v_pal <- setNames(
 )
 
 # Manual Color Identification
-  ## Example: color-blind friendly Okabe–Ito (first k colors will be used)
-#okabe_ito <- c(
+## Example: color-blind friendly Okabe–Ito (first k colors will be used)
+# okabe_ito <- c(
 #  "#000000", "#E69F00", "#56B4E9", "#009E73",
 #  "#F0E442", "#0072B2", "#D55E00", "#CC79A7"
-#)
+# )
 
-  ## Build a named palette by aligning colors to the detected levels
+## Build a named palette by aligning colors to the detected levels
 ## If there are more levels than colors, we recycle (or you can stop with an error)
-#user_colors <- okabe_ito  # or any vector like c("#AABBCC", "#DDEEFF", ...)
-#v_pal <- setNames(user_colors[seq_along(v_levels)], v_levels)
+# user_colors <- okabe_ito  # or any vector like c("#AABBCC", "#DDEEFF", ...)
+# v_pal <- setNames(user_colors[seq_along(v_levels)], v_levels)
 
 vertex_colors <- v_pal[v_vals]
 
@@ -481,7 +467,6 @@ vertex_colors <- v_pal[v_vals]
 # library(scales)
 # pal_cont <- col_numeric("viridis", domain = range(V(g)$some_number))
 # vertex_colors <- pal_cont(V(g)$some_number)
-
 
 
 # ------------------------
@@ -493,21 +478,19 @@ shape_pal <- setNames(c("circle", "square", "rectangle")[seq_along(shape_levels)
 vertex_shapes <- shape_pal[v_vals]
 
 
-
-
-#___________________________________________
+# ___________________________________________
 ## EDGE PROPERTIES
-#___________________________________________
+# ___________________________________________
 
 
 # ------------------------
-#  EDGE COLORS 
+#  EDGE COLORS
 # ------------------------
-e_vals   <- E(g)$type
+e_vals <- E(g)$type
 e_levels <- sort(unique(e_vals))
 
 e_pal <- setNames(
-  brewer.pal(length(e_levels), "Paired"), # Paired is the name of the palette from color brewer. 
+  brewer.pal(length(e_levels), "Paired"), # Paired is the name of the palette from color brewer.
   e_levels
 )
 
@@ -520,11 +503,11 @@ edge_colors <- e_pal[e_vals]
 # ------------------------
 #  EDGE LINE TYPES (discrete)
 # ------------------------
-e_lty_vals   <- E(g)$type
+e_lty_vals <- E(g)$type
 e_lty_levels <- sort(unique(e_lty_vals))
 
 # assign linetypes to the levels
-lty_palette <- c(1, 2)  # or however many you want
+lty_palette <- c(1, 2) # or however many you want
 e_lty_pal <- setNames(
   lty_palette[seq_along(e_lty_levels)],
   e_lty_levels
@@ -533,32 +516,24 @@ e_lty_pal <- setNames(
 edge_line_types <- e_lty_pal[e_lty_vals]
 
 
-
-
-
 # ------------------------
 # 5. PLOT
 # ------------------------
 plot(
   g,
   layout = layout_with_lgl,
-
   vertex.sizes = scales::rescale(V(g)$audience.size, to = c(5, 25)),
   vertex.color = adjustcolor(vertex_colors, alpha.f = 0.5),
   vertex.shape = vertex_shapes,
-
   vertex.label = V(g)$media,
   vertex.label.cex = 0.7,
   vertex.label.dist = 0.5,
-
   edge.widths = scales::rescale(E(g)$weight, to = c(0.5, 3)),
   edge.color = edge_colors,
   edge.lty = edge_line_types,
   edge.curved = 0.35,
-  
   edge.label = E(g)$weight,
   edge.label.cex = 0.6,
-
   edge.arrow.size = 0.3 * scales::rescale(E(g)$weight, to = c(0.5, 3)),
   edge.arrow.mode = 1
 )
@@ -572,18 +547,17 @@ legend(
   "topright",
   title = "Vertex Type",
   legend = v_levels,
-  fill   = v_pal[v_levels],
+  fill = v_pal[v_levels],
   border = NA,
   bty = "n",
   cex = 0.8
 )
 
 
-
 shape_pch_map <- c(
   circle     = 21,
   square     = 22,
-  rectangle  = 22,  
+  rectangle  = 22,
   csquare    = 22,
   crectangle = 22
 )
@@ -592,32 +566,30 @@ legend(
   "topleft",
   title = "Vertex Shape",
   legend = shape_levels,
-  pch    = shape_pch_map[ shape_pal[shape_levels] ],
-  pt.bg  = "gray80",
+  pch = shape_pch_map[shape_pal[shape_levels]],
+  pt.bg = "gray80",
   bty = "n",
   cex = 0.8
 )
-
 
 
 legend(
   "bottomright",
   title = "Edge Type",
   legend = e_levels,
-  col    = e_pal[e_levels],
-  lwd    = 3,
+  col = e_pal[e_levels],
+  lwd = 3,
   bty = "n",
   cex = 0.8
 )
-
 
 
 legend(
   "bottomleft",
   title = "Edge Line Type",
   legend = e_lty_levels,
-  lty    = unname(e_lty_pal[e_lty_levels]),
-  lwd    = 3,
+  lty = unname(e_lty_pal[e_lty_levels]),
+  lwd = 3,
   bty = "n",
   cex = 0.8
 )
@@ -633,7 +605,6 @@ caption_text <- "Data from: https://kateto.net/network-visualization."
 mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text)
 mtext(side = 3, line = 1, at = 0, adj = 0.5, cex = 0.8, subtitle_text)
 mtext(side = 1, line = 1, at = 0, adj = 0.5, cex = 0.6, caption_text)
-
 ```
 
 `r if(SKIP_TO_PART_3) {"\\end{comment}"}`
@@ -692,7 +663,7 @@ library(RColorBrewer) # color palettes etc
 library(scales) # scales pkg for scaling ranges of values for legends, etc
 
 ## PLOT PROPERTIES
-par(mar = c(0,0,0,0)) # bottom, left, top and right margins (in that order)
+par(mar = c(0, 0, 0, 0)) # bottom, left, top and right margins (in that order)
 
 ## VERTEX PROPERTIES
 
@@ -716,7 +687,7 @@ vertex_shapes <- "circle" # let the vertices be circles, and circles they shall 
 ## EDGE PROPERTIES
 
 # weights to set width/size/etc
-edge_weights   <- E(gangs)$weight # Lesson learned. w != W...
+edge_weights <- E(gangs)$weight # Lesson learned. w != W...
 edge_colors <- "#000000" # back in black...
 edge_line_types <- 1 # 1 = solid
 ```
@@ -724,42 +695,37 @@ edge_line_types <- 1 # 1 = solid
 ```{r segregated_plot_chunk}
 # begin output to png file
 png("LondonGangNetwork.png", width = 1920, height = 1200, res = 300) # saving to file
-# TODO
-# - need to increase spacing between nodes - need to figure out how the fuck to do so...
+# TODO need to increase spacing between nodes - need to figure out how the fuck to do so...
 
 # 5. PLOT
 custom_layout <- layout_with_lgl(
   graph = gangs,
   maxiter = 10000
-  )
+)
 
 # - need to increase plot display size
 plot(
   gangs,
   layout = custom_layout,
-
   vertex.size = scales::rescale(V(gangs)$Arrests, to = c(10, 50)), # even with 0 arrests, min size is 10 so we still see vertex
-  
+
   # - nodes appear to have a semitransparent opacity set
   vertex.color = adjustcolor(vertex_colors, alpha.f = 0.75), # VERTEX ALPHA HERE
   vertex.shape = vertex_shapes,
-
   vertex.label = V(gangs)$Birthplace,
   vertex.label.cex = 1.0,
   vertex.label.dist = 0,
-
   edge.width = 3 * E(gangs)$weight, # scale factor of 3? Seems enough
-  
+
   #  - edges also appear to have some transparency set
   edge.color = adjustcolor(edge_colors, alpha.f = 0.75), # EDGE ALPHA HERE
   edge.lty = edge_line_types,
-
   edge.curved = 0, # straight lines
   edge.label = "", # edges are unlabeled for this plot, guess I technically could comment it out and it should default to blank
 
   edge.arrow.size = 0, # zero'd, no arrows in network, it's undirected
   edge.arrow.mode = 0, # zero for no arrows, 1 for backward, 2 for forward, 3 for both
-  
+
   rescale = TRUE # TODO look into rescale behavior
 )
 
@@ -767,14 +733,15 @@ plot(
 
 
 # TODO FIX ALL LEGENDS
-# - need to decrease size of all legends
+# TODO need to decrease size of all legends
 
 # TODO this legend has the legend vector being passed correctly, just needs the bullet sizes to reflect the value
 # see https://stackoverflow.com/a/47308865
- # - legend for node size to top right, ranging from min to max of values
-arrest_count_cutoffs <- seq(from = 0,
-                            to = max(V(gangs)$Arrests),
-                            length.out = 5 # means 5 total sizes, including both endpoints, so 3 intermediate legend values
+# TODO legend for node size to top right, ranging from min to max of values
+arrest_count_cutoffs <- seq(
+  from = 0,
+  to = max(V(gangs)$Arrests),
+  length.out = 5 # means 5 total sizes, including both endpoints, so 3 intermediate legend values
 )
 
 arrest_count_cutoffs <- round(arrest_count_cutoffs, 0) # integerize the decimals if needed
@@ -789,7 +756,7 @@ legend_TR_base <- legend(
   bty = "n",
   col = "black"
 )
-# - remove the outline/border of the first/original node size legend in top right
+# TODO remove the outline/border of the first/original node size legend in top right
 legend_TR_circles <- legend(
   "topright",
   legend = arrest_count_cutoffs,
@@ -806,50 +773,50 @@ legend_TR_circles <- legend(
 x <- (legend_TR_circles$text$x + legend_TR_circles$rect$left) / 2 # average of label's x-coord and its rect's x-coord = midpoint between left edge of legend rect box and left edge of text label. Excellent.
 y <- legend_TR_circles$text$y # same y value as the text itself, checks out
 
-# - legend node size bullet position is correct, but radii is too large and causing overlap
+# TODO legend node size bullet position is correct, but radii is too large and causing overlap
 symbols(x, y, # symbols coordinates
-        circles = scales::rescale(
-          arrest_count_cutoffs,
-          to = c(1, 15) # normalize
-        ), # vector of circle radii - Circles of radius zero are plotted at radius one pixel
-        inches = FALSE, # units are taken to be those of the appropriate axes, 
-        add = TRUE, # adding to existing plot, yep
-        bg = "orange" # background color of orange? for now TODO: make these equal to the symbol color palette matching birthplace, can be lazy and just pulled color of the first entry in the palette
-        ) # see https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/symbols
+  circles = scales::rescale(
+    arrest_count_cutoffs,
+    to = c(1, 15) # normalize
+  ), # vector of circle radii - Circles of radius zero are plotted at radius one pixel
+  inches = FALSE, # units are taken to be those of the appropriate axes,
+  add = TRUE, # adding to existing plot, yep
+  bg = "orange" # background color of orange? for now TODO: make these equal to the symbol color palette matching birthplace, can be lazy and just pull color of the first entry in the palette
+) # see https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/symbols
 
 # see https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/legend
 
- # - legend for edge width to bottom left, ranging from min to max of values
+# legend for edge width to bottom left, ranging from min to max of values
 legend(
   "bottomleft",
   title = "Edge Weight",
   legend = sort(unique(e_vals)), # should be edge values (=weights) (do I need sort/unique calls on a noncategorical var?)
-  pch    = 21, # just swapped to 21 for the circle symbol
-  pt.bg  = "gray80", # background
+  pch = 21, # just swapped to 21 for the circle symbol
+  pt.bg = "gray80", # background
   bty = "n", # box type of n
   cex = 0.8 # expansion factor
 )
 
 
-# - legend for node color to bottom right, categorical based on 4 different birthplace values
-# - legend for birthplace bullets - need different shape, square with fill?
-# - legend for birthplace bullets need colors
+# TODO legend for node color to bottom right, categorical based on 4 different birthplace values
+# TODO legend for birthplace bullets - need different shape, square with fill?
+# TODO legend for birthplace bullets need colors
 legend(
   "bottomright",
   title = "Node Birthplace",
   legend = sort(unique(v_vals)), # v_vals col should be birthplace str == one of c("1", "2", ...)
-  #col    = e_pal[e_levels], # color
-  lwd    = 3, # line width
+  # col    = e_pal[e_levels], # color
+  lwd = 3, # line width
   bty = "n", # box type of n... as opposed to ... o
   cex = 0.8 # expansion factor
 )
 
-# - legend for edge weight needs a factor of 3 to match the igraph
-# - legend for edge weight needs bullets to match thickness of edge.size
+# TODO legend for edge weight needs a factor of 3 to match the igraph
+# TODO legend for edge weight needs bullets to match thickness of edge.size
 
 # 7. TITLES
- # - title above, centered, labeled "London Gang Network", looks like 2-3 lines above, title on line ~2, in the outer margin (just to the top)
- # - no caption, subtitle, etc
+# - title above, centered, labeled "London Gang Network", looks like 2-3 lines above, title on line ~2, in the outer margin (just to the top)
+# - no caption, subtitle, etc
 title_text <- "London Gang Network"
 mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text) # centered title text
 
