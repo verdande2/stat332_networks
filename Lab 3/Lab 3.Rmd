@@ -36,7 +36,6 @@ library(ggrepel)      # for stronger label repel
 library(visNetwork)   # for network graphs
 library(ggraph)       # for graphs
 library(ggplot2)      # for ploots
-library(grid)         # 
 ```
 
 ```{r utility_functions}
