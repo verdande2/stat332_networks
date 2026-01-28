@@ -1,15 +1,19 @@
 ---
-title: 'STAT 332:  Network Analytics Homework 3'
-author: 'Instructor:  Joseph Reid'
+title: 'STAT332 Statistical Analysis of Networks Sec 01 - Homework 3 - Prof. Joe Reid'
+author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: default
   html_document:
+    self_contained: true
     df_print: paged
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(networkdata)
+library(igraph)
 ```
 
 ```{r extra_functions}
@@ -39,8 +43,6 @@ First, make sure to install the networkdata package. This package isn't located 
 # 1.) Getting the Data
 
 ```{r}
-library(networkdata)
-library(igraph)
 ?wta
 ```
 
