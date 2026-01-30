@@ -10,27 +10,12 @@ output:
   pdf_document: default
 ---
 
-# STAT 332: Lab 3
-
-```{r setup}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
 
-
-## 1.) Setup
-
-Welcome to Lab 3. This week we are going to be working with alternatives to igraph.\
-This means that we want to get familiar with the tools from ggraph (<https://ggraph.data-imaginist.com/index.html>) and visNetwork (<https://datastorm-open.github.io/visNetwork/>).
-
-We're going to be using the same data as lab 2 and trying to reproduce the same graph as last time, so lets get started.
-
-## 2.) Lab Walkthrough
-
-### 2.a) Getting started.
-
-Using ctrl-alt-i you can create a section where you are going to embed R code. We're going to start by loading in the igraph library.
-
-```{r setup}
+library(knitr)
+library(gt) # for fancy tables
+library(data.table) # data tables
 library(igraph) # Our standard graph object.
 library(readr) # Reading in the data
 library(ggraph) # Plotting
@@ -44,7 +29,16 @@ library(ggraph) # for graphs
 library(ggplot2) # for ploots
 ```
 
-```{r utility_functions}
+```{r user_configurable_settings}
+# for first part:
+media_network_filename <- "Media Network.rds"
+
+# for later part:
+actor_roles_filename <- "Actor Roles.csv"
+table_2_filename <- "2006 Koschade Table 2.csv"
+```
+
+```{r extra_functions}
 print_igraph_attr <- function(graph) {
   print("--- Graph Attributes ------")
   print(graph_attr(graph))
@@ -57,11 +51,24 @@ print_igraph_attr <- function(graph) {
 }
 ```
 
+## 1.) Setup
+
+Welcome to Lab 3. This week we are going to be working with alternatives to igraph.\
+This means that we want to get familiar with the tools from ggraph (<https://ggraph.data-imaginist.com/index.html>) and visNetwork (<https://datastorm-open.github.io/visNetwork/>).
+
+We're going to be using the same data as lab 2 and trying to reproduce the same graph as last time, so lets get started.
+
+## 2.) Lab Walkthrough
+
+### 2.a) Getting started.
+
+Using ctrl-alt-i you can create a section where you are going to embed R code. We're going to start by loading the raw data file:
+
 ```{r read_data_file}
-g <- read_rds("Media Network.rds")
+g <- read_rds(media_network_filename)
 ```
 
-Just to remind ourselves of what we're working with, let's make sure we print out our vertex and edge attributes
+Just to remind ourselves of what we're working with, let's make sure we print out our vertex and edge attributes:
 
 ```{r graph_summary}
 g
@@ -184,8 +191,7 @@ p <- ggraph(g, layout = "lgl") +
 p
 ```
 
-If you're paying attention, you might notice that I stored the graph as the variable p and then called it by just using "p" at the end of the code cell. I did this for a reason. In ggplot, we can theme our graphs. <https://ggplot2.tidyverse.org/reference/theme.html>\
-\
+If you're paying attention, you might notice that I stored the graph as the variable p and then called it by just using "p" at the end of the code cell. I did this for a reason. In ggplot, we can theme our graphs. <https://ggplot2.tidyverse.org/reference/theme.html>
 
 ```{r adding_theme}
 p + theme(
@@ -197,14 +203,9 @@ p + theme(
 
 ## 3.) Your turn:
 
-In the data for this lab, there are two files (and a paper describing where they came from.) The Actor Roles provides the list of nodes and their corresponding attributes. The "Table 2" file provides a matrix of associations and their strengths that you can read in as a matrix and extract the edglist from. Please create a graph which uses shapes, colors, and edge-widths to represent this network. Also, please make sure to use both color and type on edges to denote any edge relationships between Command Team members and any other members in the network. Use GGRAPH to produce this plot. Be certain to add titles, subtitles, and footnotes/captions as appropriate and include a corresponding legend.
+In the data for this lab, there are two files (and a paper describing where they came from). The Actor Roles provides the list of nodes and their corresponding attributes. The "Table 2" file provides a matrix of associations and their strengths that you can read in as a matrix and extract the edgelist from. Please create a graph which uses shapes, colors, and edge-widths to represent this network. Also, please make sure to use both color and type on edges to denote any edge relationships between Command Team members and any other members in the network. Use `GGRAPH` to produce this plot. Be certain to add titles, subtitles, and footnotes/captions as appropriate and include a corresponding legend.
 
-```{r}
-# user configurable settings
-actor_role_filename <- "Actor Roles.csv"
-table_2_filename <- "2006 Korschade Table 2.csv"
-
-# read in data file
+```{r read_in_data_files}
 actor_roles <- readr::read_csv(actor_roles_filename)
 table_2 <- readr::read_csv(table_2_filename)
 
@@ -227,12 +228,12 @@ table_2 <- readr::read_csv(table_2_filename)
 library(visNetwork)
 ```
 
-As opposed to the ggplot framework where most of the plot information is taken care of within the plot code, visNetwork is generally done by taking care of most of the information outside of the plotting code. This is done by creating data frames for the nodes and edges separately and then adding attributes with special names to them. For example, a node or edge attribute of "title" will be the information for the tooltip which pops up on hover-over by the mouse. The "group" is specifically used for the legend.
+As opposed to the ggplot framework where most of the plot information is taken care of within the plot code, `visNetwork` is generally done by taking care of most of the information outside of the plotting code. This is done by creating data frames for the nodes and edges separately and then adding attributes with special names to them. For example, a node or edge attribute of "title" will be the information for the tooltip which pops up on hover-over by the mouse. The "group" is specifically used for the legend.
 
 ```{r}
 # Build nodes
 nodes <- igraph::as_data_frame(g, what = "vertices") |>
-  tibble::rownames_to_column("id") %|>
+  tibble::rownames_to_column("id") |>
   mutate(
     id    = as.character(id),
     label = media,
@@ -274,7 +275,7 @@ edges$dashes <- edges$type == edge_types[2] # example: second type dashed
 edges$title <- paste("Reference Type: ", edges$type)
 ```
 
-There are disadvantages to storing data this way (for example, what if the title attribute was natural in the dataset to represent the a political title?) But, once the data is in, it becomes very easy to produce a really good plot automatically.
+There are disadvantages to storing data this way (for example, what if the title attribute was natural in the dataset to represent a political title?). But, once the data is in, it becomes very easy to produce a really good plot automatically.
 
 ```{r}
 vis <- visNetwork(nodes, edges,
@@ -316,10 +317,13 @@ Reproduce the same graph as above (or close to it, showing the same information)
 
 How centralized is this network? Are there any key players that could be removed to make the network fail in their goals? Centralized networks are highly resilient but also insecure, which can play into strategies when analyzing these networks. We'll talk about a number of measures of network structure next week.
 
-Centrality measures stuff here!
-
 ```{r centrality_time}
+
 ```
+
+**Answer:**
+aSDFASDF
+
 
 ## 6.) Results
 

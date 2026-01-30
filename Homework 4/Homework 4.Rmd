@@ -1,9 +1,13 @@
 ---
-title: "Stat 407 Topography Homework"
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 4 - Prof. Joe Reid"
+author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
+due: "???"
 output:
   html_document:
+    self_contained: true
     df_print: paged
+  pdf_document: default
 link-citations: true
 natbib: true
 csl: ieee.csl
@@ -12,6 +16,24 @@ bibliography: NetworkReferences.bib
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(igraph)
+library(knitr)
+library(gt)
+library(data.table)
+```
+
+```{r extra_functions}
+print_igraph_attr <- function(graph) {
+  print("--- Graph Attributes ------")
+  print(graph_attr(graph))
+
+  print("--- Vertex Attributes ------")
+  print(vertex_attr(graph))
+
+  print("--- Edge Attributes ------")
+  print(edge_attr(graph))
+}
 ```
 
 For this lab, please refer to the facebook dataset. This dataset is from [@rozemberczki2019multiscale].
@@ -23,30 +45,87 @@ library(igraph)
 library(knitr)
 ```
 
-```{r}
+```{r read_csv_files}
 nodes <- read.csv("musae_facebook_target.csv", header=T, as.is=T)
 links <- read.csv("musae_facebook_edges.csv", header=T, as.is=T)
+```
+
+
+```{r make_graph}
 net <- graph_from_data_frame(d=links, vertices=nodes, directed=F)
 ```
 
 0.) Your first step, before doing any other work, will be to create a subgraph that is limited to only those nodes where the page_type is tvshow. Then overwrite this network with an induced subgraph where the isolates are removed (you should have 3282 nodes)
 
+```{r create_subgraph}
+
+```
+
+```{r remove_subgraph_isolates}
+
+
+# verify # of nodes == 3282
+```
+
 I wouldn't recommend trying to plot the network right away. Start by looking at the size of the data use in the environment tab. Please write the code to produce an answer to the following questions and then interpret the results when asked.
 
 1.) Produce a summary of the graph object and answer the following by producing a nice summary table of the following information using the work from the lab.
 
+```{r summarize_the_graph}
 
-2.)  Produce the 5 measures of graph structure discussed in the less on from this weak.  Report these in a table that includes the measure name, the value of the statistic, and an interpretation of the statistic.
+```
+
+2.)  Produce the 5 measures of graph structure discussed in the lesson from this week. Report these in a table that includes the measure name, the value of the statistic, and an interpretation of the statistic.
+
+```{r create_basic_measures_table}
+tbl <- data.frame(
+  measure_name = c())
+
+tbl |> gt()
+```
 
 3.) Create a table of the interconnectedness measures for this graph and provide an interpretation of this results.
 
+```{r create_interconnectedness_measures_table}
+
+```
+
+**Answer:**
+asdfasdf
+
 4.) Create a table with the degree, closeness, betweenness and eigenvalue centralization measures for this graph and interpret the results.
+
+```{r create_more_measures_table}
+tbl <- data.frame(
+  measure_name = c(),
+  measure_value = c()
+)
+
+tbl |> gt()
+```
+
+**Answer:**
+asdfasdf
 
 5.) Produce a table of the efficiency measures of this graph and provide an interpretation of the results.
 
+```{r create_efficiency_measures_table}
+tbl <- data.frame(
+  measure_name = c(),
+  measure_value = c()
+)
+
+tbl |> gt()
+```
+
 6.) Now we are going to consider interconnectedness in this graph:
 
+**Answer:**
+asdfasdf
 
 6.) Given the measures that you have produced in this assignment, would you consider this network to be centralized or de-centralized? Similarly, would you consider this network to be highly interconnected or have low interconnectedness? Based on these results, what do you think the advantages and disadvantages of this network would be in terms of robustness and resialiance.  What are the critical strengths and weaknesses of this network?
+
+**Answer:**
+asdfasdf
 
 ## References

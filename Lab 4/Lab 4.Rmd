@@ -1,26 +1,53 @@
 ---
-title: "Lab 4"
-output: 
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Lab 4 - Prof. Joe Reid"
+author: "Andrew Sparkes"
+date: "`r Sys.Date()`"
+due: "???"
+output:
   html_document:
+    self_contained: true
+    df_print: paged
     code_folding: hide
+  pdf_document: default
 ---
 
-# STAT 332: Lab 3
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(igraph)
+library(knitr)
+library(tidyverse)
+library(gt)
+library(tibble)
+library(dplyr)
+```
+
+```{r extra_functions}
+print_igraph_attr <- function(graph) {
+  print("--- Graph Attributes ------")
+  print(graph_attr(graph))
+
+  print("--- Vertex Attributes ------")
+  print(vertex_attr(graph))
+
+  print("--- Edge Attributes ------")
+  print(edge_attr(graph))
+}
+```
 
 ## 1.) Setup
 
-Welcome to Lab 4. This week we are going to be focused on macro-scale measures on networks.\
-While it takes a long time to learn these measures, the vast majority are built directly into igraph and only need the correct use of the function to calculate.
+Welcome to Lab 4. This week we are going to be focused on macro-scale measures on networks. While it takes a long time to learn these measures, the vast majority are built directly into igraph and only need the correct use of the function to calculate.
 
-For our dataset this week, we're going to use the Game of Thrones network from the popular book (I'll admit, I tried, but only got through the first couple of chapters before I was too disturbed to read it, but it is popular...)
+For our dataset this week, we're going to use the Game of Thrones network from the popular book (I'll admit, I tried, but only got through the first couple of chapters before I was too disturbed to read it, but it is popular...).
 
-![A bad visualization of the Game of Thrones Network](Game%20of%20Thrones%20Network.png)
+![A bad visualization of the Game of Thrones Network](Game of Thrones Network.png)
 
 ## 2.) Lab Walkthrough
 
 ### 2.a) Getting started.
 
-Using ctrl-alt-i you can create a section where you are going to embed R code. We're going to start by loading in the igraph library.
+Using `ctrl-alt-i` you can create a section where you are going to embed R code. We're going to start by loading in the `igraph` library.
 
 ```{r}
 library(igraph) 
@@ -38,9 +65,9 @@ summary(g)
 
 ### 2b.) Discovering Properties
 
-The first thing that we should do when considering any graph is go get the total list of binaries. The summary of this graph shows us that i has 107 nodes and 352 edges, but we can do a bit better than the summary for finding out other properties.
+The first thing that we should do when considering any graph is go get the total list of binaries. The summary of this graph shows us that it has **107** nodes and **352** edges, but we can do a bit better than the summary for finding out other properties.
 
-```{r, message = FALSE, warning=FALSE}
+```{r, message = FALSE, warning = FALSE}
 library(data.table)
 library(gt)
 
@@ -49,7 +76,7 @@ ID = c("Order", "Size", "Connected", "Directed", "Acyclic", "Weighted", "Simple"
 Value = c(gorder(g), ecount(g), is_connected(g), is_directed(g), is_acyclic(g), is_weighted(g), is_simple(g), any_loop(g), any_multiple(g), is_bipartite(g), is_tree(g), is_forest(g))
   
 table <- data.table(ID, Value)
-table %>% gt() %>% fmt_tf(columns = Value, tf_style = "yes-no")
+table %>% gt() %>% fmt_tf(columns = Value, tf_style = "yes-no") # nice little formatting trick... clever girl...
 ```
 
 In some ways it feels silly to do this, but this information is critical for many of the remaining tasks. For example, knowing that the network is connected means that we don't have to worry about measures which can't be measured on a fragmented network or have no reasonable interpretation. It also means that we don't have to subset the network to consider only the giant component. Just in case you need to find the subgraph consisting of only the largest component, it's pretty easy.
@@ -92,13 +119,13 @@ diameter(graph,
   weights = NULL)
 ```
 
-Diameter makes the assumption that the graph is unconnected and adjusts for that by finding the diameter of the largest connected component. It also makes the assumption that the graph is directed and enforces this property. If a graph is directed and you change this property to false, it will treat it as an undirected graph and give you a useless answer. Similarly, providing a disconnected graph and changing the unconnected parameter to FALSE will give you a value of infinity (Inf). However, simply leaving these parameters as TRUE will give you a correct result regardless. Let's calculated the diameter of our graph.
+Diameter makes the assumption that the graph is unconnected and adjusts for that by finding the diameter of the largest connected component. It also makes the assumption that the graph is directed and enforces this property. If a graph is directed and you change this property to false, it will treat it as an undirected graph and give you a useless answer. Similarly, providing a disconnected graph and changing the unconnected parameter to `FALSE` will give you a value of infinity (`Inf`). However, simply leaving these parameters as `TRUE` will give you a correct result regardless. Let's calculated the diameter of our graph.
 
 ```{r}
 diameter(g)
 ```
 
-85 seems really high for the diameter of the graph. Doesn't that imply that the message would have to go through 85 people to get between the two farthest nodes on the graph! Let's find out who they are!
+**85** seems really high for the diameter of the graph. Doesn't that imply that the message would have to go through **85** people to get between the two farthest nodes on the graph! Let's find out who they are!
 
 ```{r}
 farthest_vertices(g)
@@ -110,19 +137,19 @@ Well, that didn't help. I don't know who Illyrio and Salladhor are, so I couldn'
 get_diameter(g)
 ```
 
-Uh... Wait. That doesn't look like 85. What happened here? Actually it's pretty easy. There's an edge property called weight. Even without telling igraph to use this parameter, it does so. Notice:
+Uh... Wait. That doesn't look like **85**. What happened here? Actually it's pretty easy. There's an edge property called weight. Even without telling igraph to use this parameter, it does so. Notice:
 
 ```{r}
 diameter(g, weights = E(g)$weight)
 ```
 
-This is one of the standard operations in igraph. For a weighted graph, you actually have to OVERRIDE this parameter by passing it NA.
+This is one of the standard operations in igraph. For a weighted graph, you actually have to `OVERRIDE` this parameter by passing it `NA`.
 
 ```{r}
 diameter(g, weights = NA)
 ```
 
-So, in this case, the edge traversal would need 6 edges to get between the absolute farthest members of the network. Now, this is one of those conundrums where a higher weight actually indicates an easier transmission of information rather than harder. But wait, it gets weirder. There are multiple paths of length 6 (ignoring weights), so the diameter of the graph is unique, but the indicated path is NOT unique and neither are the end points.
+So, in this case, the edge traversal would need **6** edges to get between the absolute farthest members of the network. Now, this is one of those conundrums where a higher weight actually indicates an easier transmission of information rather than harder. But wait, it gets weirder. There are multiple paths of length **6** (ignoring weights), so the diameter of the graph is unique, but the indicated path is _NOT_ unique and neither are the end points.
 
 ```{r}
 get_diameter(g, weights = NA)
@@ -204,12 +231,11 @@ lambda_2 <- ev[length(ev) - 1]
 cat("The conductance is bounded by", lambda_2/2, "and", sqrt(2*lambda_2), ".")
 ```
 
-Okay, so now that we have upper bounds, it turns out there is a special vector $v_2$ associated with the eigenvalue $\lambda_2$ . This is the associated eigenvector. Using this, we can find the associated Fiedler values for every vertex and order these from smallest to largest. By successively adding into the set of vertices and computing conductance for every one of them, we can find the set with minimum conductance.
+Okay, so now that we have upper bounds, it turns out there is a special vector $v_2$ associated with the eigenvalue $\lambda_2$. This is the associated eigenvector. Using this, we can find the associated Fiedler values for every vertex and order these from smallest to largest. By successively adding into the set of vertices and computing conductance for every one of them, we can find the set with minimum conductance.
 
 Since we have this method to get a potential set to work with, we can implement these sweeps.
 
 ```{r}
-
 fiedler_sweep_cut <- function(g) {
 
   # Make sure it's undirected and weighted sensibly
@@ -265,7 +291,6 @@ An alternative to this method is the Andersen-Chung-Lang (ACL) Local Graph Parti
 Since page_rank() is well defined in igraph, we can actually implement this very easily, but because this is geared towards local calculations, it is very likely to find a much higher value than the true global value. It's more of a sanity check than a real calculation of conductance.
 
 ```{r}
-
 page_rank_sweep_cut <- function(g, alpha = 0.15) {
 
   if (is.directed(g)) {
@@ -305,7 +330,7 @@ page_rank_sweep_cut <- function(g, alpha = 0.15) {
 
 ```
 
-Employing this algorithm
+Employing this algorithm:
 
 ```{r}
 conductance_2 <- page_rank_sweep_cut(g)
@@ -337,7 +362,7 @@ vertex_connectivity(g)
 
 #### Fiedler's Value $\lambda_2$ (Algebraic Connectivity)
 
-Yeah, I showed this one above already:\
+Yeah, I showed this one above already:
 
 ```{r}
 L <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
@@ -369,20 +394,18 @@ You have to be pretty careful about the loops part of this calculation, because 
 cohesion(g)
 ```
 
-Remember how our graph is connected and has bridges? Our cohesion is 1. BUT the version of cohesion presented in igraph is ACTUALLY the graph theory definition of cohesion, not the socia network theory version of cohesion! In graph theory, cohesion is:
+Remember how our graph is connected and has bridges? Our cohesion is 1. BUT the version of cohesion presented in igraph is ACTUALLY the graph theory definition of cohesion, not the social network theory version of cohesion! In graph theory, cohesion is:
 
 $$
-cohesion(G) = \min\limits_{u \neq v} \lambda(u,v)
+\text{cohesion}(G) = \min\limits_{u \neq v} \lambda(u,v)
 $$
 
 Where $\lambda(u,v)$ is the number of pairwise local edges between u and v for a given graph.
 
-In social networks, we defined cohesion to be the "reachability ratio." I.e. the proportion of nodes where a path exists between them. This ratio depends on whether or not the graph is directed or not:\
+In social networks, we defined cohesion to be the "reachability ratio." I.e. the proportion of nodes where a path exists between them. This ratio depends on whether or not the graph is directed or not:
 
 ```{r}
-
 #Note that we are specifying directed reachability for directed graphs
-
 reachability_cohesion <- function(g, mode = c("undirected", "weak", "strong")) {
   mode <- match.arg(mode)
   n <- vcount(g)
@@ -411,15 +434,13 @@ reachability_cohesion <- function(g, mode = c("undirected", "weak", "strong")) {
   cohesion <- reachable / total
   return(cohesion)
 }
-
 ```
 
 ```{r}
 reachability_cohesion(g)
 ```
 
-It's still 1 in our case because the graph is connected, but this is the measure we discussed in class.\
-(The Reachability Ratio)
+It's still **1** in our case because the graph is connected, but this is the measure we discussed in class: The Reachability Ratio.
 
 #### Global Clustering Coefficient (Transitivity)
 
@@ -436,7 +457,7 @@ global_weighted_transitivity <- function(g, mode = c("undirected", "directed")) 
   mode <- match.arg(mode)
 
   if (mode == "undirected") {
-    # This does nothing if the grpah is already undirected but collapses a directed graph
+    # This does nothing if the graph is already undirected but collapses a directed graph
     g2 <- as_undirected(g, mode = "collapse",
                         edge.attr.comb = list(weight = "sum"))
     local <- transitivity(g2, type = "weighted")
@@ -567,10 +588,9 @@ centr_betw_weighted <- function(g) {
 centr_eigen(g)$centralization
 ```
 
-Yay, this means... nothing because once again, our weight measures are actually implicitly defining a multigraph where the degree measure is missleading! We need to create our same functionality again.
+Yay, this means... nothing because once again, our weight measures are actually implicitly defining a multigraph where the degree measure is misleading! We need to create our same functionality again:
 
 ```{r}
-
 centr_eigen_weighted <- function(g) {
   # weighted EC scores
   ec <- eigen_centrality(g, weights = E(g)$weight)$vector
@@ -591,7 +611,6 @@ centr_eigen_weighted <- function(g) {
   
   num / denom
 }
-
 ```
 
 ```{r}
@@ -757,9 +776,9 @@ global_measures_table |>
 Caviar  Description:       Project Caviar was a unique investigation that targeted a network      of hashish and cocaine importers operating out of Montreal. The      network was targeted between 1994 and 1996 by a tandem      investigation uniting the Montreal Police, the Royal Canadian      Mounted Police, and other national and regional law-enforcement      agencies from various countries (i.e., England, Spain, Italy,      Brazil, Paraguay, and Colombia). The case is unique because it      involved a specific investigative approach that will be referred      to as a “seize and wait” strategy. Unlike most law-enforcement      strategies, the mandate set forward in the Project Caviar case was      to seize identified drug consignments, but not to arrest any of      the identified participants. This took place over a 2-year period.      Thus, although 11 importation consignments were seized at      different moments throughout this period, arrests only took place      at the end of the investigation. What this case offers is a rare      opportunity to study the evolution of a criminal network      phenomenon as it was being disrupted by law-enforcement agents.      The inherent investigative strategy permits an assessment of      change in the network structure and an inside look into how      network participants react and adapt to the growing constraints      set upon them. The principal data source was comprised of      information submitted as evidence during the trials of 22      participants in the Caviar network. It included 4,279 paragraphs      of information (over 1,000 pages) revealing electronically      intercepted telephone conversations between network participants.      These transcripts were used to create the overall matrix of the      drug-trafficking operation’s communication system throughout the      course of the investigation. Individuals falling in the      surveillance net were not all participants in the trafficking      operation. An initial extraction of all names appearing in the      surveillance data led to the identification of 318 individuals.      From this pool, 208 individuals were not implicated in the      trafficking operations. Most were simply named during the many      transcripts of conversations, but never detected. Others who were      detected had no clear participatory role within the network (e.g.,      family members or legitimate entrepreneurs). The final network was      thus composed of 110 participants. NETWORK 11 1-mode matrices      person by person, representing the 11 phases of the investigation.      Ties are directed and valued. Number of nodes = 1) 15x15, 2)      24x24, 3) 33x33, 4) 33x33, 5) 32x32, 6) 27x27, 7) 34x34, 8) 42x42,      9) 34x34, 10) 42x42, 11) 41x41 1-mode matrix 110 x 110 person by      person of the complete network. Ties are communication exchanges      between criminals. Values represent level of communication      activity. Data comes from police wiretapping.
 ```
 
-I have provided a graphml object containing the 110 person network for you to analyze the general topology of. Using the work above as an example, calculate the measures associated with this graph.
+I have provided a graphml object containing the **110** person network for you to analyze the general topology of. Using the work above as an example, calculate the measures associated with this graph.
 
-```{r}
+```{r calculate_measures}
 
 ```
 

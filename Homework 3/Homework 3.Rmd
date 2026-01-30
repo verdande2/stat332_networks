@@ -10,11 +10,15 @@ output:
   pdf_document: default
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(cache = FALSE)
 knitr::opts_chunk$set(echo = TRUE)
 
 library(networkdata)
 library(igraph)
+library(ggraph)
+library(visNetwork)
+library(tidygraph)
 ```
 
 ```{r extra_functions}
@@ -30,16 +34,15 @@ print_igraph_attr <- function(graph) {
 }
 ```
 
-
 # Instructions:
 
 Please complete this homework assignment by the due data posted on canvas. Please submit your work in an html file with solutions and code presented completely.
 
 # Homework 2: Networks and visualization with igraph
 
-This homework is focused on plotting with ggraph and visNetwork but will also be used to explore the tidygraph framework. Tidygraph is a library which provides a subclass of igraph and enables much smoother manipulation of graph objects using the tidyverse methodologies.
+This homework is focused on plotting with `ggraph` and `visNetwork` but will also be used to explore the `tidygraph` framework. `tidygraph` is a library which provides a subclass of igraph and enables much smoother manipulation of graph objects using the tidyverse methodologies.
 
-First, make sure to install the networkdata package. This package isn't located in CRAN so it takes a little bit of work using remotes library to get. If you don't have remotes, install that first. Then, install network data using these instructions: <https://www.rdocumentation.org/packages/networkdata/versions/0.1.6>
+First, make sure to install the `networkdata` package. This package isn't located in CRAN so it takes a little bit of work using remotes library to get. If you don't have remotes, install that first. Then, install network data using these instructions: <https://www.rdocumentation.org/packages/networkdata/versions/0.1.6>
 
 # 1.) Getting the Data
 
@@ -47,38 +50,38 @@ First, make sure to install the networkdata package. This package isn't located 
 ?wta
 ```
 
-We are going to use the wta dataset for this. Specifically, we are going to use the data from 2007. Extracting this data isn't difficult but it is a little weird. The wta dataset is a list of igraphs, so you would think all that's necessary to get the first item in the list is to use wta[1]. Try a summary of this.
+We are going to use the `wta` dataset for this. Specifically, we are going to use the data from **2007**. Extracting this data isn't difficult but it is a little weird. The `wta` dataset is a list of `igraph`s, so you would think all that's necessary to get the first item in the list is to use `wta[1]`. Try a summary of this:
 
 ```{r}
-summary(wta[40])
+summary(wta[40]) # assuming this was supposed to be summary(wta[1])? for the a list with the first igraph object? instead of the 40th?
 ```
 
-Interestingly, you didn't get the igraph! You got the list item but not what's in it. To get that, you actually need to use a double bracket: wta[[1]].
+Interestingly, you didn't get the `igraph`! You got the list item but not what's in it. To get that, you actually need to use a double bracket: `wta[[1]]`.
 
 ```{r}
-class(wta[[40]])
+class(wta[[40]]) # extract with the double bracket, list with the single
 ```
 
-So, this is a directed, named, weighted dataset with 255 players and 1771 edges where the edge weights denote the number of times the "from" player lost to the "to" player on a specific surface type. Let's store this as g.
+So, this is a directed, named, weighted dataset with **255** players and **1,771** edges where the edge weights denote the number of times the "from" player lost to the "to" player on a specific surface type. Let's store this as `g`.
 
 ```{r}
-g <- wta[[40]]
+g <- wta[[40]] # storing just the 40th igraph in the wta dataset list for year 2007
 ```
 
-Now, getting a look at the actual values of the matrix of node attributes or edge attributes is actually not obvious; however, if we convert this using a as_tbl_graph with tidygraph, we can make this much easier.
+Now, getting a look at the actual values of the matrix of node attributes or edge attributes is actually not obvious; however, if we convert this using a `as_tbl_graph()` with `tidygraph`, we can make this much easier.
 
 ```{r}
 library(tidygraph)
 g2 <- as_tbl_graph(g)
 ```
 
-Now, these objects are interesting because we can activate either the nodes or the edges (whatever we want to work with.) When we work with one set (for example, by applying filtering), the other set is also affected. We have to be careful though, because edge filtering won't necessarily remove all corresponding nodes, but removing a node will absolutely remove all edges attached to that node. We should note that there are 55 total countries represented here. This is going to be a bit much to draw, so we're going to limit our dataset.
+Now, these objects are interesting because we can activate either the nodes or the edges (whatever we want to work with.) When we work with one set (for example, by applying filtering), the other set is also affected. We have to be careful though, because edge filtering won't necessarily remove all corresponding nodes, but removing a node will absolutely remove all edges attached to that node. We should note that there are **55** total countries represented here. This is going to be a bit much to draw, so we're going to limit our dataset.
 
 ```{r display_num_unique_countries}
 length(unique(V(g2)$country))
 ```
 
-In order to perform operations on this, we need to activate either nodes or edges and then apply our filter operations using "filter". This works exactly the same as it does in the tidyverse methodology and can be found easily online.
+In order to perform operations on this, we need to activate either nodes or edges and then apply our filter operations using `filter()`. This works exactly the same as it does in the `tidyverse` methodology and can be found easily online.
 
 ```{r}
 g3 <- g2 |>
@@ -87,7 +90,7 @@ g3 <- g2 |>
   filter(!node_is_isolated())
 ```
 
-Saving your data at this point is a good idea. You can do this with write_graph() as follows.
+Saving your data at this point is a good idea. You can do this with `write_graph()` as follows.
 
 ```{r}
 write_graph(g3, format = "gml", file = "Homework_3_filtered_data.gml")
@@ -99,7 +102,7 @@ Now, it's time to do our work::
 
 ![](igraph plot.png){width = 200%, height = 200%}
 
-Your job is to produce the code/graph which reproduces or improves on this graph using the ggraph and visNetwork packages. Good luck!
+Your job is to produce the code/graph which reproduces or improves on this graph using the `ggraph` and `visNetwork` packages. Good luck!
 
 ```{r}
 library(ggraph)
