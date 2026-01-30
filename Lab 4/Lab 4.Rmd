@@ -1,0 +1,770 @@
+---
+title: "Lab 4"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+# STAT 332: Lab 3
+
+## 1.) Setup
+
+Welcome to Lab 4. This week we are going to be focused on macro-scale measures on networks.\
+While it takes a long time to learn these measures, the vast majority are built directly into igraph and only need the correct use of the function to calculate.
+
+For our dataset this week, we're going to use the Game of Thrones network from the popular book (I'll admit, I tried, but only got through the first couple of chapters before I was too disturbed to read it, but it is popular...)
+
+![A bad visualization of the Game of Thrones Network](Game%20of%20Thrones%20Network.png)
+
+## 2.) Lab Walkthrough
+
+### 2.a) Getting started.
+
+Using ctrl-alt-i you can create a section where you are going to embed R code. We're going to start by loading in the igraph library.
+
+```{r}
+library(igraph) 
+```
+
+```{r}
+g <- readr::read_rds("got.rds")
+```
+
+Just to remind ourselves of what we're working with, let's make sure we print out our vertex and edge attributes
+
+```{r}
+summary(g)
+```
+
+### 2b.) Discovering Properties
+
+The first thing that we should do when considering any graph is go get the total list of binaries. The summary of this graph shows us that i has 107 nodes and 352 edges, but we can do a bit better than the summary for finding out other properties.
+
+```{r, message = FALSE, warning=FALSE}
+library(data.table)
+library(gt)
+
+ID = c("Order", "Size", "Connected", "Directed", "Acyclic", "Weighted", "Simple", "Has Loops", "Is Multigraph", "Bipartite", "Tree", "Forest")
+  
+Value = c(gorder(g), ecount(g), is_connected(g), is_directed(g), is_acyclic(g), is_weighted(g), is_simple(g), any_loop(g), any_multiple(g), is_bipartite(g), is_tree(g), is_forest(g))
+  
+table <- data.table(ID, Value)
+table %>% gt() %>% fmt_tf(columns = Value, tf_style = "yes-no")
+```
+
+In some ways it feels silly to do this, but this information is critical for many of the remaining tasks. For example, knowing that the network is connected means that we don't have to worry about measures which can't be measured on a fragmented network or have no reasonable interpretation. It also means that we don't have to subset the network to consider only the giant component. Just in case you need to find the subgraph consisting of only the largest component, it's pretty easy.
+
+```{r}
+g2 <- largest_component(g)
+```
+
+### 2.c.) Structural and Fragmentation
+
+#### Bridges and Articulation Points
+
+First things first, we should look to see if there are any bridges or articulation points in the data.
+
+```{r}
+cat("There are", length(bridges(g)), "bridges in this graph, and there are", 
+    length(articulation_points(g)), "articulation points in this graph.")
+```
+
+Yikes. Let's find out what they are.
+
+```{r}
+bridges(g)
+```
+
+```{r}
+articulation_points(g)
+```
+
+I can't deny that I have no idea who most of these characters are, but what this implies is that, if any of these bridges are cut (individuals stop connecting with each other) or any of the nodes are removed, the graph would be fractured into multiple components (each component would have more than one node). Based on this, some of our measures are going to be rather trivial in this network because these bridges and articulation points exist.
+
+#### Diameter:
+
+The diameter of a graph depends on a few parameters:
+
+```         
+diameter(graph, 
+  directed = TRUE, 
+  unconnected = TRUE,   
+  weights = NULL)
+```
+
+Diameter makes the assumption that the graph is unconnected and adjusts for that by finding the diameter of the largest connected component. It also makes the assumption that the graph is directed and enforces this property. If a graph is directed and you change this property to false, it will treat it as an undirected graph and give you a useless answer. Similarly, providing a disconnected graph and changing the unconnected parameter to FALSE will give you a value of infinity (Inf). However, simply leaving these parameters as TRUE will give you a correct result regardless. Let's calculated the diameter of our graph.
+
+```{r}
+diameter(g)
+```
+
+85 seems really high for the diameter of the graph. Doesn't that imply that the message would have to go through 85 people to get between the two farthest nodes on the graph! Let's find out who they are!
+
+```{r}
+farthest_vertices(g)
+```
+
+Well, that didn't help. I don't know who Illyrio and Salladhor are, so I couldn't tell you if this is even remotely reasonable. We can get the path, but you'd better be prepared for a long list.
+
+```{r}
+get_diameter(g)
+```
+
+Uh... Wait. That doesn't look like 85. What happened here? Actually it's pretty easy. There's an edge property called weight. Even without telling igraph to use this parameter, it does so. Notice:
+
+```{r}
+diameter(g, weights = E(g)$weight)
+```
+
+This is one of the standard operations in igraph. For a weighted graph, you actually have to OVERRIDE this parameter by passing it NA.
+
+```{r}
+diameter(g, weights = NA)
+```
+
+So, in this case, the edge traversal would need 6 edges to get between the absolute farthest members of the network. Now, this is one of those conundrums where a higher weight actually indicates an easier transmission of information rather than harder. But wait, it gets weirder. There are multiple paths of length 6 (ignoring weights), so the diameter of the graph is unique, but the indicated path is NOT unique and neither are the end points.
+
+```{r}
+get_diameter(g, weights = NA)
+```
+
+One warning here: **do not conflate "connection strength" with "flow efficiency"**. They are related, but not the same thing. Large pipes carry more water, but longer pipes will still take longer. If you want to measure flow efficiency, you need to have an edge attribute for that (i.e. if you want to find the "Most Efficient" route it may be very different from what the diameter gives us). If the weights on our graph represented travel time between two towns, then the diameter ("longest shortest path") WOULD measure the longest travel time between two towns in the network. However, with weights representing the strength of ties, it would take a little more thought. One common method is to change weights to distances by using the reciprocal.
+
+```{r}
+diameter(g, weights = 1/E(g)$weight)
+```
+
+```{r}
+get_diameter(g, weights = 1/E(g)$weight)
+```
+
+And now we have a completely different answer for the longest of the shortest paths and who is involved in the process.
+
+### Conductance:
+
+Now we get to a more difficult problem. In fact, we get to an NP problem.
+
+(Note: I am IGNORING the conductance for directed graphs. Some work from 2005 describes Laplacians and Cheeger inequalities on directed graphs (<https://fanchung.ucsd.edu/wp/cheeger.pdf>) and this is way harder to work with.)
+
+Conductance was defined to be: $$        $$
+
+$$
+\phi(G) = \min\limits_{S \subset V} \phi(S) = \min\limits_{S \subset V} \frac{vol(E(S))}{min\{vol(S), vol(\bar{S}\}} 
+$$
+
+```{r}
+conductance_of_set <- function(g, S, weights = E(g)$weight) {
+  if (is.null(weights)) weights <- rep(1, ecount(g))
+
+  S <- as.integer(S)
+  S_flag <- rep(FALSE, vcount(g))
+  S_flag[S] <- TRUE
+
+  ep <- ends(g, E(g), names = FALSE)
+  crossing <- xor(S_flag[ep[,1]], S_flag[ep[,2]])
+  cut_w <- sum(weights[crossing], na.rm = TRUE)
+
+  # weighted degrees
+  if (!is.null(E(g)$weight)) {
+    deg_w <- strength(g, vids = V(g), mode = "all", weights = E(g)$weight)
+  } else {
+    deg_w <- degree(g)
+  }
+
+  vol_S  <- sum(deg_w[S])
+  vol_cS <- sum(deg_w[!S_flag])
+
+  denom <- min(vol_S, vol_cS)
+  if (denom == 0) return(0)
+  cut_w / denom
+}
+```
+
+But, this generally requires that we perform this calculation on all possible cutsets which partition a graph and then find the minimum of this set of values. The increase to the numbers of cutsets available increases at a rate faster than polynomial which makes this problem NP. Generally, this calculation is restricted to "balanced" sets in order to ease the process (and reduce the number of required calculations), but even finding "balanced" sets in a weighted graph is a difficult problem.
+
+To get around this, several attempts have been made to find efficient algorithms or bound the value. One of the most elegant that I have seen is presented in <https://math.uchicago.edu/~may/REU2020/REUPapers/Zhang,Yueheng.pdf>
+
+Theorem 3.2.7 provides Cheeger's inequality for a graph G and concludes:
+
+$$
+\frac{\lambda_2}{2} \leq \phi(G) \leq \sqrt{2\lambda_2}
+$$
+
+where $\lambda_2$ is the second smallest eigenvalue to the normalized Laplacian. If you kept up in the lecture notes, this is the same $\lambda_2$ that we identified as Algebraic Connectivity (i.e. Fiedler's value). EXCEPT Fiedler's value is calculated on the entire graph but conductance is only defined on a connected graph (i.e. the "giant component"). So, this means that if we can restrict the graph to the largest component we can find bounds on the estimate for conductance for the largest connected component of the graph by using the eigenvalues of the normalized Laplacian on this component.
+
+```{r}
+
+L <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
+ev <- eigen(L, symmetric = TRUE, only.values = TRUE)$values
+lambda_2 <- ev[length(ev) - 1]
+
+```
+
+```{r}
+cat("The conductance is bounded by", lambda_2/2, "and", sqrt(2*lambda_2), ".")
+```
+
+Okay, so now that we have upper bounds, it turns out there is a special vector $v_2$ associated with the eigenvalue $\lambda_2$ . This is the associated eigenvector. Using this, we can find the associated Fiedler values for every vertex and order these from smallest to largest. By successively adding into the set of vertices and computing conductance for every one of them, we can find the set with minimum conductance.
+
+Since we have this method to get a potential set to work with, we can implement these sweeps.
+
+```{r}
+
+fiedler_sweep_cut <- function(g) {
+
+  # Make sure it's undirected and weighted sensibly
+  if (is_directed(g)) {
+    g <- as_undirected(g, mode="collapse", edge.attr.comb = list(weight="sum"))
+  }
+
+  # Compute symmetric normalized Laplacian
+  L <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
+
+  # Eigen-decomposition: eigenvalues in *descending order*
+  ev <- eigen(L, symmetric = TRUE)
+
+  # Fiedler vector = eigenvector for second-smallest eigenvalue
+  fiedler_vec <- ev$vectors[, ncol(ev$vectors) - 1]
+
+  # Sweep: sort vertices by Fiedler values
+  ord <- order(fiedler_vec)
+
+  best_phi <- Inf
+  best_S <- NULL
+
+  for (t in 1:(length(ord) - 1)) {
+    S <- ord[1:t]
+    phi_S <- conductance_of_set(g, S)
+    if (phi_S < best_phi) {
+      best_phi <- phi_S
+      best_S <- S
+    }
+  }
+
+  list(
+    phi = best_phi,
+    S = best_S,
+    fiedler_vector = fiedler_vec
+  )
+}
+```
+
+```{r}
+
+res <- fiedler_sweep_cut(g)
+cat("Best φ from spectral sweep:", res$phi, "\n")
+
+```
+
+This is probably NOT the true value of conductance but has been shown to be very close which is an encouraging thing on an NP-hard problem.
+
+An alternative to this method is the Andersen-Chung-Lang (ACL) Local Graph Partitioning method.
+
+<https://fanchung.ucsd.edu/wp/localpartition.pdf>
+
+Since page_rank() is well defined in igraph, we can actually implement this very easily, but because this is geared towards local calculations, it is very likely to find a much higher value than the true global value. It's more of a sanity check than a real calculation of conductance.
+
+```{r}
+
+page_rank_sweep_cut <- function(g, alpha = 0.15) {
+
+  if (is.directed(g)) {
+    g <- as.undirected(g, mode="collapse", edge.attr.comb=list(weight="sum"))
+  }
+
+  # Weighted PageRank
+  pr <- page_rank(g, algo = "prpack", damping = 1 - alpha,
+                  weights = E(g)$weight)$vector
+
+  # Normalize by weighted degree (this matters!)
+  deg <- strength(g, vids = V(g), mode = "all", weights = E(g)$weight)
+  score <- pr / deg
+
+  ord <- order(score, decreasing = TRUE)  # highest score first
+
+  best_phi <- Inf
+  best_S <- NULL
+
+  for (t in 1:(length(ord)-1)) {
+    S <- ord[1:t]
+    phi <- conductance_of_set(g, S)
+    if (phi < best_phi) {
+      best_phi <- phi
+      best_S <- S
+    }
+  }
+
+  list(
+    phi = best_phi,
+    vertex_ids = best_S,
+    vertex_names = V(g)$name[best_S],
+    page_rank = pr,
+    score = score
+  )
+}
+
+```
+
+Employing this algorithm
+
+```{r}
+conductance_2 <- page_rank_sweep_cut(g)
+```
+
+And our results are:
+
+```{r}
+conductance_2$phi
+```
+
+Again, this is MUCH higher but within the Cheeger bound indicating that local conductance tends to be relatively high compared to global conductance. With a value very close to zero, partitioning this graph is likely very easy and strong bottlenecks exist.
+
+#### Adhesion
+
+Once again, Adhesion only works on fully connected graphs, so we would need to use the largest connected component if we didn't have a connected graph. Luckily, we have a direct function for this one:
+
+```{r}
+adhesion((g))
+```
+
+Granted, we already knew this because there are bridges in our graph. There are also articulation points so...
+
+#### Node Connectivity
+
+```{r}
+vertex_connectivity(g)
+```
+
+#### Fiedler's Value $\lambda_2$ (Algebraic Connectivity)
+
+Yeah, I showed this one above already:\
+
+```{r}
+L <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
+ev <- eigen(L, symmetric = TRUE, only.values = TRUE)$values
+lambda_2 <- ev[length(ev) - 1]
+```
+
+```{r}
+lambda_2
+```
+
+So, just so we're all on the same page here, the bounds on Fiedler's value is actually [0, 2] NOT [0, 1] like we would expect. This comes from the fact that we use the symmetric normalized Laplacian rather than the random walk version. If we were looking at random walk mixing or diffusion properties (i.e. Markov Chain properties rather than shortest path style methods) we would want to use the other version of the matrix method provided in the notes by changing the normalization method in the Laplacian-matrix calculation and adapting the eigenvalue method by changing symmetric to false.
+
+In terms of interpretation, there's not much "glue" to this network. It's easily fracturable and at high risk of splintering based on the connections we have observed.
+
+### 2.d.) Interconnectedness
+
+#### Edge Density
+
+```{r}
+edge_density(g, loops = FALSE)
+```
+
+You have to be pretty careful about the loops part of this calculation, because if you are wrong, the results don't make sense. Remember, this measure isn't very useful except for comparison, so I'm not going to spend much time here.
+
+#### Network Cohesion
+
+```{r}
+cohesion(g)
+```
+
+Remember how our graph is connected and has bridges? Our cohesion is 1. BUT the version of cohesion presented in igraph is ACTUALLY the graph theory definition of cohesion, not the socia network theory version of cohesion! In graph theory, cohesion is:
+
+$$
+cohesion(G) = \min\limits_{u \neq v} \lambda(u,v)
+$$
+
+Where $\lambda(u,v)$ is the number of pairwise local edges between u and v for a given graph.
+
+In social networks, we defined cohesion to be the "reachability ratio." I.e. the proportion of nodes where a path exists between them. This ratio depends on whether or not the graph is directed or not:\
+
+```{r}
+
+#Note that we are specifying directed reachability for directed graphs
+
+reachability_cohesion <- function(g, mode = c("undirected", "weak", "strong")) {
+  mode <- match.arg(mode)
+  n <- vcount(g)
+  if (n <= 1) return(1)
+
+  if (mode == "undirected") {
+    g2 <- as_undirected(g, mode = "collapse",
+                        edge.attr.comb = list(weight = "sum"))
+    D <- distances(g2)
+    reachable <- sum(D != Inf) - n      # exclude self-pairs
+    total <- n * (n - 1)
+
+  } else if (mode == "weak") {
+    # treat as undirected for reachability
+    comps <- components(g, mode = "weak")$membership
+    comp_sizes <- table(comps)
+    reachable <- sum(comp_sizes * (comp_sizes - 1))
+    total <- n * (n - 1)
+
+  } else if (mode == "strong") {
+    D <- distances(g, mode = "out")
+    reachable <- sum(D != Inf) - n
+    total <- n * (n - 1)
+  }
+
+  cohesion <- reachable / total
+  return(cohesion)
+}
+
+```
+
+```{r}
+reachability_cohesion(g)
+```
+
+It's still 1 in our case because the graph is connected, but this is the measure we discussed in class.\
+(The Reachability Ratio)
+
+#### Global Clustering Coefficient (Transitivity)
+
+In class, I mentioned that there are several methods of calculating transitivity for weighted graphs. Igraph implements "Barrat" as the appropriate method; however, remember that this does not work if you have a multigraph or loops. You MUST simplify() the graph first in those cases. On the plus side, global transitivity is easy to calculate. On the downside, weighted methods are only implemented for local transitivity.
+
+```{r}
+transitivity(g, type = "globalundirected", isolates = "NaN")
+```
+
+Now we have a choice. There are multiple "correct" ways of getting a global measure for a weighted graph, but the most common is to use the arithmetic mean of local transitiveness. This isn't all that hard, but requires that we write another function.\
+
+```{r}
+global_weighted_transitivity <- function(g, mode = c("undirected", "directed")) {
+  mode <- match.arg(mode)
+
+  if (mode == "undirected") {
+    # This does nothing if the grpah is already undirected but collapses a directed graph
+    g2 <- as_undirected(g, mode = "collapse",
+                        edge.attr.comb = list(weight = "sum"))
+    local <- transitivity(g2, type = "weighted")
+  } else {
+    # Directed -> use directed weights but still based on Barrat formulation
+    local <- transitivity(g, type = "weighted")
+  }
+
+  # Remove NA values (degree < 2)
+  local <- local[!is.na(local)]
+
+  # Average global weighted clustering
+  mean(local)
+}
+```
+
+```{r}
+global_weighted_transitivity(g, mode = "undirected")
+```
+
+I'm going to pause here because these two measures actually tell us two different things. The unweighted transitivity is based on the proportion of triangles that exist when compared to the total that could exist. The weighted version actually tells us the strength of the embedding for the node based on intensity. The average of this being much higher tells us that there are some clusters with very strong ties. I.e. it answers the question of how strongly do triads reinforce each other? It is common to look at a distribution of these weighted triads to understand whether this comes from a lot of moderately strong connections or from a few VERY strong connections.
+
+#### Assortativity
+
+We talked about degree assortativity in class, so let's implement that first.
+
+```{r}
+assortativity_degree(g)
+```
+
+That's it. Essentially, because this value is negative, it indicates that individuals with high degree don't necessarily aggregate together (except that this measure doesn't account for the fact that the weights on our edges indicate the number of associations between individuals, so this measure DOES NOT WORK because this graph would naturally be a multigraph.
+
+This is critical. Do NOT just apply functions without thinking. Remember the measure we talked about called strength?
+
+```{r}
+strengths <- strength(g, mode = "all", weights = E(g)$weight)
+```
+
+This gives us a value to calculate correlations over other than degree.
+
+```{r}
+assortativity(g, strengths, directed = FALSE)
+```
+
+This is the correct value. It didn't change a lot, but it answers the question, do people with strong ties tend to associate with other people that have strong ties. And the answer is, no, they don't tend to do so within this network.
+
+### 2.e.) Centralization
+
+#### Degree Centralization
+
+```{r}
+centr_degree(g, mode = "all")$centralization
+```
+
+Remember how we said that degree is a useless measure in our graph (because it is an explicit multigraph) and strength matters more? And we have already calculated strengths. In cases like this, there is a general centralization function available.
+
+```{r}
+centralize(strengths, theoretical.max = sum(strengths)*(length(strengths) - 1), normalized = TRUE)
+```
+
+#### Closeness Centralization
+
+```{r}
+centr_clo(g, mode = "all")$centralization
+```
+
+Or at least this would be the answer if all edges have the same weight, but really this can't be the case when our edge weights represent strength of association based on number of interactions The real "distance" here isn't measured by the edge weights because that would indicate that higher values are further apart (cost more to travel). On a typical weighted graph, this would be right, but on ours, the reciprocal is true, and that's exactly how we can redefine our distances:
+
+$$
+d_{ij} = 1/w_{ij}
+$$
+
+```{r}
+centr_clo_weighted <- function(g) {
+  # convert tie strength → distance
+  d <- 1 / E(g)$weight
+  
+  # weighted closeness
+  C <- closeness(g, weights = d)
+  
+  # remove Inf or NA (isolates)
+  C <- C[is.finite(C)]
+  
+  C_max <- max(C)
+  num <- sum(C_max - C)
+  #Set a theoretical maximum based on the total distance represented in the network
+  denom <- (length(C) - 1) * C_max 
+  
+  if (denom == 0) return(0)
+  num / denom
+}
+```
+
+```{r}
+centr_clo_weighted(g)
+```
+
+#### Betweenness Centralization
+
+```{r}
+centr_betw(g)$centralization
+```
+
+Betweenness demonstrates choke points and imbalance of brokerage power on shortest paths. This means that the weights matter, and once again, costs needs to be measured based on the strength of association (or recriprocal weights) yet again. I'm not just making this up either. <https://toreopsahl.com/tnet/weighted-networks/node-centrality/>
+
+```{r}
+
+centr_betw_weighted <- function(g) {
+  # Convert strength → distance
+  d <- 1 / E(g)$weight
+  
+  # weighted betweenness
+  b <- betweenness(g, directed = FALSE, weights = d)
+  
+  b_max <- max(b)
+  num <- sum(b_max - b)
+  denom <- (length(b) - 1) * b_max
+  
+  if (denom == 0) return(0)
+  num / denom
+}
+
+```
+
+#### Eigenvector Centralization
+
+```{r}
+centr_eigen(g)$centralization
+```
+
+Yay, this means... nothing because once again, our weight measures are actually implicitly defining a multigraph where the degree measure is missleading! We need to create our same functionality again.
+
+```{r}
+
+centr_eigen_weighted <- function(g) {
+  # weighted EC scores
+  ec <- eigen_centrality(g, weights = E(g)$weight)$vector
+  
+  # remove missing values (rare but can occur)
+  ec <- ec[is.finite(ec)]
+  
+  ec_max <- max(ec)
+  
+  # Freeman numerator
+  num <- sum(ec_max - ec)
+  
+  # theoretical maximum for normalized star
+  # (one node gets ec_max, all others get 0)
+  denom <- (length(ec) - 1) * ec_max
+  
+  if (denom == 0) return(0)
+  
+  num / denom
+}
+
+```
+
+```{r}
+centr_eigen_weighted(g)
+```
+
+Perfect, this is actually a meaningful measure for eigenvector centrality. Do you remember what this meant?
+
+### 2.f.) Efficiency
+
+So, once again, the weights on the edges being strengths rather than distances means that efficiency should be calculated based on the reciprocal values. Let's just store those as an edge attribute.
+
+```{r}
+E(g)$dist = 1/E(g)$weight
+```
+
+#### Global Efficiency
+
+```{r}
+global_efficiency(g, weights = E(g)$dist)
+```
+
+#### Average Local Efficiency
+
+```{r}
+average_local_efficiency(g, weights = E(g)$dist, mode = "all")
+```
+
+#### Average Shortest Path Length
+
+```{r}
+mean_distance(g, weights = E(g)$dist)
+```
+
+So we have very strongly tied local networks when compared to the overall global structure. This seems perfectly normal, and the average shortest path length is going to be pretty small based on how strong some of the ties are. (now look back at diameter. Is something wrong?)
+
+I purposefully chose a difficult dataset where the weights have a common (but annoying) underlying interpretation. If you don't understand the nuance of the measures, it is common to perform these calculations incorrectly and get results that are outright meaningless if not the opposite of what you are truly looking for!
+
+## 3.) Summary:
+
+Strength-based weights: weights encode tie strength → larger = closer / faster / more interaction
+
+Distance-based weights (opposite case): weights encode cost → larger = farther / harder / more expensive
+
+Distance metric: For strength-based weights →
+
+$$\text{distance} = \frac{1}{\text{weight}}$$
+
+```{r message=FALSE}
+
+library(tibble)
+
+global_measures_table <- tribble(
+  ~Measure, ~Meaning, ~Category, ~Disconnected, ~Multigraphs_Loops, ~Strength_Weights, ~Distance_Weights,
+
+  # --------------------- STRUCTURAL ---------------------
+  "Diameter", "Longest shortest path", "Structural",
+  "Largest Component", "Collapse; remove loops",
+  "1/weight", "✓",
+
+  "Conductance", "Global bottleneck ratio", "Structural",
+  "Largest Component", "Collapse",
+  "✓", "✓",
+
+  "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural",
+  "✓", "Collapse or merge multiplicity",
+  "✓", "✓",
+
+  "Vertex Connectivity", "Minimum vertices to disconnect", "Structural",
+  "✓", "Collapse",
+  "Irrelevant", "Irrelevant",
+
+  "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural",
+  "Largest Component", "Collapse; remove loops",
+  "✓", "Do NOT use",
+
+  # --------------------- INTERCONNECTEDNESS ---------------------
+  "Edge Density", "Edges ÷ possible edges", "Interconnectedness",
+  "✓", "Collapse",
+  "Irrelevant", "Irrelevant",
+
+  "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness",
+  "✓", "Collapse",
+  "Irrelevant", "Irrelevant",
+
+  "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness",
+  "✓", "Collapse",
+  "✓ (Barrat local → mean)", "Irrelevant",
+
+  "Assortativity", "Mixing by attribute", "Interconnectedness",
+  "✓", "Collapse",
+  "✓ (strength assort.)", "✓ (degree assort.)",
+
+  # --------------------- CENTRALIZATION ---------------------
+  "Degree Centralization", "Inequality of degree distribution", "Centralization",
+  "✓", "Collapse",
+  "Consider Strength Centralization", "✓",
+
+  "Strength Centralization", "Inequality of weighted degree", "Centralization",
+  "✓", "Collapse",
+  "✓", "Irrelevant",
+
+  "Closeness Centralization", "Inequality in closeness", "Centralization",
+  "Largest Component", "Collapse",
+  "1/weight", "✓",
+
+  "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization",
+  "Largest Component", "Collapse",
+  "1/weight", "✓",
+
+  "Eigenvector Centralization", "Inequality in spectral influence", "Centralization",
+  "✓", "Collapse",
+  "✓", "Do NOT use",
+
+  # --------------------- EFFICIENCY ---------------------
+  "Global Efficiency", "Global ease of communication", "Efficiency",
+  "✓", "Collapse",
+  "1/weight", "✓",
+
+  "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency",
+  "✓", "Collapse",
+  "1/weight", "✓",
+
+  "Average Shortest Path Length", "Mean geodesic distance", "Efficiency",
+  "Largest Component", "Collapse",
+  "1/weight", "✓"
+)
+```
+
+```{r message=FALSE}
+
+library(gt)
+library(dplyr)
+
+# Color-blind-safe palette (Okabe-Ito)
+category_colors <- c(
+  "Structural"         = "#a6cee3",
+  "Interconnectedness" = "#b2df8a",
+  "Centralization"     = "#fdbf6f",
+  "Efficiency"         = "#cab2d6"
+)
+
+global_measures_table |>
+  gt() |>
+  tab_header(
+    title = "Global Graph Measures",
+    subtitle = "Handling Disconnected Graphs, Multigraphs, and Weight Semantics"
+  ) |>
+  data_color(
+    columns = everything(),   # columns to tint
+    fn = function(cols) {
+      category <- global_measures_table$Category
+      category_colors[category]
+    }
+  ) |>
+  tab_options(table.font.size = 12)
+
+```
+
+## 4.) Your turn:
+
+```         
+Caviar  Description:       Project Caviar was a unique investigation that targeted a network      of hashish and cocaine importers operating out of Montreal. The      network was targeted between 1994 and 1996 by a tandem      investigation uniting the Montreal Police, the Royal Canadian      Mounted Police, and other national and regional law-enforcement      agencies from various countries (i.e., England, Spain, Italy,      Brazil, Paraguay, and Colombia). The case is unique because it      involved a specific investigative approach that will be referred      to as a “seize and wait” strategy. Unlike most law-enforcement      strategies, the mandate set forward in the Project Caviar case was      to seize identified drug consignments, but not to arrest any of      the identified participants. This took place over a 2-year period.      Thus, although 11 importation consignments were seized at      different moments throughout this period, arrests only took place      at the end of the investigation. What this case offers is a rare      opportunity to study the evolution of a criminal network      phenomenon as it was being disrupted by law-enforcement agents.      The inherent investigative strategy permits an assessment of      change in the network structure and an inside look into how      network participants react and adapt to the growing constraints      set upon them. The principal data source was comprised of      information submitted as evidence during the trials of 22      participants in the Caviar network. It included 4,279 paragraphs      of information (over 1,000 pages) revealing electronically      intercepted telephone conversations between network participants.      These transcripts were used to create the overall matrix of the      drug-trafficking operation’s communication system throughout the      course of the investigation. Individuals falling in the      surveillance net were not all participants in the trafficking      operation. An initial extraction of all names appearing in the      surveillance data led to the identification of 318 individuals.      From this pool, 208 individuals were not implicated in the      trafficking operations. Most were simply named during the many      transcripts of conversations, but never detected. Others who were      detected had no clear participatory role within the network (e.g.,      family members or legitimate entrepreneurs). The final network was      thus composed of 110 participants. NETWORK 11 1-mode matrices      person by person, representing the 11 phases of the investigation.      Ties are directed and valued. Number of nodes = 1) 15x15, 2)      24x24, 3) 33x33, 4) 33x33, 5) 32x32, 6) 27x27, 7) 34x34, 8) 42x42,      9) 34x34, 10) 42x42, 11) 41x41 1-mode matrix 110 x 110 person by      person of the complete network. Ties are communication exchanges      between criminals. Values represent level of communication      activity. Data comes from police wiretapping.
+```
+
+I have provided a graphml object containing the 110 person network for you to analyze the general topology of. Using the work above as an example, calculate the measures associated with this graph.
+
+```{r}
+
+```
+
+Next, please provide a few paragraphs regarding these measures and what they imply about the resilience, strengths, and weaknesses of this drug smuggling network.
+
+## 5.) Results
+
+What you need to do next is to "knit" your document into an html using the "Knit" button near the top of the screen. This will give you an HTML that you can turn in.
