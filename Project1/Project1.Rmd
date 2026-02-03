@@ -43,10 +43,8 @@ You **DO NOT** need to use the _full_ network. You may subset or aggregate the d
 
 # Story
 
-asdf
-
 ```{r}
-
+# TODO all the things
 ```
 
 # Pretty Graphs
