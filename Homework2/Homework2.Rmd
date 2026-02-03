@@ -3,10 +3,10 @@ title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 2 - Prof. Joe
 author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
 output:
-  word_document: default
   html_document:
     self_contained: true
     df_print: paged
+  word_document: default
   pdf_document: default
 due: "23-01-2026"
 ---
@@ -467,3 +467,5 @@ legend(
   cex = 1 # general scaling factor
 )
 ```
+
+That'll do pig, that'll do...
