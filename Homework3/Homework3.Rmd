@@ -21,6 +21,11 @@ library(visNetwork)
 library(tidygraph)
 ```
 
+```{r user_configurable_settings}
+SKIP_AHEAD = TRUE # skips ahead and truncates off the demo code/markdown (uses a TeX comment to omit output)
+```
+
+
 ```{r extra_functions}
 print_igraph_attr <- function(graph) {
   print("--- Graph Attributes ------")
@@ -34,17 +39,29 @@ print_igraph_attr <- function(graph) {
 }
 ```
 
-# Instructions:
+This homework is focused on plotting with `ggraph` and `visNetwork` but will also be used to explore the `tidygraph` framework. `tidygraph` is a library which provides a subclass of igraph and enables much smoother manipulation of graph objects using the tidyverse methodologies.
+
+## Instructions:
 
 Please complete this homework assignment by the due data posted on canvas. Please submit your work in an html file with solutions and code presented completely.
 
-# Homework 2: Networks and visualization with igraph
-
-This homework is focused on plotting with `ggraph` and `visNetwork` but will also be used to explore the `tidygraph` framework. `tidygraph` is a library which provides a subclass of igraph and enables much smoother manipulation of graph objects using the tidyverse methodologies.
+`r if(SKIP_AHEAD) {"Commenting out middle chunks to skip to the relevant bits!\\n\\n... snip ...\\n\\begin{comment}"}`
 
 First, make sure to install the `networkdata` package. This package isn't located in CRAN so it takes a little bit of work using remotes library to get. If you don't have remotes, install that first. Then, install network data using these instructions: <https://www.rdocumentation.org/packages/networkdata/versions/0.1.6>
 
 # 1.) Getting the Data
+
+```{r reference_code}
+# install.packages("drat")
+# drat::addRepo("schochastics")
+# install.packages("networkdata")
+
+# OR for dev version:
+# install.packages("remotes")
+# remotes::install_github("schochastics/networkdata")
+
+# installing the dev version for now
+```
 
 ```{r}
 ?wta
@@ -96,7 +113,9 @@ Saving your data at this point is a good idea. You can do this with `write_graph
 write_graph(g3, format = "gml", file = "Homework_3_filtered_data.gml")
 ```
 
-Now, it's time to do our work::
+Now, it's time to do our work:
+
+`r if(SKIP_AHEAD) {"\\end{comment}"}`
 
 # 2.) Graph with ggraph
 
@@ -104,10 +123,57 @@ Now, it's time to do our work::
 
 Your job is to produce the code/graph which reproduces or improves on this graph using the `ggraph` and `visNetwork` packages. Good luck!
 
+---
+
+First off, let's take a look at this graph and note the important features:
+ - There are 4 legends at each of the 4 corners:
+  - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
+  - vertex size based on `age` (legend only showing min, max) in bottom left
+  - vertex shape based on `hand` (legend showing U, R, L) in top right
+  - edge color based on `surface` (legend showing Hard, Grass, Clay, Carpet)
+ - We can see one isolated component to the right, with 4 nodes, and a main more-connected component to the center
+ - edge thickness does seem to vary, but it does not have a legend associated with it (assuming based on strength/degree?)
+ - title top center: "Tennis Losses from 2007", color black, bolded
+ - subtitle top center (below title): "Data represents players from USA, GBR, and AUS", color black, normal font size
+ - caption bottom center: "Data from networkdata R package", wta dataset, color gray, small
+ - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
+ 
+Now, using each of those bullet points as a code chunk beginning:
+
 ```{r}
 library(ggraph)
 
+# graph creation
+
+# plot and layout settings
+
+# edge settings
+# - edge thickness does seem to vary, but it does not have a legend associated with it (assuming based on strength/degree?)
+# - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
+# - edge color based on `surface`
+
+# vertex settings
+# - vertex color based on `country`
+# - vertex size based on `age`
+# - vertex shape based on `hand`
+
+# legends
+# - There are 4 legends at each of the 4 corners:
+#  - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
+#  - vertex size based on `age` (legend only showing min, max) in bottom left
+#  - vertex shape based on `hand` (legend showing U, R, L) in top right
+#  - edge color based on `surface` (legend showing Hard, Grass, Clay, Carpet)
+
+# titles and text
+# - title top center: "Tennis Losses from 2007", color black, bolded
+# - subtitle top center (below title): "Data represents players from USA, GBR, and AUS", color black, normal font size
+# - caption bottom center: "Data from networkdata R package", wta dataset, color gray, small
+
+# plot
 # TODO make graph happen!
+
+
+# - We can see one isolated component to the right, with 4 nodes, and a main more-connected component to the center
 ```
 
 # 3.) Graph with visNetwork
