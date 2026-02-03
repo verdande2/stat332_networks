@@ -621,7 +621,7 @@ knitr::opts_chunk$set(echo = TRUE) # in case echo was previously disabled, defau
 
 The London Gang Network has been made available to you in the course shell. I would like you to use the information in this lab to give your best shot to reproducing the following graph.
 
-![London Gang Network Visualization](London%20Gang%20Network.png)
+![London Gang Network Visualization](London Gang Network.png)
 
 Well, taking an initial look at the network graph picture, I see 3 legends at 3 of the 4 corners (missing top left), showing:
  - legend for node size to top right, ranging from min to max of values in V(g)$Arrests
