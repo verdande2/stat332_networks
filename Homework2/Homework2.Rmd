@@ -2,12 +2,13 @@
 title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 2 - Prof. Joe Reid"
 author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
-due: "23-01-2026"
 output:
+  word_document: default
   html_document:
     self_contained: true
     df_print: paged
   pdf_document: default
+due: "23-01-2026"
 ---
 
 ```{r setup, include=FALSE}
@@ -90,7 +91,7 @@ print_big_fancy_summary_table <- function(graph) {
       mean_distance(graph)
     )
   )
-  big_fancy_igraph_table |> gt()
+  print(big_fancy_igraph_table |> gt())
 }
 
 # this was actually quite handy as an utility func
@@ -107,29 +108,48 @@ print_igraph_attr <- function(graph) {
 
 # generic version of this function, without the third col of expected values
 print_metadata_summary_table <- function(graph) {
-  tbl <- data.table(
+  # editor's note: splitting table into two subtables, first for T/F values and the second for the component counts
+  
+  tbl_TF <- data.table(
     label <- c(
       "Directed?",
       "Weighted?",
       "Not Simple?",
       "Has Multiple Edges?",
       "Weakly Connected?",
-      "Strongly Connected?",
+      "Strongly Connected?"
+    ),
+    value <- c(
+      igraph::is_directed(g),
+      igraph::is_weighted(g),
+      !igraph::is_simple(g),
+      length(E(g)) > 1,
+      is_connected(g, mode = "weak"), # mode = weak is the default
+      is_connected(g, mode = "strong")
+    )
+  )
+  colnames(tbl_TF) <- c("Test", "Value")
+  print(tbl_TF |> 
+    gt() |> 
+    fmt_tf(columns = c(Value), tf_style = "yes-no")
+  )
+  
+  
+  tbl_components <- data.table(
+    label <- c(
       "# of Strongly-connected components:",
       "# of Weakly-connected components:"
     ),
     value <- c(
-      igraph::is_directed(graph),
-      igraph::is_weighted(graph),
-      !igraph::is_simple(graph),
-      length(E(graph)) > 1,
-      is_connected(graph, mode = "weak"), # mode = weak is the default
-      is_connected(graph, mode = "strong"),
-      components(graph, mode = "strong")$no,
-      components(graph, mode = "weak")$no # mode = weak is the default
+      components(g, mode = "strong")$no,
+      components(g, mode = "weak")$no # mode = weak is the default
     )
   )
-  tbl |> gt()
+  colnames(tbl_components) <- c("Test", "Value")
+  print(tbl_components |> 
+    gt() |> 
+    fmt_number(columns = c(Value), decimals = 0, use_seps = TRUE)
+  )
 }
 ```
 
@@ -145,7 +165,7 @@ Create a .csv file using a spreadsheet software or notepad. This file should hav
 
 ### 1.a) 
 
-Read in your edgelist. The following code can help.
+Read in your edge list. The following code can help.
 
 ```{r load_the_edge_list}
 edges <- readr::read_csv(edge_filename)
@@ -154,7 +174,7 @@ edges <- readr::read_csv(edge_filename)
 edge_list <- edges[, c("from", "to", "name", "weight")]
 ```
 
-Once you have your edge list, convert it to an igraph object using the graph_from_data_frame() function (you may need the documentation).
+Once you have your edge list, convert it to an `igraph` object using the `graph_from_data_frame()` function (you may need the documentation).
 
 ```{r convert_df_to_igraph}
 # g is not very descriptive, but it'll save some keystrokes...
@@ -163,7 +183,7 @@ g <- igraph::graph_from_data_frame(d = edge_list)
 
 ### 1.b)
 
-Produce a summary of your graph to make sure the igraph works correctly.
+Produce a summary of your graph to make sure the `igraph` works correctly.
 
 ```{r assert_igraph_class}
 testit::assert(paste0("ig object should be of class: igraph, but returned class: ", class(g)), {
@@ -183,18 +203,18 @@ print_igraph_attr(g)
 
 In Lab 2 we looked at how to create a summary of the metadata for the graph. Use this code as a basis to make sure that the above conditions are met in general (Directed, Weighted, Not Simple, Has Multiple Edges, is weakly connected but not strongly connected, has two components when counting the number of strongly connected components but only one when counting the number of weakly connected components.
 
-```{r}
+```{r summary_with_compare}
 print_metadata_summary_w_compare <- function(g) {
-  tbl <- data.table(
+  # editor's note: splitting table into two subtables, first for T/F values and the second for the component counts
+  
+  tbl_TF <- data.table(
     label <- c(
       "Directed?",
       "Weighted?",
       "Not Simple?",
       "Has Multiple Edges?",
       "Weakly Connected?",
-      "Strongly Connected?",
-      "# of Strongly-connected components:",
-      "# of Weakly-connected components:"
+      "Strongly Connected?"
     ),
     value <- c(
       igraph::is_directed(g),
@@ -202,9 +222,7 @@ print_metadata_summary_w_compare <- function(g) {
       !igraph::is_simple(g),
       length(E(g)) > 1,
       is_connected(g, mode = "weak"), # mode = weak is the default
-      is_connected(g, mode = "strong"),
-      components(g, mode = "strong")$no,
-      components(g, mode = "weak")$no # mode = weak is the default
+      is_connected(g, mode = "strong")
     ),
     expected <- c(
       TRUE, # Directed
@@ -212,18 +230,40 @@ print_metadata_summary_w_compare <- function(g) {
       TRUE, # Not Simple
       TRUE, # Has Multiple Edges
       TRUE, # Weakly Connected
-      FALSE, # Strongly Connected
+      FALSE # Strongly Connected
+    )
+  )
+  colnames(tbl_TF) <- c("Test", "Value", "Expected")
+  print(tbl_TF |> 
+    gt() |> 
+    fmt_tf(columns = c(Value, Expected), tf_style = "yes-no")
+  )
+  
+  
+  tbl_components <- data.table(
+    label <- c(
+      "# of Strongly-connected components:",
+      "# of Weakly-connected components:"
+    ),
+    value <- c(
+      components(g, mode = "strong")$no,
+      components(g, mode = "weak")$no # mode = weak is the default
+    ),
+    expected <- c(
       2, # Strongly-Connected Components
       1 # Weakly-Connected Components
     )
   )
-  colnames(tbl) <- c("Test", "Value", "Expected")
-  tbl |> gt()
+  colnames(tbl_components) <- c("Test", "Value", "Expected")
+  
+  
+  print(tbl_components |> 
+    gt() |> 
+    fmt_number(columns = c(Value, Expected), decimals = 0, use_seps = TRUE)
+  )
 }
 
-
 print_metadata_summary_w_compare(g)
-# TODO I feel like this is an appropriate place to employ tests and asserts properly, but I need to delve more into testing in R
 # TODO need moar asssert()s
 ```
 
@@ -245,7 +285,7 @@ I guess we better add the other elements from the edges matrix into our graph as
 print_igraph_attr(g)
 ```
 
-Well, when we read the graph in as a data frame and then used igraph::graph_from_data_frame(), we already added those edge attributes, so we are golden!
+Well, when we read the graph in as a data frame and then used `igraph::graph_from_data_frame()`, we already added those edge attributes, so we are golden!
 
 Also, read in your nodes file the same way you did for the edges file and update the vertex property with the types.
 
@@ -262,7 +302,7 @@ Now, we have the nodes list csv file loaded, and have pulled out the columns for
 V(g)$type <- unlist(node_type_list)
 ```
 
-Let's verify we see vertex name and vertex type in our igraph:
+Let's verify we see vertex name and vertex type in our `igraph`:
 
 ```{r verify_vertex_attributes}
 print_igraph_attr(g)
@@ -270,7 +310,7 @@ print_igraph_attr(g)
 
 ---
 
-Finally, produce a summary of the graph again. You should see that, because you have a column called weight, the summary is now: DNWB 8. This means it is a weighted graph.
+Finally, produce a summary of the graph again. You should see that, because you have a column called weight, the summary is now: `DNWB 8`. This means it is a weighted graph.
 
 
 ```{r print_metadata_for_graph_after_attrs}
@@ -278,7 +318,7 @@ g
 print_igraph_attr(g)
 ```
 
-IGRAPH a82ac7f DNWB 8 31 --! Check! Got that W! That looks good to me!
+`IGRAPH a82ac7f DNWB 8 31 --`! Check! Got that `W`! That looks good to me!
 
 ### 1.e)
 
@@ -291,20 +331,20 @@ plot(g)
 
 ### 2.)  Graphing
 
-Now, we are going to work on improving the plot, but we actually have a problem. The vertex name of "type" is actually a reserved term. This one is supposed to be a logical of 1 or 0. We need to rename our vertex attribute of "type" to "classification" and then overwrite the "type" variable. I'll give you this code.
+Now, we are going to work on improving the plot, but we actually have a problem. The vertex name of `type` is actually a reserved term. This one is supposed to be a logical of `1` or `0`. We need to rename our vertex attribute of `type` to `classification` and then overwrite the `type` variable. I'll give you this code.
 
 ```{r rename_type_to_classification}
 V(g)$classification <- V(g)$type
 ```
 
-Of note, the edge attribute _type_ still exists at this point, to be overwritten in the next code block:
+Of note, the edge attribute `type` still exists at this point, to be overwritten in the next code block:
 
 ```{r assign_type_based_on_fruit}
 # so if it's a fruit type, it gets a TRUE, else FALSE
 V(g)$type <- ifelse(V(g)$classification == "Fruit", TRUE, FALSE) # so type isn't /really/ a "type" anyone, it's an is_fruit bool flag... Got it.
 ```
 
-Now, start by using the layout_as_bipartite in your plot.
+Now, start by using the `layout_as_bipartite` in your plot.
 
 ```{r setup_bipartite_graph_layout}
 layout <- igraph::layout_as_bipartite(
@@ -325,7 +365,6 @@ Your final task on this will be to make this look better based on the lab from c
 ```{r setup_bipartite_graph_plot_params}
 par(mar = c(3, 1, 4, 1)) # margins
 ```
-
 
 ```{r plot_the_bipartite_graph}
 plot(
@@ -416,7 +455,7 @@ legend_labels <- V(g)$degree_in |> # gather all the vertices' degree in attribut
   round(digits = 0) |> # round to integer
   unique() # prune any duplicates due to rounding to same integer
 
-# I must say, utilizing the pipe sure does make that flow look more easily understandable and clear. Pretty nifty! Learning happened here today.
+# I must say, utilizing the pipe sure does make that flow look more easily understandable and clear. Pretty nifty! Learning happened here today. I like this.
 
 legend(
   "topright",
