@@ -36,6 +36,8 @@ media_network_filename <- "Media Network.rds"
 # for later part:
 actor_roles_filename <- "Actor Roles.csv"
 table_2_filename <- "2006 Koschade Table 2.csv"
+
+SKIP_AHEAD <- TRUE # bool flag to comment out part 1 and 2, set to FALSE to output parts 1 and 2
 ```
 
 ```{r extra_functions}
@@ -50,6 +52,8 @@ print_igraph_attr <- function(graph) {
   print(edge_attr(graph))
 }
 ```
+
+`r if(SKIP_AHEAD) {"Commenting out first introductory sections to skip to the relevant bits!\\n\\n... snip ...\\n\\begin{comment}"}`
 
 ## 1.) Setup
 
@@ -201,9 +205,11 @@ p + theme(
 )
 ```
 
+`r if(SKIP_AHEAD) {"\\end{comment}"}`
+
 ## 3.) Your turn:
 
-In the data for this lab, there are two files (and a paper describing where they came from). The Actor Roles provides the list of nodes and their corresponding attributes. The "Table 2" file provides a matrix of associations and their strengths that you can read in as a matrix and extract the edgelist from. Please create a graph which uses shapes, colors, and edge-widths to represent this network. Also, please make sure to use both color and type on edges to denote any edge relationships between Command Team members and any other members in the network. Use `GGRAPH` to produce this plot. Be certain to add titles, subtitles, and footnotes/captions as appropriate and include a corresponding legend.
+In the data for this lab, there are two files (and a paper describing where they came from). The Actor Roles provides the list of nodes and their corresponding attributes. The "Table 2" file provides a matrix of associations and their strengths that you can read in as a matrix and extract the edge list from. Please create a graph which uses shapes, colors, and edge-widths to represent this network. Also, please make sure to use both color and type on edges to denote any edge relationships between Command Team members and any other members in the network. Use `GGRAPH` to produce this plot. Be certain to add titles, subtitles, and footnotes/captions as appropriate and include a corresponding legend.
 
 ```{r read_in_data_files}
 actor_roles <- readr::read_csv(actor_roles_filename)

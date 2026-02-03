@@ -20,6 +20,8 @@ library(tidyverse)
 library(gt)
 library(tibble)
 library(dplyr)
+
+SKIP_AHEAD <- TRUE # to skip outputting the introductory sections, TRUE for omit, FALSE for display all
 ```
 
 ```{r extra_functions}
@@ -34,6 +36,9 @@ print_igraph_attr <- function(graph) {
   print(edge_attr(graph))
 }
 ```
+
+`r if(SKIP_AHEAD) {"Commenting out parts 1 and 2 to skip to the relevant bits!\\n\\n... snip ...\\n\\begin{comment}"}`
+
 
 ## 1.) Setup
 
@@ -450,7 +455,7 @@ In class, I mentioned that there are several methods of calculating transitivity
 transitivity(g, type = "globalundirected", isolates = "NaN")
 ```
 
-Now we have a choice. There are multiple "correct" ways of getting a global measure for a weighted graph, but the most common is to use the arithmetic mean of local transitiveness. This isn't all that hard, but requires that we write another function.\
+Now we have a choice. There are multiple "correct" ways of getting a global measure for a weighted graph, but the most common is to use the arithmetic mean of local transitiveness. This isn't all that hard, but requires that we write another function.
 
 ```{r}
 global_weighted_transitivity <- function(g, mode = c("undirected", "directed")) {
@@ -769,6 +774,8 @@ global_measures_table |>
   tab_options(table.font.size = 12)
 
 ```
+
+`r if(SKIP_AHEAD) {"\\end{comment}"}`
 
 ## 4.) Your turn:
 
