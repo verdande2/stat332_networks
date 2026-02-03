@@ -15,14 +15,17 @@ knitr::opts_chunk$set(cache = FALSE)
 knitr::opts_chunk$set(echo = TRUE)
 
 library(networkdata)
+library(ggplot2)
+library(tidygraph)
 library(igraph)
 library(ggraph)
 library(visNetwork)
-library(tidygraph)
 ```
 
 ```{r user_configurable_settings}
-SKIP_AHEAD = TRUE # skips ahead and truncates off the demo code/markdown (uses a TeX comment to omit output)
+gml_filename <- "Homework_3_filtered_data.gml"
+
+SKIP_AHEAD <- TRUE # skips ahead and truncates off the demo code/markdown (uses a TeX comment to omit output)
 ```
 
 
@@ -110,7 +113,7 @@ g3 <- g2 |>
 Saving your data at this point is a good idea. You can do this with `write_graph()` as follows.
 
 ```{r}
-write_graph(g3, format = "gml", file = "Homework_3_filtered_data.gml")
+write_graph(g3, format = "gml", file = gml_filename)
 ```
 
 Now, it's time to do our work:
@@ -141,7 +144,8 @@ First off, let's take a look at this graph and note the important features:
 Now, using each of those bullet points as a code chunk beginning:
 
 ```{r}
-library(ggraph)
+# first, read in the gml as a igraph obj
+g <- igraph::read_graph(gml_filename, format = "gml")
 
 # graph creation
 
@@ -172,8 +176,11 @@ library(ggraph)
 # plot
 # TODO make graph happen!
 
-
-# - We can see one isolated component to the right, with 4 nodes, and a main more-connected component to the center
+ggraph(g, layout = "stress") +
+  geom_edge_link() +
+  geom_node_point() +
+  theme_graph()
+# - We can see one isolated component to the right, with 4 nodes, and a main more-connected component to the center, and a pairing
 ```
 
 # 3.) Graph with visNetwork
