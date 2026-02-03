@@ -21,6 +21,11 @@ library(data.table)
 library(gt)
 library(RColorBrewer) # color palettes etc
 library(scales)
+```
+
+```{r user_configurable_settings}
+gangs_filename <- "London Gang Network.rds"
+PNG <- FALSE
 
 SKIP_TO_PART_3 <- TRUE # bool flag to comment out the ~600 lines of part 1 and 2, set to FALSE to output parts 1 and 2
 ```
@@ -635,12 +640,11 @@ Well, taking an initial look at the network graph picture, I see 3 legends at 3 
  - looking to margins, it seems that outer margins are zero'd, and inner margins are minimal, so starting with 0 for all
  
 Now, listing those all out like that makes them easy to cannabalize and turn into psuedocode comments below, used to guide my process...
- 
- 
+
 To start out, I'll begin by copy/pasting the above plotting code chunk to below and adapting that as I go, but first, lets get the data actually in the environment:
 
 ```{r prob4_load_dataset}
-gangs <- read_rds("London Gang Network.rds")
+gangs <- read_rds(gangs_filename)
 ```
 
 Make sure we know what we just imported:
@@ -697,7 +701,9 @@ edge_line_types <- 1 # 1 = solid
 
 ```{r segregated_plot_chunk}
 # begin output to png file
-png("LondonGangNetwork.png", width = 1920, height = 1200, res = 300) # saving to file
+if (PNG) {
+  png("LondonGangNetwork.png", width = 1920, height = 1200, res = 300) # saving to file
+}
 # TODO need to increase spacing between nodes - need to figure out how the fuck to do so...
 
 # 5. PLOT
@@ -706,22 +712,19 @@ custom_layout <- layout_with_lgl(
   maxiter = 10000
 )
 
-# - need to increase plot display size
 plot(
   gangs,
   layout = custom_layout,
-  vertex.size = scales::rescale(V(gangs)$Arrests, to = c(10, 50)), # even with 0 arrests, min size is 10 so we still see vertex
+  vertex.size = scales::rescale(V(gangs)$Arrests, to = c(5, 25)), # even with 0 arrests, min size is 5 so we still see vertex
 
-  # - nodes appear to have a semitransparent opacity set
-  vertex.color = adjustcolor(vertex_colors, alpha.f = 0.75), # VERTEX ALPHA HERE
+  vertex.color = adjustcolor(vertex_colors, alpha.f = 0.75),
   vertex.shape = vertex_shapes,
   vertex.label = V(gangs)$Birthplace,
   vertex.label.cex = 1.0,
   vertex.label.dist = 0,
   edge.width = 3 * E(gangs)$weight, # scale factor of 3? Seems enough
 
-  #  - edges also appear to have some transparency set
-  edge.color = adjustcolor(edge_colors, alpha.f = 0.75), # EDGE ALPHA HERE
+  edge.color = adjustcolor(edge_colors, alpha.f = 0.75),
   edge.lty = edge_line_types,
   edge.curved = 0, # straight lines
   edge.label = "", # edges are unlabeled for this plot, guess I technically could comment it out and it should default to blank
@@ -742,50 +745,57 @@ plot(
 # see https://stackoverflow.com/a/47308865
 # TODO legend for node size to top right, ranging from min to max of values
 arrest_count_cutoffs <- seq(
-  from = 0,
+  from = min(V(gangs)$Arrests),
   to = max(V(gangs)$Arrests),
   length.out = 5 # means 5 total sizes, including both endpoints, so 3 intermediate legend values
 )
 
 arrest_count_cutoffs <- round(arrest_count_cutoffs, 0) # integerize the decimals if needed
+
+arrest_count_cutoffs <- unique(arrest_count_cutoffs) # just in case our 5 chosen points are duplicated after rounding
+
+# legend_TR_base is just for the legend labels
 legend_TR_base <- legend(
-  "topleft",
+  "topright",
   title = "Node Arrests",
   legend = arrest_count_cutoffs, # should have min, max and 5-2 = 3 evenly spaced intermediate sizes for the legend
   pt.cex = scales::rescale(
     arrest_count_cutoffs,
     to = c(1, 3) # normalize
   ),
-  bty = "n",
-  col = "black"
+  pch = 21, # circle
+  #bty = "n",
+  col = "black",
+  pt.bg = "orange"
 )
 # TODO remove the outline/border of the first/original node size legend in top right
-legend_TR_circles <- legend(
-  "topright",
-  legend = arrest_count_cutoffs,
-  pt.cex = scales::rescale(
-    arrest_count_cutoffs,
-    to = c(1, 3) # normalize
-  ),
-  col = "white",
-  pch = 21, # circle
-  pt.bg = "white"
-)
-
-# getting the legend's text's coords/offset
-x <- (legend_TR_circles$text$x + legend_TR_circles$rect$left) / 2 # average of label's x-coord and its rect's x-coord = midpoint between left edge of legend rect box and left edge of text label. Excellent.
-y <- legend_TR_circles$text$y # same y value as the text itself, checks out
+# legend_TR_circles is used for it's x and y coords for the text labels, used to find circle coords below
+# legend_TR_circles <- legend(
+#   "topright",
+#   legend = arrest_count_cutoffs,
+#   # pt.cex = scales::rescale(
+#   #   arrest_count_cutoffs,
+#   #   to = c(1, 3) # normalize
+#   # ),
+#   col = "white",
+#   pch = 21, # circle
+#   pt.bg = "white"
+# )
+# 
+# # getting the legend's text's coords/offset
+# x <- (legend_TR_circles$text$x + legend_TR_circles$rect$left) / 2 # average of label's x-coord and its rect's x-coord = midpoint between left edge of legend rect box and left edge of text label. Excellent.
+# y <- legend_TR_circles$text$y # same y value as the text itself, checks out
 
 # TODO legend node size bullet position is correct, but radii is too large and causing overlap
-symbols(x, y, # symbols coordinates
-  circles = scales::rescale(
-    arrest_count_cutoffs,
-    to = c(1, 15) # normalize
-  ), # vector of circle radii - Circles of radius zero are plotted at radius one pixel
-  inches = FALSE, # units are taken to be those of the appropriate axes,
-  add = TRUE, # adding to existing plot, yep
-  bg = "orange" # background color of orange? for now TODO: make these equal to the symbol color palette matching birthplace, can be lazy and just pull color of the first entry in the palette
-) # see https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/symbols
+# symbols(x, y, # symbols coordinates
+#   circles = scales::rescale(
+#     arrest_count_cutoffs,
+#     to = c(1, 5) # normalize
+#   ), # vector of circle radii - Circles of radius zero are plotted at radius one pixel
+#   inches = FALSE, # units are taken to be those of the appropriate axes,
+#   add = TRUE, # adding to existing plot, yep
+#   bg = "orange" # background color of orange? for now TODO: make these equal to the symbol color palette matching birthplace, can be lazy and just pull color of the first entry in the palette
+# ) # see https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/symbols
 
 # see https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/legend
 
@@ -793,8 +803,10 @@ symbols(x, y, # symbols coordinates
 legend(
   "bottomleft",
   title = "Edge Weight",
-  legend = sort(unique(e_vals)), # should be edge values (=weights) (do I need sort/unique calls on a noncategorical var?)
-  pch = 21, # just swapped to 21 for the circle symbol
+  legend = 3 * E(gangs)$weight |> unique() |> sort(
+    
+  ), # should be edge values (=weights) (do I need sort/unique calls on a noncategorical var?)
+  # pch = 21, # just swapped to 21 for the circle symbol
   pt.bg = "gray80", # background
   bty = "n", # box type of n
   cex = 0.8 # expansion factor
@@ -807,7 +819,7 @@ legend(
 legend(
   "bottomright",
   title = "Node Birthplace",
-  legend = sort(unique(v_vals)), # v_vals col should be birthplace str == one of c("1", "2", ...)
+  legend = gangs$Birthplace |> unique() |> sort(), # should be birthplace str == one of c("1", "2", ...)
   # col    = e_pal[e_levels], # color
   lwd = 3, # line width
   bty = "n", # box type of n... as opposed to ... o
@@ -825,8 +837,9 @@ mtext(side = 3, line = 2, at = 0, adj = 0.5, cex = 1.1, title_text) # centered t
 
 
 # close device, write png file
-dev.off()
-
+if (PNG) {
+  dev.off()
+}
 
 # now that we've written to file, include it in the markdown:
 ```
