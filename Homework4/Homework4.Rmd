@@ -55,7 +55,7 @@ links <- read.csv("musae_facebook_edges.csv", header=T, as.is=T)
 net <- graph_from_data_frame(d=links, vertices=nodes, directed=F)
 ```
 
-0.) Your first step, before doing any other work, will be to create a subgraph that is limited to only those nodes where the page_type is tvshow. Then overwrite this network with an induced subgraph where the isolates are removed (you should have 3282 nodes)
+0.) Your first step, before doing any other work, will be to create a subgraph that is limited to only those nodes where the page_type is tvshow. Then overwrite this network with an induced subgraph where the isolates are removed (you should have **3,282** nodes)
 
 ```{r create_subgraph}
 
@@ -75,7 +75,7 @@ I wouldn't recommend trying to plot the network right away. Start by looking at 
 
 ```
 
-2.)  Produce the 5 measures of graph structure discussed in the lesson from this week. Report these in a table that includes the measure name, the value of the statistic, and an interpretation of the statistic.
+2.)  Produce the **5** measures of graph structure discussed in the lesson from this week. Report these in a table that includes the measure name, the value of the statistic, and an interpretation of the statistic.
 
 ```{r create_basic_measures_table}
 tbl <- data.frame(
@@ -123,7 +123,7 @@ tbl |> gt()
 **Answer:**
 asdfasdf
 
-6.) Given the measures that you have produced in this assignment, would you consider this network to be centralized or de-centralized? Similarly, would you consider this network to be highly interconnected or have low interconnectedness? Based on these results, what do you think the advantages and disadvantages of this network would be in terms of robustness and resialiance.  What are the critical strengths and weaknesses of this network?
+6.) Given the measures that you have produced in this assignment, would you consider this network to be centralized or de-centralized? Similarly, would you consider this network to be highly interconnected or have low interconnectedness? Based on these results, what do you think the advantages and disadvantages of this network would be in terms of robustness and resialiance. What are the critical strengths and weaknesses of this network?
 
 **Answer:**
 asdfasdf
