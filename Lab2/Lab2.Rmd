@@ -29,11 +29,14 @@ Copying over the table function we used recently, might prove to be useful:
 
 ```{r func_defs, echo=TRUE}
 make_table_happen <- function(graph) {
-  data.table(
-    ID = c("Size", "Components", "Isolate Proportion", "Density", "Diameter", "Average Path Length"),
+  tbl <- data.table(
+    Label = c("Size", "Components", "Isolate Proportion", "Density", "Diameter", "Average Path Length"),
     Value = c(gorder(graph), count_components(graph), sum(degree(graph) == 0) / gorder(graph), edge_density(simplify(graph)), diameter(graph), mean_distance(graph))
-  ) |>
-    gt()
+  )
+  colnames(tbl) <- c("Label", "Value")
+  tbl |>
+    gt() |>
+    fmt_number(columns = ~is.numeric(.x), decimals = 2, use_seps = TRUE)
 }
 ```
 
