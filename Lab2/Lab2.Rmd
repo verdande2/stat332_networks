@@ -729,7 +729,7 @@ plot(
   edge.arrow.size = 0, # zero'd, no arrows in network, it's undirected
   edge.arrow.mode = 0, # zero for no arrows, 1 for backward, 2 for forward, 3 for both
 
-  rescale = TRUE # TODO look into rescale behavior
+  rescale = TRUE
 )
 
 # 8. LEGENDS
