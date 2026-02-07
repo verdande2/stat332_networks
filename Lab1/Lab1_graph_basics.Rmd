@@ -1,11 +1,14 @@
 ---
-title: "Andrew Sparkes - STAT332 Statistical Analysis of Networks Sec 01 - Lab 1"
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Lab 1 - Prof. Joe Reid"
+author: "Andrew Sparkes"
+date: "`r Sys.Date()`"
+due: "???"
 output:
-  html_document: default
+  html_document:
+    self_contained: true
+    df_print: paged
   pdf_document: default
 ---
-
-# STAT 332:  Lab 1
 
 ## 1.)  Setup
 
