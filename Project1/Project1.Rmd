@@ -22,10 +22,13 @@ library(scales) # scaling factors
 library(grid) # for unit()
 library(ggrepel) # for stronger label repel
 library(visNetwork) # for network graphs
-library(ggraph) # for graphs
 library(ggplot2) # for ploots
 ```
 
+```{r user_configurable_settings}
+# user config
+
+```
 
 For your midterm project, I would like you use use the data from the `igraphdata` package. You need to use the US airport network, **2010 December** dataset (which has **755** nodes and **23,473** edges) to write your report. This network has a number of node and edge attributes.
 
@@ -43,10 +46,19 @@ You **DO NOT** need to use the _full_ network. You may subset or aggregate the d
 
 # Story
 
-```{r}
-# TODO all the things
+```{r load_in_dataset}
+# TODO load in data
 ```
 
 # Pretty Graphs
 
+```{r make_pretty_graphs}
+# TODO pretty graphs
+```
+
 # Various Measures about subnetwork
+
+```{r}
+# TODO make measures table
+```
+

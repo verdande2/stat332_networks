@@ -2,7 +2,7 @@
 title: "STAT332 Statistical Analysis of Networks Sec 01 - Lab 4 - Prof. Joe Reid"
 author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
-due: "???"
+due: "06-02-2026"
 output:
   html_document:
     self_contained: true
@@ -47,7 +47,7 @@ print_igraph_attr <- function(graph) {
 
 ## 1.) Setup
 
-Welcome to Lab 4. This week we are going to be focused on macro-scale measures on networks. While it takes a long time to learn these measures, the vast majority are built directly into igraph and only need the correct use of the function to calculate.
+Welcome to Lab 4. This week we are going to be focused on macro-scale measures on networks. While it takes a long time to learn these measures, the vast majority are built directly into `igraph` and only need the correct use of the function to calculate.
 
 For our dataset this week, we're going to use the Game of Thrones network from the popular book (I'll admit, I tried, but only got through the first couple of chapters before I was too disturbed to read it, but it is popular...).
 
@@ -181,9 +181,9 @@ And now we have a completely different answer for the longest of the shortest pa
 
 Now we get to a more difficult problem. In fact, we get to an NP problem.
 
-(Note: I am IGNORING the conductance for directed graphs. Some work from 2005 describes Laplacians and Cheeger inequalities on directed graphs (<https://fanchung.ucsd.edu/wp/cheeger.pdf>) and this is way harder to work with.)
+(Note: I am IGNORING the conductance for directed graphs. Some work from **2005** describes Laplacians and Cheeger inequalities on directed graphs (<https://fanchung.ucsd.edu/wp/cheeger.pdf>) and this is way harder to work with.)
 
-Conductance was defined to be: $$        $$
+Conductance was defined to be:
 
 $$
 \phi(G) = \min\limits_{S \subset V} \phi(S) = \min\limits_{S \subset V} \frac{vol(E(S))}{min\{vol(S), vol(\bar{S}\}} 
@@ -217,11 +217,11 @@ conductance_of_set <- function(g, S, weights = E(g)$weight) {
 }
 ```
 
-But, this generally requires that we perform this calculation on all possible cutsets which partition a graph and then find the minimum of this set of values. The increase to the numbers of cutsets available increases at a rate faster than polynomial which makes this problem NP. Generally, this calculation is restricted to "balanced" sets in order to ease the process (and reduce the number of required calculations), but even finding "balanced" sets in a weighted graph is a difficult problem.
+But, this generally requires that we perform this calculation on all possible cutsets which partition a graph and then find the minimum of this set of values. The increase to the numbers of cutsets available increases at a rate faster than polynomial which makes this problem **_NP_**. Generally, this calculation is restricted to "balanced" sets in order to ease the process (and reduce the number of required calculations), but even finding "balanced" sets in a weighted graph is a difficult problem.
 
 To get around this, several attempts have been made to find efficient algorithms or bound the value. One of the most elegant that I have seen is presented in <https://math.uchicago.edu/~may/REU2020/REUPapers/Zhang,Yueheng.pdf>
 
-Theorem 3.2.7 provides Cheeger's inequality for a graph G and concludes:
+Theorem 3.2.7 provides Cheeger's inequality for a graph $G$ and concludes:
 
 $$
 \frac{\lambda_2}{2} \leq \phi(G) \leq \sqrt{2\lambda_2}
@@ -283,10 +283,10 @@ fiedler_sweep_cut <- function(g) {
     fiedler_vector = fiedler_vec
   )
 }
+
 ```
 
 ```{r}
-
 res <- fiedler_sweep_cut(g)
 cat("Best φ from spectral sweep:", res$phi, "\n")
 
@@ -298,7 +298,7 @@ An alternative to this method is the Andersen-Chung-Lang (ACL) Local Graph Parti
 
 <https://fanchung.ucsd.edu/wp/localpartition.pdf>
 
-Since page_rank() is well defined in igraph, we can actually implement this very easily, but because this is geared towards local calculations, it is very likely to find a much higher value than the true global value. It's more of a sanity check than a real calculation of conductance.
+Since `page_rank()` is well defined in `igraph`, we can actually implement this very easily, but because this is geared towards local calculations, it is very likely to find a much higher value than the true global value. It's more of a sanity check than a real calculation of conductance.
 
 ```{r}
 page_rank_sweep_cut <- function(g, alpha = 0.15) {
@@ -384,7 +384,7 @@ lambda_2 <- ev[length(ev) - 1]
 lambda_2
 ```
 
-So, just so we're all on the same page here, the bounds on Fiedler's value is actually [0, 2] NOT [0, 1] like we would expect. This comes from the fact that we use the symmetric normalized Laplacian rather than the random walk version. If we were looking at random walk mixing or diffusion properties (i.e. Markov Chain properties rather than shortest path style methods) we would want to use the other version of the matrix method provided in the notes by changing the normalization method in the Laplacian-matrix calculation and adapting the eigenvalue method by changing symmetric to false.
+So, just so we're all on the same page here, the bounds on Fiedler's value is actually $[0, 2]$, _NOT_ $[0, 1]$ like we would expect. This comes from the fact that we use the symmetric normalized Laplacian rather than the random walk version. If we were looking at random walk mixing or diffusion properties (i.e. Markov Chain properties rather than shortest path style methods) we would want to use the other version of the matrix method provided in the notes by changing the normalization method in the Laplacian-matrix calculation and adapting the eigenvalue method by changing symmetric to false.
 
 In terms of interpretation, there's not much "glue" to this network. It's easily fracturable and at high risk of splintering based on the connections we have observed.
 
@@ -404,13 +404,13 @@ You have to be pretty careful about the loops part of this calculation, because 
 cohesion(g)
 ```
 
-Remember how our graph is connected and has bridges? Our cohesion is 1. BUT the version of cohesion presented in igraph is ACTUALLY the graph theory definition of cohesion, not the social network theory version of cohesion! In graph theory, cohesion is:
+Remember how our graph is connected and has bridges? Our cohesion is 1. BUT the version of cohesion presented in `igraph` is ACTUALLY the graph theory definition of cohesion, not the social network theory version of cohesion! In graph theory, cohesion is:
 
 $$
 \text{cohesion}(G) = \min\limits_{u \neq v} \lambda(u,v)
 $$
 
-Where $\lambda(u,v)$ is the number of pairwise local edges between u and v for a given graph.
+Where $\lambda(u,v)$ is the number of pairwise local edges between $u$ and $v$ for a given graph.
 
 In social networks, we defined cohesion to be the "reachability ratio." I.e. the proportion of nodes where a path exists between them. This ratio depends on whether or not the graph is directed or not:
 
@@ -454,7 +454,7 @@ It's still **1** in our case because the graph is connected, but this is the mea
 
 #### Global Clustering Coefficient (Transitivity)
 
-In class, I mentioned that there are several methods of calculating transitivity for weighted graphs. Igraph implements "Barrat" as the appropriate method; however, remember that this does not work if you have a multigraph or loops. You MUST simplify() the graph first in those cases. On the plus side, global transitivity is easy to calculate. On the downside, weighted methods are only implemented for local transitivity.
+In class, I mentioned that there are several methods of calculating transitivity for weighted graphs. `igraph` implements "Barrat" as the appropriate method; however, remember that this does not work if you have a multigraph or loops. You MUST `simplify()` the graph first in those cases. On the plus side, global transitivity is easy to calculate. On the downside, weighted methods are only implemented for local transitivity.
 
 ```{r}
 transitivity(g, type = "globalundirected", isolates = "NaN")
@@ -571,10 +571,9 @@ centr_clo_weighted(g)
 centr_betw(g)$centralization
 ```
 
-Betweenness demonstrates choke points and imbalance of brokerage power on shortest paths. This means that the weights matter, and once again, costs needs to be measured based on the strength of association (or recriprocal weights) yet again. I'm not just making this up either. <https://toreopsahl.com/tnet/weighted-networks/node-centrality/>
+Betweenness demonstrates choke points and imbalance of brokerage power on shortest paths. This means that the weights matter, and once again, costs needs to be measured based on the strength of association (or reciprocal weights) yet again. I'm not just making this up either. <https://toreopsahl.com/tnet/weighted-networks/node-centrality/>
 
 ```{r}
-
 centr_betw_weighted <- function(g) {
   # Convert strength → distance
   d <- 1 / E(g)$weight
@@ -677,80 +676,46 @@ global_measures_table <- tribble(
   ~Measure, ~Meaning, ~Category, ~Disconnected, ~Multigraphs_Loops, ~Strength_Weights, ~Distance_Weights,
 
   # --------------------- STRUCTURAL ---------------------
-  "Diameter", "Longest shortest path", "Structural",
-  "Largest Component", "Collapse; remove loops",
-  "1/weight", "✓",
+  "Diameter", "Longest shortest path", "Structural", "Largest Component", "Collapse; remove loops", "1/weight", "✓",
 
-  "Conductance", "Global bottleneck ratio", "Structural",
-  "Largest Component", "Collapse",
-  "✓", "✓",
+  "Conductance", "Global bottleneck ratio", "Structural", "Largest Component", "Collapse", "✓", "✓",
 
-  "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural",
-  "✓", "Collapse or merge multiplicity",
-  "✓", "✓",
+  "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural", "✓", "Collapse or merge multiplicity", "✓", "✓",
 
-  "Vertex Connectivity", "Minimum vertices to disconnect", "Structural",
-  "✓", "Collapse",
-  "Irrelevant", "Irrelevant",
+  "Vertex Connectivity", "Minimum vertices to disconnect", "Structural", "✓", "Collapse", "Irrelevant", "Irrelevant",
 
-  "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural",
-  "Largest Component", "Collapse; remove loops",
-  "✓", "Do NOT use",
+  "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural", "Largest Component", "Collapse; remove loops", "✓", "Do NOT use",
 
   # --------------------- INTERCONNECTEDNESS ---------------------
-  "Edge Density", "Edges ÷ possible edges", "Interconnectedness",
-  "✓", "Collapse",
-  "Irrelevant", "Irrelevant",
+  "Edge Density", "Edges ÷ possible edges", "Interconnectedness", "✓", "Collapse", "Irrelevant", "Irrelevant",
 
-  "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness",
-  "✓", "Collapse",
-  "Irrelevant", "Irrelevant",
+  "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness", "✓", "Collapse", "Irrelevant", "Irrelevant",
 
-  "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness",
-  "✓", "Collapse",
-  "✓ (Barrat local → mean)", "Irrelevant",
+  "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness", "✓", "Collapse", "✓ (Barrat local → mean)", "Irrelevant",
 
-  "Assortativity", "Mixing by attribute", "Interconnectedness",
-  "✓", "Collapse",
-  "✓ (strength assort.)", "✓ (degree assort.)",
+  "Assortativity", "Mixing by attribute", "Interconnectedness", "✓", "Collapse", "✓ (strength assort.)", "✓ (degree assort.)",
 
   # --------------------- CENTRALIZATION ---------------------
-  "Degree Centralization", "Inequality of degree distribution", "Centralization",
-  "✓", "Collapse",
-  "Consider Strength Centralization", "✓",
+  "Degree Centralization", "Inequality of degree distribution", "Centralization", "✓", "Collapse", "Consider Strength Centralization", "✓",
 
-  "Strength Centralization", "Inequality of weighted degree", "Centralization",
-  "✓", "Collapse",
-  "✓", "Irrelevant",
+  "Strength Centralization", "Inequality of weighted degree", "Centralization", "✓", "Collapse", "✓", "Irrelevant",
 
-  "Closeness Centralization", "Inequality in closeness", "Centralization",
-  "Largest Component", "Collapse",
-  "1/weight", "✓",
+  "Closeness Centralization", "Inequality in closeness", "Centralization", "Largest Component", "Collapse", "1/weight", "✓",
 
-  "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization",
-  "Largest Component", "Collapse",
-  "1/weight", "✓",
+  "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization", "Largest Component", "Collapse", "1/weight", "✓",
 
-  "Eigenvector Centralization", "Inequality in spectral influence", "Centralization",
-  "✓", "Collapse",
-  "✓", "Do NOT use",
+  "Eigenvector Centralization", "Inequality in spectral influence", "Centralization", "✓", "Collapse", "✓", "Do NOT use",
 
   # --------------------- EFFICIENCY ---------------------
-  "Global Efficiency", "Global ease of communication", "Efficiency",
-  "✓", "Collapse",
-  "1/weight", "✓",
+  "Global Efficiency", "Global ease of communication", "Efficiency", "✓", "Collapse", "1/weight", "✓",
 
-  "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency",
-  "✓", "Collapse",
-  "1/weight", "✓",
+  "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency", "✓", "Collapse", "1/weight", "✓",
 
-  "Average Shortest Path Length", "Mean geodesic distance", "Efficiency",
-  "Largest Component", "Collapse",
-  "1/weight", "✓"
+  "Average Shortest Path Length", "Mean geodesic distance", "Efficiency", "Largest Component", "Collapse", "1/weight", "✓"
 )
 ```
 
-```{r message=FALSE}
+```{r message = FALSE}
 
 library(gt)
 library(dplyr)
@@ -780,27 +745,162 @@ global_measures_table |>
 
 ```
 
+I have to admit, that is a nicely made table. Well done!
+
 `r if(SKIP_AHEAD) {"\\end{comment}"}`
 
 ## 4.) Your turn:
 
-```         
-Caviar  Description:       Project Caviar was a unique investigation that targeted a network      of hashish and cocaine importers operating out of Montreal. The      network was targeted between 1994 and 1996 by a tandem      investigation uniting the Montreal Police, the Royal Canadian      Mounted Police, and other national and regional law-enforcement      agencies from various countries (i.e., England, Spain, Italy,      Brazil, Paraguay, and Colombia). The case is unique because it      involved a specific investigative approach that will be referred      to as a “seize and wait” strategy. Unlike most law-enforcement      strategies, the mandate set forward in the Project Caviar case was      to seize identified drug consignments, but not to arrest any of      the identified participants. This took place over a 2-year period.      Thus, although 11 importation consignments were seized at      different moments throughout this period, arrests only took place      at the end of the investigation. What this case offers is a rare      opportunity to study the evolution of a criminal network      phenomenon as it was being disrupted by law-enforcement agents.      The inherent investigative strategy permits an assessment of      change in the network structure and an inside look into how      network participants react and adapt to the growing constraints      set upon them. The principal data source was comprised of      information submitted as evidence during the trials of 22      participants in the Caviar network. It included 4,279 paragraphs      of information (over 1,000 pages) revealing electronically      intercepted telephone conversations between network participants.      These transcripts were used to create the overall matrix of the      drug-trafficking operation’s communication system throughout the      course of the investigation. Individuals falling in the      surveillance net were not all participants in the trafficking      operation. An initial extraction of all names appearing in the      surveillance data led to the identification of 318 individuals.      From this pool, 208 individuals were not implicated in the      trafficking operations. Most were simply named during the many      transcripts of conversations, but never detected. Others who were      detected had no clear participatory role within the network (e.g.,      family members or legitimate entrepreneurs). The final network was      thus composed of 110 participants. NETWORK 11 1-mode matrices      person by person, representing the 11 phases of the investigation.      Ties are directed and valued. Number of nodes = 1) 15x15, 2)      24x24, 3) 33x33, 4) 33x33, 5) 32x32, 6) 27x27, 7) 34x34, 8) 42x42,      9) 34x34, 10) 42x42, 11) 41x41 1-mode matrix 110 x 110 person by      person of the complete network. Ties are communication exchanges      between criminals. Values represent level of communication      activity. Data comes from police wiretapping.
-```
+### Dataset description:
+
+#### Description:
+
+_Project Caviar_ was a unique investigation that targeted a network of hashish and cocaine importers operating out of Montreal. The      network was targeted between **1994** and **1996** by a tandem investigation uniting the Montreal Police, the Royal Canadian Mounted Police, and other national and regional law-enforcement agencies from various countries (i.e. England, Spain, Italy, Brazil, Paraguay, and Colombia). The case is unique because it involved a specific investigative approach that will be referred to as a “seize and wait” strategy. Unlike most law-enforcement strategies, the mandate set forward in the _Project Caviar_ case was to seize identified drug consignments, but not to arrest any of the identified participants. This took place over a **2**-year period. Thus, although **11** importation consignments were seized at different moments throughout this period, arrests only took place at the end of the investigation. What this case offers is a rare opportunity to study the evolution of a criminal network phenomenon as it was being disrupted by law-enforcement agents. The inherent investigative strategy permits an assessment of change in the network structure and an inside look into how network participants react and adapt to the growing constraints set upon them. The principal data source was comprised of information submitted as evidence during the trials of **22** participants in the Caviar network. It included **4,279** paragraphs of information (over **1,000** pages) revealing electronically intercepted telephone conversations between network participants. These transcripts were used to create the overall matrix of the drug-trafficking operation’s communication system throughout the course of the investigation. Individuals falling in the surveillance net were not all participants in the trafficking operation. An initial extraction of all names appearing in the surveillance data led to the identification of **318** individuals. From this pool, **208** individuals were not implicated in the trafficking operations. Most were simply named during the many transcripts of conversations, but never detected. Others who were detected had no clear participatory role within the network (e.g., family members or legitimate entrepreneurs). The final network was thus composed of **110** participants. 
+
+#### Network
+
+**11**x **1**-mode matrices person by person, representing the **11** phases of the investigation. **_Ties_** are _directed_ **and** _valued_. Number of nodes:
+1) **15**x**15**
+2) **24**x**24**
+3) **33**x**33**
+4) **33**x**33**
+5) **32**x**32**
+6) **27**x**27**
+7) **34**x**34**
+8) **42**x**42**
+9) **34**x**34**
+10) **42**x**42**
+11) **41**x**41**
+
+**1**-mode matrix **110** x **110** person by person of the complete network. **_Ties_** are communication exchanges between criminals. **_Values_** represent level of communication activity. Data comes from police wiretapping.
+
+---
 
 I have provided a `graphml` object containing the **110** person network for you to analyze the general topology of. Using the work above as an example, calculate the measures associated with this graph.
 
 ```{r load_in_the_gml_file}
-# TODO load me!
+g <- igraph::read_graph(file = gml_file, format = "gml")
+# Error in read.graph.gml(file, ...) :
+# At vendor/cigraph/src/io/gml.c:455 : Parse error in GML file, line 1 (syntax error, unexpected ERROR, expecting end of file), Parse error
 ```
 
-```{r calculate_measures}
-# TODO calc me!
+```{r}
+# TODO calculate a tribble full of the various measurement values
+global_measures_data <- tribble(
+  ~Measure, ~Meaning, ~Category, ~Disconnected, ~Multigraphs_Loops, ~Strength_Weights, ~Distance_Weights,
+
+  # --------------------- STRUCTURAL ---------------------
+  "Diameter", "Longest shortest path", "Structural", "Largest Component", "Collapse; remove loops", "1/weight", "✓",
+
+  "Conductance", "Global bottleneck ratio", "Structural", "Largest Component", "Collapse", "✓", "✓",
+
+  "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural", "✓", "Collapse or merge multiplicity", "✓", "✓",
+
+  "Vertex Connectivity", "Minimum vertices to disconnect", "Structural", "✓", "Collapse", "Irrelevant", "Irrelevant",
+
+  "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural", "Largest Component", "Collapse; remove loops", "✓", "Do NOT use",
+
+  # --------------------- INTERCONNECTEDNESS ---------------------
+  "Edge Density", "Edges ÷ possible edges", "Interconnectedness", "✓", "Collapse", "Irrelevant", "Irrelevant",
+
+  "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness", "✓", "Collapse", "Irrelevant", "Irrelevant",
+
+  "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness", "✓", "Collapse", "✓ (Barrat local → mean)", "Irrelevant",
+
+  "Assortativity", "Mixing by attribute", "Interconnectedness", "✓", "Collapse", "✓ (strength assort.)", "✓ (degree assort.)",
+
+  # --------------------- CENTRALIZATION ---------------------
+  "Degree Centralization", "Inequality of degree distribution", "Centralization", "✓", "Collapse", "Consider Strength Centralization", "✓",
+
+  "Strength Centralization", "Inequality of weighted degree", "Centralization", "✓", "Collapse", "✓", "Irrelevant",
+
+  "Closeness Centralization", "Inequality in closeness", "Centralization", "Largest Component", "Collapse", "1/weight", "✓",
+
+  "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization", "Largest Component", "Collapse", "1/weight", "✓",
+
+  "Eigenvector Centralization", "Inequality in spectral influence", "Centralization", "✓", "Collapse", "✓", "Do NOT use",
+
+  # --------------------- EFFICIENCY ---------------------
+  "Global Efficiency", "Global ease of communication", "Efficiency", "✓", "Collapse", "1/weight", "✓",
+
+  "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency", "✓", "Collapse", "1/weight", "✓",
+
+  "Average Shortest Path Length", "Mean geodesic distance", "Efficiency", "Largest Component", "Collapse", "1/weight", "✓"
+)
+```
+
+```{r display_measures}
+global_measures_table <- tribble(
+  ~Measure, ~Meaning, ~Category, ~Disconnected, ~Multigraphs_Loops, ~Strength_Weights, ~Distance_Weights,
+
+  # --------------------- STRUCTURAL ---------------------
+  "Diameter", "Longest shortest path", "Structural", "Largest Component", "Collapse; remove loops", "1/weight", "✓",
+
+  "Conductance", "Global bottleneck ratio", "Structural", "Largest Component", "Collapse", "✓", "✓",
+
+  "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural", "✓", "Collapse or merge multiplicity", "✓", "✓",
+
+  "Vertex Connectivity", "Minimum vertices to disconnect", "Structural", "✓", "Collapse", "Irrelevant", "Irrelevant",
+
+  "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural", "Largest Component", "Collapse; remove loops", "✓", "Do NOT use",
+
+  # --------------------- INTERCONNECTEDNESS ---------------------
+  "Edge Density", "Edges ÷ possible edges", "Interconnectedness", "✓", "Collapse", "Irrelevant", "Irrelevant",
+
+  "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness", "✓", "Collapse", "Irrelevant", "Irrelevant",
+
+  "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness", "✓", "Collapse", "✓ (Barrat local → mean)", "Irrelevant",
+
+  "Assortativity", "Mixing by attribute", "Interconnectedness", "✓", "Collapse", "✓ (strength assort.)", "✓ (degree assort.)",
+
+  # --------------------- CENTRALIZATION ---------------------
+  "Degree Centralization", "Inequality of degree distribution", "Centralization", "✓", "Collapse", "Consider Strength Centralization", "✓",
+
+  "Strength Centralization", "Inequality of weighted degree", "Centralization", "✓", "Collapse", "✓", "Irrelevant",
+
+  "Closeness Centralization", "Inequality in closeness", "Centralization", "Largest Component", "Collapse", "1/weight", "✓",
+
+  "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization", "Largest Component", "Collapse", "1/weight", "✓",
+
+  "Eigenvector Centralization", "Inequality in spectral influence", "Centralization", "✓", "Collapse", "✓", "Do NOT use",
+
+  # --------------------- EFFICIENCY ---------------------
+  "Global Efficiency", "Global ease of communication", "Efficiency", "✓", "Collapse", "1/weight", "✓",
+
+  "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency", "✓", "Collapse", "1/weight", "✓",
+
+  "Average Shortest Path Length", "Mean geodesic distance", "Efficiency", "Largest Component", "Collapse", "1/weight", "✓"
+)
+
+# Color-blind-safe palette (Okabe-Ito)
+category_colors <- c(
+  "Structural"         = "#a6cee3",
+  "Interconnectedness" = "#b2df8a",
+  "Centralization"     = "#fdbf6f",
+  "Efficiency"         = "#cab2d6"
+)
+
+global_measures_table |>
+  gt() |>
+  tab_header(
+    title = "Drug Smuggling Graph - Measures",
+    subtitle = "Various measures and metrics for Caviar Drug Smuggling network"
+  ) |>
+  data_color(
+    columns = everything(),   # columns to tint
+    fn = function(cols) {
+      category <- global_measures_table$Category
+      category_colors[category]
+    }
+  ) |>
+  tab_options(table.font.size = 12)
+
 ```
 
 Next, please provide a few paragraphs regarding these measures and what they imply about the resilience, strengths, and weaknesses of this drug smuggling network.
 
 **Answer:**
+
 TODO finish me!
 
 ## 5.) Results

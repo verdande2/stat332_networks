@@ -114,7 +114,7 @@ library(gt)
 table |> gt()
 ```
 
-So, as we already knew, this graph is connected but now we find out that it is not a simple graph. While it is not a multigraph, it does have loops. It has edge weights and is also directed but not acyclic. Furthermore, it is not a bipartite graph, nor is it a tree or a forest. Realistically, this information (along with citation information) could be stored as attributes of the graph. if we want to store something as an attribute of the graph, we need to use the set_graph_attr() function. First, let's check the graph attributes.
+So, as we already knew, this graph is connected but now we find out that it is not a simple graph. While it is not a multigraph, it does have loops. It has edge weights and is also directed but not acyclic. Furthermore, it is not a bipartite graph, nor is it a tree or a forest. Realistically, this information (along with citation information) could be stored as attributes of the graph. if we want to store something as an attribute of the graph, we need to use the `set_graph_attr()` function. First, let's check the graph attributes.
 
 ```{r}
 graph_attr(g)
@@ -148,7 +148,8 @@ Perfect, now if a we save this graph and a future user loads it, they will know 
 
 ### 2b.) Adding degree as attributes
 
-This dataset actually has a reasonable number of both node and edge properties which could be used for our analysis but we really should get used to augmenting the data with properties that can be used for visualization. Since we already know what degree and component are, those seem like a great place to start. Let's add degree as a vertex attribute. We know the mean_degree and max_degree, but we haven't really messed with the degree function. Let's look at the documentation.
+This dataset actually has a reasonable number of both node and edge properties which could be used for our analysis but we really should get used to augmenting the data with properties that can be used for visualization. Since we already know what degree and component are, those seem like a great place to start. Let's add degree as a vertex attribute. We know the `mean_degree` and `max_degree`, but we haven't really messed with the `degree
+()`function. Let's look at the documentation.
 
 ```         
 degree(   
@@ -159,9 +160,9 @@ degree(
   normalized = FALSE )
 ```
 
-The variable graph is simply the name of the graph. v is the list of nodes that we will perform the calculations for. Obviously, we will want to calculate the degree for all vertices and V(graph) is the default so we don't even need to do anything there. There are loops in the graph, IF we want them to count. And now is our first decision point. Is it important if a media outlet links or references themselves? Does this add value to their trustworthyness, authority, value, or anything else? If not, perhaps we should remove the loops before any further analysis. (Our goal picture does have a loop represented, so we are going to leave them in, but we will investigate filtering out loops in a moment. Finally, normalized just divides every value by n-1 which doesn't serve much purpose for degree (for other measures it's a lot more meaningful.)
+The variable graph is simply the name of the graph. `v` is the list of nodes that we will perform the calculations for. Obviously, we will want to calculate the degree for all vertices and `V(graph)` is the default so we don't even need to do anything there. There are loops in the graph, IF we want them to count. And now is our first decision point. Is it important if a media outlet links or references themselves? Does this add value to their trustworthiness, authority, value, or anything else? If not, perhaps we should remove the loops before any further analysis. (Our goal picture does have a loop represented, so we are going to leave them in, but we will investigate filtering out loops in a moment. Finally, `normalized` just divides every value by `n-1` which doesn't serve much purpose for degree (for other measures it's a lot more meaningful.)
 
-I ignored "mode". This is a directed graph, so we need to know what we care about. In degree would represent media sources from other networks (perhaps this is a sign of trust?) Out degree would be the number of other media sources referenced by this source. Total is just the sum of the two (and is the same as "all"). Note that the weight of the edges tells us the number of references to each, so what does degree actually mean in this context?
+I ignored `mode`. This is a directed graph, so we need to know what we care about. In degree would represent media sources from other networks (perhaps this is a sign of trust?) Out degree would be the number of other media sources referenced by this source. Total is just the sum of the two (and is the same as "all"). Note that the weight of the edges tells us the number of references to each, so what does degree actually mean in this context?
 
 ```{r}
 degree(g, mode = "out")
@@ -183,7 +184,7 @@ strength(
   )
 ```
 
-Strength actually sums up the weights of the adjacent edges, so it's a better metric for the impact of these numbers because it tells how often links and references are made rather than just that a tie exists. Be careful here though. The weights parameter is NULL indicating that it does not just automatically use a weight unless a specific parameter in edges is specified as the weights parameter. This is done by making sure that the edge attribute for weight has the name "weight". You can use a different edge attribute for weights, and that's what this parameter is for (just in case you don't have an edge attribute named weight).
+Strength actually sums up the weights of the adjacent edges, so it's a better metric for the impact of these numbers because it tells how often links and references are made rather than just that a tie exists. Be careful here though. The weights parameter is `NULL` indicating that it does not just automatically use a weight unless a specific parameter in edges is specified as the weights parameter. This is done by making sure that the edge attribute for weight has the name `weight`. You can use a different edge attribute for weights, and that's what this parameter is for (just in case you don't have an edge attribute named `weight`).
 
 ```{r}
 strength(g, mode = "in")
@@ -215,7 +216,7 @@ There's only one component here, right? Let's check with a quick plot.
 plot(g)
 ```
 
-Yup, looks fully connected. Actually, it's not. Look carefully at S11. Remember the out degree of S11 is 0? That means that this graph is only connected in one direction! The terminology for this is to call it "Weakly" connected. If there is any node or group of nodes where, starting at that node or within the group, you cannot reach other nodes by following the directed graphs then the graph is "Weakly" connected. A component is said to be "Strongly" connected if a path exists from every node to every other node. Let's look back at that "is_connected()" documentation.
+Yup, looks fully connected. Actually, it's not. Look carefully at S11. Remember the out degree of S11 is **0**? That means that this graph is only connected in one direction! The terminology for this is to call it "Weakly" connected. If there is any node or group of nodes where, starting at that node or within the group, you cannot reach other nodes by following the directed graphs then the graph is "Weakly" connected. A component is said to be "Strongly" connected if a path exists from every node to every other node. Let's look back at that `is_connected()` documentation.
 
 ```         
 is_connected(graph, mode = c("weak", "strong"))
@@ -237,7 +238,7 @@ It looks like "weak" is the default option here. This graph is not strongly conn
 components(g, mode = "strong")
 ```
 
-The result of the components function returns three values: membership, csize, and no. To access any component of an R object, you can use the \$. Let's do that:
+The result of the components function returns three values: `membership`, `csize`, and `no`. To access any component of an R object, you can use the \$. Let's do that:
 
 ```{r}
 components_results <- components(g, mode = "strong")
@@ -271,7 +272,7 @@ Well, it's time to improve this plot. Recall that a network plot has for real co
 
 These elements need to be in the outer margins of the plot and have to be controlled by a specific set of parameters. A full description for margin control is located at: <https://r-graph-gallery.com/74-margin-and-oma-cheatsheet.html>
 
-The critical fact is that there are two parameters that matter. Margins are controlled by the mar() function and outer margins are controlled by the oma() parameter. oma(Bottom, Left, Top, Right) tells it how many lines should be made available in the outer margin. Then, the mtext parameter can be used to dictate the location, color, font, size, etc... for the information. If you want more information on this, ?mtext in the console will get you more information about how the mtext argument is applied. Here's an example.
+The critical fact is that there are two parameters that matter. Margins are controlled by the `mar()` function and outer margins are controlled by the `oma()` parameter. `oma(Bottom, Left, Top, Right)` tells it how many lines should be made available in the outer margin. Then, the `mtext` parameter can be used to dictate the location, color, font, size, etc... for the information. If you want more information on this, `?mtext` in the console will get you more information about how the `mtext` argument is applied. Here's an example.
 
 ```{r}
 plot(
@@ -286,11 +287,11 @@ mtext(side = 3, line = 2, at = -2, adj = 0, cex = 0.7, subtitle)
 mtext(side = 1, line = 2, at = -2, adj = 0, cex = 0.5, caption)
 ```
 
-You might notice that the information for the title, subtitle, caption, (and eventually our legends appear outside of the plot() function. These are actually added onto the canvas after the grah object has been created.
+You might notice that the information for the title, subtitle, caption, (and eventually our legends appear outside of the `plot()` function. These are actually added onto the canvas after the graph object has been created.
 
 **Layout**
 
-The notes from class give us a lot of different layouts that can be used. Let's try to look at one of them: type ?layout_with_fr into the console. There's a lot here that you would need to look into in order to really understand this graph; however, it's honestly not that bad to use. Usually, I don't even mess with the parameters.
+The notes from class give us a lot of different layouts that can be used. Let's try to look at one of them: type `?layout_with_fr` into the console. There's a lot here that you would need to look into in order to really understand this graph; however, it's honestly not that bad to use. Usually, I don't even mess with the parameters.
 
 ```{r}
 plot(g,
@@ -298,7 +299,7 @@ plot(g,
 )
 ```
 
-That doesn't mean you can't change the parameters within the plot function.
+That doesn't mean you can't change the parameters within the `plot()` function.
 
 ```{r}
 plot(g,
@@ -308,7 +309,7 @@ plot(g,
 
 **Vertex and edge Parameters**
 
-Vertex parameters begin with the term "vertex." For example, vertex.size will be used to set the vertex size. vertex.label is used to set the vertex label. Rather than going through them one at a time, here's a generic code:
+Vertex parameters begin with the term `vertex.` For example, `vertex.size` will be used to set the vertex size. `vertex.label` is used to set the vertex label. Rather than going through them one at a time, here's a generic code:
 
 ```         
 plot_params <- list(
@@ -665,10 +666,6 @@ Well, I see some circles and numbers and lines, looks about right to me! That wa
 ## 4.) My turn (code and plot)
 
 ```{r setup_plot_params}
-# I know these were already imported in a prev code chunk, but getting used to seeing the library names so I don't forget them later
-library(RColorBrewer) # color palettes etc
-library(scales) # scales pkg for scaling ranges of values for legends, etc
-
 ## PLOT PROPERTIES
 par(mar = c(0, 0, 0, 0)) # bottom, left, top and right margins (in that order)
 

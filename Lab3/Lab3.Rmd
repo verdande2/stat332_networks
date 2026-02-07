@@ -13,6 +13,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(tidyverse)
 library(knitr)
 library(gt) # for fancy tables
 library(data.table) # data tables
@@ -25,7 +26,6 @@ library(scales) # scaling factors
 library(grid) # for unit()
 library(ggrepel) # for stronger label repel
 library(visNetwork) # for network graphs
-library(ggraph) # for graphs
 library(ggplot2) # for ploots
 ```
 
@@ -57,8 +57,7 @@ print_igraph_attr <- function(graph) {
 
 ## 1.) Setup
 
-Welcome to Lab 3. This week we are going to be working with alternatives to igraph.\
-This means that we want to get familiar with the tools from ggraph (<https://ggraph.data-imaginist.com/index.html>) and visNetwork (<https://datastorm-open.github.io/visNetwork/>).
+Welcome to Lab 3. This week we are going to be working with alternatives to `igraph`. This means that we want to get familiar with the tools from `ggraph` (<https://ggraph.data-imaginist.com/index.html>) and `visNetwork` (<https://datastorm-open.github.io/visNetwork/>).
 
 We're going to be using the same data as lab 2 and trying to reproduce the same graph as last time, so lets get started.
 
@@ -66,7 +65,7 @@ We're going to be using the same data as lab 2 and trying to reproduce the same 
 
 ### 2.a) Getting started.
 
-Using ctrl-alt-i you can create a section where you are going to embed R code. We're going to start by loading the raw data file:
+Using `ctrl-alt-i` you can create a section where you are going to embed R code. We're going to start by loading the raw data file:
 
 ```{r read_data_file}
 g <- read_rds(media_network_filename)
@@ -145,7 +144,7 @@ p <- g |> # Start with the graph object
   ) +
   # the above linetype params both yield:
   #   Error in `as_discrete_pal()`:
-  # ! Cannot convert `x` to a discrete palette.
+  # ! Cannot convert `x` to a discrete palette. # TODO look into this behavior
   
   labs(
     title    = "Media Networks Link to and Reference Each Other",
@@ -159,10 +158,6 @@ p
 Okay, it's not perfect. We can do better, but the format is just so much better. Let's fix the scales next:
 
 ```{r fixing_scales}
-library(ggraph)
-library(ggplot2)
-library(grid)
-
 # Shape mapping (3 shapes)
 node_types <- sort(unique(V(g)$type.label))
 shape_vals <- c(21, 22, 24)[seq_along(node_types)]
@@ -202,7 +197,7 @@ p <- ggraph(g, layout = "lgl") +
   scale_size_continuous(name = "Audience Size", range = c(1, 8)) +
   scale_shape_manual(values = shape_map, guide = "none") +
   scale_edge_width(range = c(0.5, 1.5), guide = "none") +
-  # scale_edge_linetype(guide = "none") + # this line triggers the below error! see note at end of chunk!
+  # scale_edge_linetype(guide = "none") + # this line triggers the below error! see note at end of chunk! # TODO look into this
 
   guides(
     size = guide_legend(nrow = 2, byrow = TRUE),
@@ -245,7 +240,7 @@ p
 #  12.             └─rlang::abort(...)
 ```
 
-If you're paying attention, you might notice that I stored the graph as the variable p and then called it by just using "p" at the end of the code cell. I did this for a reason. In ggplot, we can theme our graphs. <https://ggplot2.tidyverse.org/reference/theme.html>
+If you're paying attention, you might notice that I stored the graph as the variable `p` and then called it by just using `p` at the end of the code cell. I did this for a reason. In `ggplot2`, we can theme our graphs. <https://ggplot2.tidyverse.org/reference/theme.html>
 
 ```{r adding_theme}
 p + theme(
@@ -257,11 +252,11 @@ p + theme(
 
 `r if(SKIP_AHEAD) {"\\end{comment}"}`
 
-Note: Before I forget, I had to modify a couple of the chunks above, commenting out a few parameters related to edge line type. I'll have to look into what is the source of that issue.
+**Note**: Before I forget, I had to modify a couple of the chunks above, commenting out a few parameters related to edge line type. I'll have to look into what is the source of that issue.
 
 ## 3.) Your turn:
 
-In the data for this lab, there are two files (and a paper describing where they came from). The Actor Roles provides the list of nodes and their corresponding attributes. The "Table 2" file provides a matrix of associations and their strengths that you can read in as a matrix and extract the edge list from. Please create a graph which uses shapes, colors, and edge-widths to represent this network. Also, please make sure to use both color and type on edges to denote any edge relationships between Command Team members and any other members in the network. Use `GGRAPH` to produce this plot. Be certain to add titles, subtitles, and footnotes/captions as appropriate and include a corresponding legend.
+In the data for this lab, there are two files (and a paper describing where they came from). The "Actor Roles" file provides the list of nodes and their corresponding attributes. The "Table 2" file provides a matrix of associations and their strengths that you can read in as a matrix and extract the edge list from. Please create a graph which uses shapes, colors, and edge-widths to represent this network. Also, please make sure to use both color and type on edges to denote any edge relationships between Command Team members and any other members in the network. Use `ggraph` to produce this plot. Be certain to add titles, subtitles, and footnotes/captions as appropriate and include a corresponding legend.
 
 ```{r read_in_data_files}
 actor_roles <- readr::read_csv(actor_roles_filename, col_names = TRUE, progress = TRUE)
@@ -377,11 +372,10 @@ p + theme(
 ## 4.)  visNetwork
 
 ```{r}
-library(visNetwork)
 # TODO do visNetwork graph!
 ```
 
-As opposed to the ggplot framework where most of the plot information is taken care of within the plot code, `visNetwork` is generally done by taking care of most of the information outside of the plotting code. This is done by creating data frames for the nodes and edges separately and then adding attributes with special names to them. For example, a node or edge attribute of "title" will be the information for the tooltip which pops up on hover-over by the mouse. The "group" is specifically used for the legend.
+As opposed to the `ggplot2` framework where most of the plot information is taken care of within the plot code, in `visNetwork`, the work is generally done by taking care of most of the information outside of the plotting code. This is done by creating data frames for the nodes and edges separately and then adding attributes with special names to them. For example, a node or edge attribute of "title" will be the information for the tooltip which pops up on hover-over by the mouse. The "group" is specifically used for the legend.
 
 ```{r}
 # Build nodes
@@ -459,7 +453,7 @@ vis
 Reproduce the same graph as above (or close to it, showing the same information) using visNetwork. Make the tooltip display the individual's name and their role. Don't worry about a legend on this plot.
 
 ```{r}
-# make graph with visNetwork
+# TODO make graph with visNetwork
 
 # tooltip w/ individual's name and role
 
@@ -471,11 +465,11 @@ Reproduce the same graph as above (or close to it, showing the same information)
 How centralized is this network? Are there any key players that could be removed to make the network fail in their goals? Centralized networks are highly resilient but also insecure, which can play into strategies when analyzing these networks. We'll talk about a number of measures of network structure next week.
 
 ```{r centrality_time}
-
+# TODO centrality measures
 ```
 
 **Answer:**
-aSDFASDF
+TODO me!
 
 
 ## 6.) Results

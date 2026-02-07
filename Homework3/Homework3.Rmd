@@ -42,7 +42,7 @@ print_igraph_attr <- function(graph) {
 }
 ```
 
-This homework is focused on plotting with `ggraph` and `visNetwork` but will also be used to explore the `tidygraph` framework. `tidygraph` is a library which provides a subclass of igraph and enables much smoother manipulation of graph objects using the tidyverse methodologies.
+This homework is focused on plotting with `ggraph` and `visNetwork` but will also be used to explore the `tidygraph` framework. `tidygraph` is a library which provides a subclass of `igraph` and enables much smoother manipulation of graph objects using the `tidyverse` methodologies.
 
 ## Instructions:
 
@@ -73,7 +73,7 @@ First, make sure to install the `networkdata` package. This package isn't locate
 We are going to use the `wta` dataset for this. Specifically, we are going to use the data from **2007**. Extracting this data isn't difficult but it is a little weird. The `wta` dataset is a list of `igraph`s, so you would think all that's necessary to get the first item in the list is to use `wta[1]`. Try a summary of this:
 
 ```{r}
-summary(wta[40]) # assuming this was supposed to be summary(wta[1])? for the a list with the first igraph object? instead of the 40th?
+summary(wta[40])
 ```
 
 Interestingly, you didn't get the `igraph`! You got the list item but not what's in it. To get that, you actually need to use a double bracket: `wta[[1]]`.
@@ -120,7 +120,7 @@ Now, it's time to do our work:
 
 `r if(SKIP_AHEAD) {"\\end{comment}"}`
 
-# 2.) Graph with ggraph
+# 2.) Graph with `ggraph`
 
 ![](igraph plot.png){width = 200%, height = 200%}
 
@@ -128,27 +128,32 @@ Your job is to produce the code/graph which reproduces or improves on this graph
 
 ---
 
+**Answer:**
+
 First off, let's take a look at this graph and note the important features:
- - There are 4 legends at each of the 4 corners:
+ - There are **4** legends at each of the 4 corners:
   - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
   - vertex size based on `age` (legend only showing min, max) in bottom left
   - vertex shape based on `hand` (legend showing U, R, L) in top right
   - edge color based on `surface` (legend showing Hard, Grass, Clay, Carpet)
- - We can see one isolated component to the right, with 4 nodes, and a main more-connected component to the center
+ - We can see one isolated component to the right, with **4** nodes, and a main more-connected component to the center
  - edge thickness does seem to vary, but it does not have a legend associated with it (assuming based on strength/degree?)
  - title top center: "Tennis Losses from 2007", color black, bolded
  - subtitle top center (below title): "Data represents players from USA, GBR, and AUS", color black, normal font size
- - caption bottom center: "Data from networkdata R package", wta dataset, color gray, small
+ - caption bottom center: "Data from `networkdata` R package", wta dataset, color gray, small
  - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
  
 Now, using each of those bullet points as a code chunk beginning:
 
-```{r}
+```{r prepare_the_graph_data}
 # first, read in the gml as a igraph obj
 g <- igraph::read_graph(gml_filename, format = "gml")
 
 # graph creation
+```
 
+
+```{r plot_the_graph_data}
 # plot and layout settings
 
 # edge settings
@@ -183,10 +188,13 @@ ggraph(g, layout = "stress") +
 # - We can see one isolated component to the right, with 4 nodes, and a main more-connected component to the center, and a pairing
 ```
 
-# 3.) Graph with visNetwork
+# 3.) Graph with `visNetwork`
 
-```{r}
-library(visNetwork)
-
+```{r prepare_visnetwork_graph_data}
 # TODO make graph happen!
 ```
+
+```{r plot_visnetwork_graph}
+
+```
+
