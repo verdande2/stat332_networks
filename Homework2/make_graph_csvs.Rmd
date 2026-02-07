@@ -151,7 +151,7 @@ Ensuring our graph looks right after combining the two components into a larger 
 
 ```{r plot_the_combined_graph}
 g
-plot(g) # TODO why are there so many god damn curved edges when this renders?!?!?!??
+plot(g)
 ```
 
 Well, that there certainly looks like two disjoint components! Now we add the remaining edges to connect the two components/subgraphs in a weakly connected manner:
@@ -192,7 +192,7 @@ edge_pairs_concat <- NULL # interesting. Instead of starting with a blank string
 
 
 # I couldn't figure out a better way to take two lists and merge them by concat'ing rows, defaulted to old school C style for loop
-# TODO: research better way to do this, there has to be a better way to flatten a df. Google and SO didn't lead to anything promising...
+# TODO: research better way to do this
 for (i in seq_along(edge_pairs[[1]])) {
   edge_pairs_concat <- c(edge_pairs_concat, edge_pairs[i, "from"], edge_pairs[i, "to"]) # should concat from, to onto existing
 }

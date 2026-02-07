@@ -59,7 +59,7 @@ A <- matrix(
   byrow = TRUE
 )
 
-knitr::kable(A) # TODO look into better ways of printing matrices. Some stackoverflow posts re: printing LaTeX from a R matrix that are similar
+knitr::kable(A)
 ```
 
 Well, `kable` didn't exactly output a *pretty* table (why does it have 3 miles of margin-bottom, urgh), but there it is in its 10x10 adjacency matrix glory, take your pick of the various forms above for easiest to read.
