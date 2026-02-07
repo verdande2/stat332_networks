@@ -25,7 +25,7 @@ library(readr)
 ## 1.a) Create and report the adjacency matrix associated with this graph.
 
 ```{r}
-# NOTE: first param to matrix call is row vector of all elements of A
+# note: first param to matrix call is row vector of all elements of A
 # Skipping the waste of paper and making the adjacency matrix in comments:
 # A_{i,j} i is row, j is col, A_{i,j} = 1 => Node i -> Node j
 #   1 2 3 4 5 6 7 8 9 0
