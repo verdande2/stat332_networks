@@ -122,7 +122,7 @@ Now, it's time to do our work:
 
 # 2.) Graph with `ggraph`
 
-![](igraph plot.png){width = 200%, height = 200%}
+![](igraph plot.png)
 
 Your job is to produce the code/graph which reproduces or improves on this graph using the `ggraph` and `visNetwork` packages. Good luck!
 
@@ -131,6 +131,7 @@ Your job is to produce the code/graph which reproduces or improves on this graph
 **Answer:**
 
 First off, let's take a look at this graph and note the important features:
+```
  - There are **4** legends at each of the 4 corners:
   - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
   - vertex size based on `age` (legend only showing min, max) in bottom left
@@ -142,29 +143,63 @@ First off, let's take a look at this graph and note the important features:
  - subtitle top center (below title): "Data represents players from USA, GBR, and AUS", color black, normal font size
  - caption bottom center: "Data from `networkdata` R package", wta dataset, color gray, small
  - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
- 
-Now, using each of those bullet points as a code chunk beginning:
+```
+
+Now, using each of those bullet points becomes a code chunk beginning:
 
 ```{r prepare_the_graph_data}
 # first, read in the gml as a igraph obj
 g <- igraph::read_graph(gml_filename, format = "gml")
 
-# graph creation
 ```
 
 
-```{r plot_the_graph_data}
+```{r plot_the_graph_data, fig.height = 9, fig.width = 16}
 # plot and layout settings
 
-# edge settings
-# - edge thickness does seem to vary, but it does not have a legend associated with it (assuming based on strength/degree?)
-# - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
-# - edge color based on `surface`
+# Shape mapping (3 shapes)
+node_types <- sort(unique(V(g)$hand)) # hand should be one of L, R, U
+shape_vals <- c(21, 22, 24)[seq_along(node_types)]
+shape_map <- setNames(shape_vals, node_types)
+
+p <- ggraph(g, layout = "lgl") +
 
 # vertex settings
 # - vertex color based on `country`
 # - vertex size based on `age`
 # - vertex shape based on `hand`
+    geom_node_point(
+    aes(
+      size = scales::rescale(age, to = c(5, 25)),
+      fill = country,
+      shape = hand
+      ),
+    alpha = 0.6
+  ) +
+  geom_node_text(
+    aes(
+      label = name
+      ),
+    repel = TRUE,
+    size = 3
+  ) +
+  
+# edge settings
+# - edge thickness does seem to vary, but it does not have a legend associated with it (assuming based on strength/degree?)
+# - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
+# - edge color based on `surface`
+  geom_edge_arc(
+    aes(
+      color = surface,
+      # linetype = type, # this line /also/ triggers the noted error below! Argh!
+      #width = weight
+      ),
+    alpha = 0.8,
+    lineend = "round",
+    arrow = arrow(length = unit(3, "mm"), type = "closed"),
+    end_cap = circle(2, "mm"),
+    strength = 0.3
+  ) +
 
 # legends
 # - There are 4 legends at each of the 4 corners:
@@ -172,20 +207,35 @@ g <- igraph::read_graph(gml_filename, format = "gml")
 #  - vertex size based on `age` (legend only showing min, max) in bottom left
 #  - vertex shape based on `hand` (legend showing U, R, L) in top right
 #  - edge color based on `surface` (legend showing Hard, Grass, Clay, Carpet)
-
+  scale_size_continuous(name = "Age", range = c(1, 8)) +
+  #scale_shape_manual(values = shape_map, guide = "none") +
+  #scale_edge_width(range = c(0.5, 1.5), guide = "none") +
+  # scale_edge_linetype(guide = "none") + # this line triggers the below error! see note at end of chunk! # TODO look into this
+guides() + 
+  # guides(
+  #   size = guide_legend(nrow = 2, byrow = TRUE),
+  #   # fill = guide_legend(
+  #   #   nrow = 1, byrow = TRUE, title = "Vertex Color",
+  #   #   override.aes = list(fill = vertex_colors)
+  #   # ),
+  #   # edge_color = guide_legend(
+  #   #   ncol = 2, byrow = TRUE,
+  #   #   title = "Surface Type"
+  #   # )
+  # ) +
+  
 # titles and text
 # - title top center: "Tennis Losses from 2007", color black, bolded
 # - subtitle top center (below title): "Data represents players from USA, GBR, and AUS", color black, normal font size
 # - caption bottom center: "Data from networkdata R package", wta dataset, color gray, small
-
-# plot
-# TODO make graph happen!
-
-ggraph(g, layout = "stress") +
-  geom_edge_link() +
-  geom_node_point() +
+  labs(
+    title    = "Tennis Losses from 2007",
+    subtitle = "Data represents players from USA, GBR, and AUS",
+    caption  = "Data from `networkdata` R package"
+  ) +
   theme_graph()
-# - We can see one isolated component to the right, with 4 nodes, and a main more-connected component to the center, and a pairing
+# TODO why are vertices not being colored by country?!?!?!?!
+p
 ```
 
 # 3.) Graph with `visNetwork`
@@ -195,6 +245,6 @@ ggraph(g, layout = "stress") +
 ```
 
 ```{r plot_visnetwork_graph}
-
+# TODO plot!
 ```
 
