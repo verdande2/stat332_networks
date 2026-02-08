@@ -20,6 +20,7 @@ library(tidygraph)
 library(igraph)
 library(ggraph)
 library(visNetwork)
+library(tibble)
 ```
 
 ```{r user_configurable_settings}
@@ -241,10 +242,100 @@ p
 # 3.) Graph with `visNetwork`
 
 ```{r prepare_visnetwork_graph_data}
-# TODO make graph happen!
+
+library("igraph", quietly = TRUE, warn.conflicts = FALSE, verbose = FALSE)
+data <- visNetwork::toVisNetworkData(g, idToLabel = TRUE)
+
+# we currently have an igraph object with all our data in it. Let's convert it to data.frames for visNetwork consumption
+nodes <- data$nodes
+edges <- data$edges
 ```
 
 ```{r plot_visnetwork_graph}
-# TODO plot!
+visNetwork(nodes, edges, height = "800px", width = "100%") |>
+  visNodes(color = list(background = "lightblue", 
+                        border = "darkblue",
+                        highlight = "yellow"),
+           shadow = list(enabled = TRUE, size = 10)
+           ) |>
+  visEdges(shadow = TRUE,
+           arrows = list(
+             to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
+             ),
+           color = list(
+             color = "lightblue", # make 'em pretty
+             highlight = "red")
+           ) |>
+  visLayout(randomSeed = 12) # TODO remove me before submit!
+```
+
+```{r try_the_visigraph_plot}
+visNetwork::visIgraph(g, idToLabel = FALSE, physics = TRUE)
+
+```
+
+Well, while `physics = TRUE` is rather amusing to toy with, I'm not getting any edges showing up... Let's investigate...
+
+```{r edge_check}
+edges
+```
+
+```{r nodes_check}
+nodes
+```
+
+Reading through `?visNetwork` and `?toVisNetworkData` learned me some new information: the parameters `nodes` and `edges` passed into `visNetwork()` require id (an int) in the `to` and `from` columns, and the edges that their dumb helper function `toVisNetworkData()` failed to do, despite throwing the flag to _not_ convert id to label... Let's confirm that suspicion, correct that and continue...
+
+```{r confirm_breaking_the_thing}
+d_with_flag <- visNetwork::toVisNetworkData(g, idToLabel = TRUE)
+d_without_flag <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+
+d_with_flag
+d_without_flag
+```
+
+So the `idToLabel` flag parameter in `toVisNetworkData()` doesn't do what I thought it does. If it's `TRUE`, it will add another column to the nodes `data.frame` called "label" containing the id... It doesn't seem to _convert_ `id` to `label` nor vice versa... I'll have to replace the strings with their `id` programmatically:
+
+```{r fix_the_bad_juju}
+# converts vertex name string to int id from graph nodes
+f <- function(nodes, name){
+  id <- nodes |> 
+    rownames_to_column(var = "rowname") |>
+    filter(rowname == name) |>
+    select(id)[[1]] # extract id from df
+  
+  id # TODO some kind of error checking. If name is not found in nodes, this func shits the bed
+}
+
+# first, let's fix the from column:
+#edges$from <- vapply(edges$from, f)
+
+
+
+# TODO now, I need to do a vapply() type map, over the vector edges$from, calling f(thing) foreach thing in edges$from
+
+# now, the to column:
+#edges$to # TODO do same thing as above, vapply(edges$to, f)
+```
+
+Now that we've remapped the edges from string labels to id integers again, we should be able to construct the visNetwork object anew and re-plot, and we _should_ get our edges back!
+
+```{r plot_visnetwork_graph_take_two}
+# let's try this again!
+visNetwork(nodes, edges, height = "800px", width = "100%") |>
+  visNodes(color = list(background = "lightblue", 
+                        border = "darkblue",
+                        highlight = "yellow"),
+           shadow = list(enabled = TRUE, size = 10)
+           ) |>
+  visEdges(shadow = TRUE,
+           arrows = list(
+             to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
+             ),
+           color = list(
+             color = "lightblue", # make 'em pretty
+             highlight = "red")
+           ) |>
+  visLayout(randomSeed = 12) # TODO remove me before submit!
 ```
 
