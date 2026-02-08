@@ -238,6 +238,7 @@ p
 #  10.         └─scales:::as_discrete_pal.default(elem)
 #  11.           └─cli::cli_abort("Cannot convert {.arg x} to a discrete palette.")
 #  12.             └─rlang::abort(...)
+# this stack trace is ... less than useful... All I know about this error is that trying to map to edge linetype leads to some function getting a param `x` passed that is not a discrete palette already. I'd imagine it's probably a /continuous/ palette, but unsure where the conversion needs to happen # TODO
 ```
 
 If you're paying attention, you might notice that I stored the graph as the variable `p` and then called it by just using `p` at the end of the code cell. I did this for a reason. In `ggplot2`, we can theme our graphs. <https://ggplot2.tidyverse.org/reference/theme.html>
@@ -270,7 +271,7 @@ table_2 <- readr::read_csv(table_2_filename, col_names = TRUE, progress = TRUE)
 
 df <- as.data.frame(table_2) # first, convert to df
 rownames(df) <- df$...1 # name the rows = the first col (...1) which are the terrorist names
-df <- df |> select(-...1) # select all BUT that first col (...1)
+df <- df |> select(-...1) # select all cols BUT that first col (...1)
 adj_matrix <- as.matrix(df) # convert to matrix so igraph won't complain
 
 # finally, make the igraph obj
@@ -278,10 +279,21 @@ g_actors <- igraph::graph_from_adjacency_matrix(adj_matrix, mode = "directed", w
 
 # utilizing the data from the actors/role csv, assign the roles to each vertex as an attr
 g_actors <- set_vertex_attr(g_actors, name = "Role", value = actor_roles$Role) # TODO double check these are assigned in the proper order
+
+g_actors
+print_igraph_attr(g_actors)
+```
+```{r identify_command_team_relations}
+command_team_edges <- E(g_actors)[.inc(V(g_actors)[Role == "Command Team"])]
+
+# TODO do something special to command_team_edges...
+
+
+# note: command team members: id 1 Muklas, 4 Samudra, 6 Idris (should be 62 edges)
+command_team_edges
 ```
 
 ```{r setup_the_ploot}
-# TODO finish me!
 
 # Shape mapping (3 shapes)
 node_types <- sort(unique(V(g)$type.label))
@@ -303,7 +315,6 @@ p <- ggraph(g_actors, layout = "lgl") +
     alpha = 0.6
   ) +
   
-  # custom colors? maybe? or too obnoxious?
   geom_node_text(
     aes(
       label = Actor
@@ -317,7 +328,7 @@ p <- ggraph(g_actors, layout = "lgl") +
   # use custom color AND type on edges to denote Command Team members
   geom_edge_arc(
     aes(
-      color = ifelse(Role == "Command Team", "red", "black"), # denote command team
+      color = "black", #ifelse(Role == "Command Team", "red", "black"), # denote command team
       # linetype = type, # this line /also/ triggers the noted error below! Argh!
       width = weight
       ),
@@ -369,18 +380,14 @@ p + theme(
 )
 ```
 
-## 4.)  visNetwork
-
-```{r}
-# TODO do visNetwork graph!
-```
+## 4.) `visNetwork`
 
 As opposed to the `ggplot2` framework where most of the plot information is taken care of within the plot code, in `visNetwork`, the work is generally done by taking care of most of the information outside of the plotting code. This is done by creating data frames for the nodes and edges separately and then adding attributes with special names to them. For example, a node or edge attribute of "title" will be the information for the tooltip which pops up on hover-over by the mouse. The "group" is specifically used for the legend.
 
 ```{r}
 # Build nodes
 nodes <- igraph::as_data_frame(g, what = "vertices") |>
-  tibble::rownames_to_column("id") |>
+  tibble::rownames_to_column("id") |> # this is an important function call, looking ahead to visNetwork's obsession with int ids
   mutate(
     id    = as.character(id),
     label = media,
@@ -452,10 +459,12 @@ vis
 
 Reproduce the same graph as above (or close to it, showing the same information) using visNetwork. Make the tooltip display the individual's name and their role. Don't worry about a legend on this plot.
 
-```{r}
-# TODO make graph with visNetwork
+```{r adjust_the_graph_and_replot}
+# we already kinda made this graph in visNetwork, so we just need to make the tooltips happen.
 
-# tooltip w/ individual's name and role
+vis
+
+# TODO tooltip w/ individual's name and role
 
 # no legend
 ```
@@ -466,11 +475,11 @@ How centralized is this network? Are there any key players that could be removed
 
 ```{r centrality_time}
 # TODO centrality measures
+
 ```
 
 **Answer:**
 TODO me!
-
 
 ## 6.) Results
 
