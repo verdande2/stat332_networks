@@ -630,16 +630,18 @@ The London Gang Network has been made available to you in the course shell. I wo
 ![London Gang Network Visualization](London Gang Network.png)
 
 Well, taking an initial look at the network graph picture, I see 3 legends at 3 of the 4 corners (missing top left), showing:
- - legend for node size to top right, ranging from min to max of values in V(g)$Arrests
- - legend for node color to bottom right, categorical based on 4 different birthplace values = c("1", "2", "3", "4")
- - legend for edge width to bottom left, ranging from min to max of values for thickness
- - title above, centered, labeled "London Gang Network", looks like 2-3 lines above, title on line ~2, in the outer margin (just to the top)
- - no caption, subtitle, etc
- - legend titles are centered in their bounding boxes # adj = .5 # ctr
- - nodes appear to have a semitransparent opacity set
- - edges also appear to have some transparency set (let's assume 0.5)
- - looking to margins, it seems that outer margins are zero'd, and inner margins are minimal, so starting with 0 for all
- 
+```
+* legend for node size to top right, ranging from min to max of values in V(g)$Arrests
+* legend for node color to bottom right, categorical based on 4 different birthplace values = c("1", "2", "3", "4")
+* legend for edge width to bottom left, ranging from min to max of values for thickness
+* title above, centered, labeled "London Gang Network", looks like 2-3 lines above, title on line ~2, in the outer margin (just to the top)
+* no caption, subtitle, etc
+* legend titles are centered in their bounding boxes # adj = .5 # ctr
+* nodes appear to have a semitransparent opacity set
+* edges also appear to have some transparency set (let's assume 0.5)
+* looking to margins, it seems that outer margins are zero'd, and inner margins are minimal, so starting with 0 for all
+```
+
 Now, listing those all out like that makes them easy to cannabalize and turn into psuedocode comments below, used to guide my process...
 
 To start out, I'll begin by copy/pasting the above plotting code chunk to below and adapting that as I go, but first, lets get the data actually in the environment:
@@ -790,7 +792,7 @@ if (PNG) {
 ```
 
 
-![London Gang Network](LondonGangNetwork.png){width = 100%, height = 100%}
+![London Gang Network](LondonGangNetwork.png)
 
 ## 5.) Results
 
