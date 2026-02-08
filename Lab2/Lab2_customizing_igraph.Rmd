@@ -25,14 +25,14 @@ library(scales)
 
 ```{r user_configurable_settings}
 gangs_filename <- "London Gang Network.rds"
-PNG <- FALSE
+PNG <- TRUE
 
 SKIP_TO_PART_3 <- TRUE # bool flag to comment out the ~600 lines of part 1 and 2, set to FALSE to output parts 1 and 2
 ```
 
 Copying over the table function we used recently, might prove to be useful:
 
-```{r func_defs, echo=TRUE}
+```{r func_defs, echo = TRUE}
 make_table_happen <- function(graph) {
   tbl <- data.table(
     Label = c("Size", "Components", "Isolate Proportion", "Density", "Diameter", "Average Path Length"),
@@ -62,13 +62,13 @@ The documentation for igraph in R is located at <https://r.igraph.org/>. This do
 
 Our goal for this lab is going to be to reproduce and improve on the following graph:
 
-![Goal network image for this lab](Example%20Goal.png)
+![Goal network image for this lab](Example Goal.png)
 
 ## 2.) Lab Walkthrough
 
 ### 2.a) Getting started.
 
-Using ctrl-alt-i you can create a section where you are going to embed R code. We're going to start by loading in the igraph library.
+Using `ctrl-alt-i` you can create a section where you are going to embed R code. We're going to start by loading in the `igraph` library.
 
 ```{r}
 library(igraph)
@@ -160,7 +160,7 @@ degree(
   normalized = FALSE )
 ```
 
-The variable graph is simply the name of the graph. `v` is the list of nodes that we will perform the calculations for. Obviously, we will want to calculate the degree for all vertices and `V(graph)` is the default so we don't even need to do anything there. There are loops in the graph, IF we want them to count. And now is our first decision point. Is it important if a media outlet links or references themselves? Does this add value to their trustworthiness, authority, value, or anything else? If not, perhaps we should remove the loops before any further analysis. (Our goal picture does have a loop represented, so we are going to leave them in, but we will investigate filtering out loops in a moment. Finally, `normalized` just divides every value by `n-1` which doesn't serve much purpose for degree (for other measures it's a lot more meaningful.)
+The variable `graph` is simply the name of the graph. `v` is the list of nodes that we will perform the calculations for. Obviously, we will want to calculate the degree for all vertices and `V(graph)` is the default so we don't even need to do anything there. There are loops in the graph, IF we want them to count. And now is our first decision point. Is it important if a media outlet links or references themselves? Does this add value to their trustworthiness, authority, value, or anything else? If not, perhaps we should remove the loops before any further analysis. (Our goal picture does have a loop represented, so we are going to leave them in, but we will investigate filtering out loops in a moment. Finally, `normalized` just divides every value by `n-1` which doesn't serve much purpose for degree (for other measures it's a lot more meaningful.)
 
 I ignored `mode`. This is a directed graph, so we need to know what we care about. In degree would represent media sources from other networks (perhaps this is a sign of trust?) Out degree would be the number of other media sources referenced by this source. Total is just the sum of the two (and is the same as "all"). Note that the weight of the edges tells us the number of references to each, so what does degree actually mean in this context?
 
@@ -655,7 +655,7 @@ class(gangs)
 gangs
 ```
 
-Looks good to me! We pulled a igraph object directly out of the rds binary. Excellent. Let's make sure there isn't anything obviously awry by throwing it to plot with default parameters...
+Looks good to me! We pulled a `igraph` object directly out of the rds binary. Excellent. Let's make sure there isn't anything obviously awry by throwing it to plot with default parameters...
 
 ```{r prob3_plot_the_ugly_network}
 plot(gangs)
@@ -674,9 +674,7 @@ par(mar = c(0, 0, 0, 0)) # bottom, left, top and right margins (in that order)
 # V(gangs)$Birthplace shows that Birthplace is stored as a string, but is actually numbers "1" - "4", which appears to color AND label the vertices
 
 vertex_labels <- V(gangs)$Birthplace
-vertex_levels <- sort(unique(vertex_labels)) # will look like c("1", "2", "3", "4")
-
-# keeping the rest of this as is for now... Paired palette is fine, only choosing four colors anyway...
+vertex_levels <- vertex_labels |> unique() |> sort() # will look like c("1", "2", "3", "4")
 
 # Automated Color Identification
 vertex_palette <- setNames(
@@ -699,9 +697,8 @@ edge_line_types <- 1 # 1 = solid
 ```{r segregated_plot_chunk}
 # begin output to png file
 if (PNG) {
-  png("LondonGangNetwork.png", width = 1920, height = 1200, res = 300) # saving to file
+  png("LondonGangNetwork.png", width = 1920, height = 1200, res = 200) # saving to file
 }
-# TODO need to increase spacing between nodes - need to figure out how the fuck to do so...
 
 # 5. PLOT
 custom_layout <- layout_with_lgl(
@@ -719,112 +716,58 @@ plot(
   vertex.label = V(gangs)$Birthplace,
   vertex.label.cex = 1.0,
   vertex.label.dist = 0,
-  edge.width = 3 * E(gangs)$weight, # scale factor of 3? Seems enough
+  edge.width = 2 * E(gangs)$weight, # scale factor of 2? Seems enough
 
-  edge.color = adjustcolor(edge_colors, alpha.f = 0.75),
+  edge.color = adjustcolor(edge_colors, alpha.f = 0.5),
   edge.lty = edge_line_types,
   edge.curved = 0, # straight lines
-  edge.label = "", # edges are unlabeled for this plot, guess I technically could comment it out and it should default to blank
+  edge.label = "", # edges are unlabeled for this plot
 
   edge.arrow.size = 0, # zero'd, no arrows in network, it's undirected
-  edge.arrow.mode = 0, # zero for no arrows, 1 for backward, 2 for forward, 3 for both
-
-  rescale = TRUE
+  edge.arrow.mode = 0 # zero for no arrows, 1 for backward, 2 for forward, 3 for both
 )
 
 # 8. LEGENDS
 
-
-# TODO FIX ALL LEGENDS
-# TODO need to decrease size of all legends
-
-# TODO this legend has the legend vector being passed correctly, just needs the bullet sizes to reflect the value
-# see https://stackoverflow.com/a/47308865
-# TODO legend for node size to top right, ranging from min to max of values
 arrest_count_cutoffs <- seq(
   from = min(V(gangs)$Arrests),
   to = max(V(gangs)$Arrests),
   length.out = 5 # means 5 total sizes, including both endpoints, so 3 intermediate legend values
-)
+) |> 
+  round(digits = 0) |> 
+  unique()
 
-arrest_count_cutoffs <- round(arrest_count_cutoffs, 0) # integerize the decimals if needed
-
-arrest_count_cutoffs <- unique(arrest_count_cutoffs) # just in case our 5 chosen points are duplicated after rounding
-
-# legend_TR_base is just for the legend labels
 legend_TR_base <- legend(
   "topright",
   title = "Node Arrests",
   legend = arrest_count_cutoffs, # should have min, max and 5-2 = 3 evenly spaced intermediate sizes for the legend
   pt.cex = scales::rescale(
     arrest_count_cutoffs,
-    to = c(1, 3) # normalize
+    to = c(1, 3)
   ),
   pch = 21, # circle
-  #bty = "n",
   col = "black",
-  pt.bg = "orange"
+  pt.bg = "orange",
+  cex = 1.1
 )
-# TODO remove the outline/border of the first/original node size legend in top right
-# legend_TR_circles is used for it's x and y coords for the text labels, used to find circle coords below
-# legend_TR_circles <- legend(
-#   "topright",
-#   legend = arrest_count_cutoffs,
-#   # pt.cex = scales::rescale(
-#   #   arrest_count_cutoffs,
-#   #   to = c(1, 3) # normalize
-#   # ),
-#   col = "white",
-#   pch = 21, # circle
-#   pt.bg = "white"
-# )
-# 
-# # getting the legend's text's coords/offset
-# x <- (legend_TR_circles$text$x + legend_TR_circles$rect$left) / 2 # average of label's x-coord and its rect's x-coord = midpoint between left edge of legend rect box and left edge of text label. Excellent.
-# y <- legend_TR_circles$text$y # same y value as the text itself, checks out
-
-# TODO legend node size bullet position is correct, but radii is too large and causing overlap
-# symbols(x, y, # symbols coordinates
-#   circles = scales::rescale(
-#     arrest_count_cutoffs,
-#     to = c(1, 5) # normalize
-#   ), # vector of circle radii - Circles of radius zero are plotted at radius one pixel
-#   inches = FALSE, # units are taken to be those of the appropriate axes,
-#   add = TRUE, # adding to existing plot, yep
-#   bg = "orange" # background color of orange? for now TODO: make these equal to the symbol color palette matching birthplace, can be lazy and just pull color of the first entry in the palette
-# ) # see https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/symbols
-
-# see https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/legend
 
 # legend for edge width to bottom left, ranging from min to max of values
 legend(
   "bottomleft",
   title = "Edge Weight",
-  legend = 3 * E(gangs)$weight |> unique() |> sort(
-    
-  ), # should be edge values (=weights) (do I need sort/unique calls on a noncategorical var?)
-  # pch = 21, # just swapped to 21 for the circle symbol
-  pt.bg = "gray80", # background
-  bty = "n", # box type of n
-  cex = 0.8 # expansion factor
+  legend = E(gangs)$weight |> unique() |> sort(), # note, not multiplied by factor of 2
+  lwd = 2 * E(gangs)$weight |> unique() |> sort(),
+  cex = 1.0 # scale
 )
 
-
-# TODO legend for node color to bottom right, categorical based on 4 different birthplace values
-# TODO legend for birthplace bullets - need different shape, square with fill?
-# TODO legend for birthplace bullets need colors
+# legend for node color to bottom right, categorical based on 4 different birthplace values
 legend(
   "bottomright",
   title = "Node Birthplace",
-  legend = gangs$Birthplace |> unique() |> sort(), # should be birthplace str == one of c("1", "2", ...)
-  # col    = e_pal[e_levels], # color
-  lwd = 3, # line width
-  bty = "n", # box type of n... as opposed to ... o
-  cex = 0.8 # expansion factor
+  legend = V(gangs)$Birthplace |> unique() |> sort(), # should be birthplace str == one of c("1", "2", ...)
+  cex = 1.0, # scale
+  fill = adjustcolor(vertex_colors[names(vertex_colors) |> unique() |> sort()], alpha.f = 0.75) # had to do a little black magic to make colors happen
 )
-
-# TODO legend for edge weight needs a factor of 3 to match the igraph
-# TODO legend for edge weight needs bullets to match thickness of edge.size
 
 # 7. TITLES
 # - title above, centered, labeled "London Gang Network", looks like 2-3 lines above, title on line ~2, in the outer margin (just to the top)
@@ -840,6 +783,12 @@ if (PNG) {
 
 # now that we've written to file, include it in the markdown:
 ```
+
+```{r tkplot_testing}
+# Well, I /was/ going to play with tkplot and try to visually adjust the vertex spacing and such, but it appears that tkplot is ... rather useless...
+#id <- tkplot(gangs)
+```
+
 
 ![London Gang Network](LondonGangNetwork.png){width = 100%, height = 100%}
 
