@@ -40,7 +40,6 @@ For this lab, please refer to the facebook dataset. This dataset is from [@rozem
 
 You may use the following code to read and generate the graph.
 
-
 ```{r read_csv_files}
 nodes <- read.csv("musae_facebook_target.csv", header = TRUE, as.is = TRUE)
 links <- read.csv("musae_facebook_edges.csv", header = TRUE, as.is = TRUE)
@@ -48,7 +47,9 @@ links <- read.csv("musae_facebook_edges.csv", header = TRUE, as.is = TRUE)
 
 
 ```{r make_graph}
-g <- graph_from_data_frame(d = links, vertices = nodes, directed = FALSE)
+g <- igraph::graph_from_data_frame(d = links, vertices = nodes, directed = FALSE)
+
+# convert igraph to visNetwork?
 ```
 
 0.) Your first step, before doing any other work, will be to create a subgraph that is limited to only those nodes where the `page_type` is "tvshow". Then overwrite this network with an induced subgraph where the isolates are removed (you should have **3,282** nodes)
@@ -75,29 +76,46 @@ print_igraph_attr(sg)
 ```{r make_pretty_table}
 # now, let's calculate some better measures and spit them out in a nicely formatted gt() table:
 # TODO make measurements and table
-tbl <- data.frame(
-  measure_name = c(),
-  measure_value = c()
-)
+output_measurement_table <- function(g) {
+  tbl <- data.frame(
+    measure_name = c(),
+    measure_value = c()
+  )
+  # TODO finish this func
+  tbl | gt
+}
 
-tbl | gt()
-
+output_measurement_table(sg)
 ```
-
 
 2.)  Produce the **5** measures of graph structure discussed in the lesson from this week. Report these in a table that includes the measure name, the value of the statistic, and an interpretation of the statistic.
 
 ```{r create_basic_measures_table}
-tbl <- data.frame(
-  measure_name = c())
+output_five_basic_measures_table <- function(g) {
+  tbl <- data.frame(
+    measure_name = c(),
+    measure_value = c()
+  )
+  # TODO finish this func
+  tbl | gt
+}
 
-tbl |> gt()
+output_five_basic_measures_table(sg)
 ```
 
 3.) Create a table of the interconnectedness measures for this graph and provide an interpretation of this results.
 
 ```{r create_interconnectedness_measures_table}
-# TODO make table
+output_interconnectedness_measures_table <- function(g) {
+  tbl <- data.frame(
+    measure_name = c(),
+    measure_value = c()
+  )
+  # TODO finish this func
+  tbl | gt
+}
+
+output_interconnectedness_measures_table(sg)
 ```
 
 **Answer:**
@@ -106,13 +124,16 @@ TODO answer
 4.) Create a table with the degree, closeness, betweenness and eigenvalue centralization measures for this graph and interpret the results.
 
 ```{r create_more_measures_table}
-# TODO degree, closeness, betweenness, eigen centralization
-tbl <- data.frame(
-  measure_name = c(),
-  measure_value = c()
-)
+output_more_measures_table <- function(g) {
+  tbl <- data.frame(
+    measure_name = c(),
+    measure_value = c()
+  )
+  # TODO finish this func
+  tbl | gt
+}
 
-tbl |> gt()
+output_more_measures_table(sg)
 ```
 
 **Answer:**
@@ -121,23 +142,23 @@ TODO interpret answer
 5.) Produce a table of the efficiency measures of this graph and provide an interpretation of the results.
 
 ```{r create_efficiency_measures_table}
-# TODO efficiency measures
-tbl <- data.frame(
-  measure_name = c(),
-  measure_value = c()
-)
+output_efficiency_measures_table <- function(g) {
+  tbl <- data.frame(
+    measure_name = c(),
+    measure_value = c()
+  )
+  # TODO finish this func
+  tbl | gt
+}
 
-tbl |> gt()
+output_efficiency_measures_table(sg)
 ```
 
 6.) Now we are going to consider interconnectedness in this graph:
 
-```{r create_interconnectedness_measures_table}
-# TODO interconnectedness table
+```{r}
+# TODO didn't we do this already in section 3 above?
 ```
-
-**Answer:**
-TODO interpret answer
 
 6.) Given the measures that you have produced in this assignment, would you consider this network to be centralized or de-centralized? Similarly, would you consider this network to be highly interconnected or have low interconnectedness? Based on these results, what do you think the advantages and disadvantages of this network would be in terms of robustness and resilience. What are the critical strengths and weaknesses of this network?
 
