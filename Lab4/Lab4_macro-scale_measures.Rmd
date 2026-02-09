@@ -779,9 +779,9 @@ _Project Caviar_ was a unique investigation that targeted a network of hashish a
 I have provided a `graphml` object containing the **110** person network for you to analyze the general topology of. Using the work above as an example, calculate the measures associated with this graph.
 
 ```{r load_in_the_gml_file}
-g <- igraph::read_graph(file = gml_file, format = "gml")
-# Error in read.graph.gml(file, ...) :
-# At vendor/cigraph/src/io/gml.c:455 : Parse error in GML file, line 1 (syntax error, unexpected ERROR, expecting end of file), Parse error
+g <- igraph::read_graph(gml_file, format = "graphml")
+g
+print_igraph_attr(g)
 ```
 
 ```{r}
