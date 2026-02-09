@@ -21,6 +21,7 @@ library(igraph)
 library(ggraph)
 library(visNetwork)
 library(tibble)
+library(purrr)
 ```
 
 ```{r user_configurable_settings}
@@ -294,7 +295,7 @@ d_with_flag
 d_without_flag
 ```
 
-So the `idToLabel` flag parameter in `toVisNetworkData()` doesn't do what I thought it does. If it's `TRUE`, it will add another column to the nodes `data.frame` called "label" containing the id... It doesn't seem to _convert_ `id` to `label` nor vice versa... I'll have to replace the strings with their `id` programmatically:
+So the `idToLabel` flag parameter in `toVisNetworkData()` doesn't do what I thought it does. If it's `TRUE`, it will add another column to the nodes `data.frame` called `label` containing the id... It doesn't seem to _convert_ anything past that, ie. it doesn't rename the from/to attributes of the edges to match the id. I'll have to replace the strings with their `id` programmatically:
 
 ```{r fix_the_bad_juju}
 # converts vertex name string to int id from graph nodes
@@ -310,7 +311,8 @@ f <- function(nodes, name){
 # first, let's fix the from column:
 #edges$from <- vapply(edges$from, f)
 
-
+edges$from <- purrr::map(edges$from, f)
+edges$to <- purrr::map(edges$to, f)
 
 # TODO now, I need to do a vapply() type map, over the vector edges$from, calling f(thing) foreach thing in edges$from
 
