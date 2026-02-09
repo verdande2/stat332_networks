@@ -7,7 +7,7 @@
   <key id="g_name" for="graph" attr.name="name" attr.type="string"/>
   <key id="v_name" for="node" attr.name="name" attr.type="string"/>
   <key id="e_weight" for="edge" attr.name="weight" attr.type="double"/>
-  <graph id="G" edgedefault="undirected">
+  <graph id="G" edgedefault="directed">
     <data key="g_name">CAVIAR_FULL</data>
     <node id="n0">
       <data key="v_name">1</data>
