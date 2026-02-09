@@ -302,7 +302,7 @@ Comparing the `data.frame`s of nodes and edges from with and without the `idToLa
 ```{r helper_func}
 # converts vertex `name` string to int `id` from graph `nodes`
 name_to_id <- function(nodes, name){
-  browser()
+  
   # id_df <- nodes |> 
   #   rownames_to_column(var = "rowname") |>
   #   filter(rowname == name) |>
