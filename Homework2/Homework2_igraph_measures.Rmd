@@ -260,7 +260,6 @@ print_metadata_summary_components_w_compare <- function(g) {
 
 print_metadata_summary_TF_w_compare(g)
 print_metadata_summary_components_w_compare(g)
-# TODO need moar asssert()s
 ```
 
 ---
