@@ -22,6 +22,9 @@ library(ggraph)
 library(visNetwork)
 library(tibble)
 library(purrr)
+library(ragg)
+library(extrafont)
+loadfonts(device = "win")
 ```
 
 ```{r user_configurable_settings}
@@ -173,7 +176,7 @@ p <- ggraph(g, layout = "lgl") +
     geom_node_point(
     aes(
       size = scales::rescale(age, to = c(5, 25)),
-      fill = country,
+      color = country,
       shape = hand
       ),
     alpha = 0.6
@@ -213,7 +216,7 @@ p <- ggraph(g, layout = "lgl") +
   #scale_shape_manual(values = shape_map, guide = "none") +
   #scale_edge_width(range = c(0.5, 1.5), guide = "none") +
   # scale_edge_linetype(guide = "none") + # this line triggers the below error! see note at end of chunk! # TODO look into this
-guides() + 
+guides() + # default guides
   # guides(
   #   size = guide_legend(nrow = 2, byrow = TRUE),
   #   # fill = guide_legend(
@@ -236,7 +239,6 @@ guides() +
     caption  = "Data from `networkdata` R package"
   ) +
   theme_graph()
-# TODO why are vertices not being colored by country?!?!?!?!
 p
 ```
 
@@ -295,29 +297,83 @@ d_with_flag
 d_without_flag
 ```
 
-So the `idToLabel` flag parameter in `toVisNetworkData()` doesn't do what I thought it does. If it's `TRUE`, it will add another column to the nodes `data.frame` called `label` containing the id... It doesn't seem to _convert_ anything past that, ie. it doesn't rename the from/to attributes of the edges to match the id. I'll have to replace the strings with their `id` programmatically:
+Comparing the `data.frame`s of nodes and edges from with and without the `idToLabel` flag set. So the `idToLabel` flag parameter in `toVisNetworkData()` doesn't do what I thought it does. If it's `TRUE`, it will add another column to the nodes `data.frame` called `label` containing the id... It doesn't seem to _convert_ anything past that, ie. it doesn't rename the from/to attributes of the edges to match the id. I'll have to replace the strings with their `id` programmatically:
 
-```{r fix_the_bad_juju}
-# converts vertex name string to int id from graph nodes
-f <- function(nodes, name){
-  id <- nodes |> 
-    rownames_to_column(var = "rowname") |>
-    filter(rowname == name) |>
-    select(id)[[1]] # extract id from df
-  
-  id # TODO some kind of error checking. If name is not found in nodes, this func shits the bed
+```{r helper_func}
+# converts vertex `name` string to int `id` from graph `nodes`
+name_to_id <- function(nodes, name){
+  browser()
+  # id_df <- nodes |> 
+  #   rownames_to_column(var = "rowname") |>
+  #   filter(rowname == name) |>
+  #   select(id)
+  # id <- id_df[[1]] # extract id from df
+  # id # TODO some kind of error checking. If name is not found in nodes, this func shits the bed
 }
 
+# test:
+# TODO update, need to changes nodes to an individual node, to emulate the map/apply below
+name_to_id(nodes, "Lauren Albanese") # 14
+name_to_id(nodes, "Samantha Stosur") # 23
+name_to_id(nodes, "Alicia Molik") # 3
+```
+
+```{r fix_the_bad_juju_pt1}
 # first, let's fix the from column:
-#edges$from <- vapply(edges$from, f)
 
-edges$from <- purrr::map(edges$from, f)
-edges$to <- purrr::map(edges$to, f)
+# I'm gonna learn the *apply() family, the purrr package and all the various map style functions god damnit. 
 
-# TODO now, I need to do a vapply() type map, over the vector edges$from, calling f(thing) foreach thing in edges$from
+# it would make sense to start with vapply, as I'm wanting a numeric vector output (the id)
+# vapply(edges$from, name_to_id)
+# Error in vapply(edges$from, name_to_id) : argument "FUN.VALUE" is missing, with no default
 
+# vapply(edges$from, FUN = name_to_id)
+# Error in vapply(edges$from, FUN = name_to_id) : 
+#   argument "FUN.VALUE" is missing, with no default
+
+# vapply(edges$from, FUN = name_to_id, FUN.VALUE = NULL)
+# Error in vapply(edges$from, FUN = name_to_id, FUN.VALUE = NULL) : 
+#   'FUN.VALUE' must be a vector
+
+
+# vapply(edges$from, FUN = name_to_id, FUN.VALUE = c(0))
+# Error in rownames_to_column(nodes, var = "rowname") :
+# is.data.frame(df) is not TRUE
+
+# so it's complaining about the datatype of the data parameter I'm passing in.... Okay...
+# let's investigate its data type and class and obj structure
+#edges$from # dumps whole vector data
+#class(edges$from) # "character" vector
+#str(edges$from) # chr vector, 1:38
+
+# So we see that our edges object is a vector (length 38) of chrs of various lengths
+# class is character
+# str shows vector datatype, index range/length of vector and contents
+
+# so if vapply is complaining that it isn't a data.frame, let's coerce the object and see if that is acceptable:
+e = edges$from
+
+print("--original------------------------------------------------------")
+str(e)
+print("-----After convert to DF-------------------------------------------")
+e <- as.data.frame(e)
+str(e)
+print("---Setting col names------------------------------------------------")
+colnames(e) <- c("name")
+str(e)
+print("----apply convert name to id-----------------------------------------")
+e <- lapply(e["name"], FUN = name_to_id) # TODO WTF ALSKDJF LSDKJ FL
+str(e)
+print("----final------------------------------------------------")
+
+```
+
+
+```{r fix_the_bad_juju_pt2}
 # now, the to column:
 #edges$to # TODO do same thing as above, vapply(edges$to, f)
+
+
 ```
 
 Now that we've remapped the edges from string labels to id integers again, we should be able to construct the visNetwork object anew and re-plot, and we _should_ get our edges back!
