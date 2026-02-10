@@ -3,6 +3,7 @@ linters: all_linters(
   print_linter = NULL,
   commented_code_linter = NULL,
   line_length_linter = line_length_linter(120),
-  object_name_linter = NULL
+  object_name_linter = NULL,
+  return_linter = return_linter()
   )
 encoding: "UTF-8"
