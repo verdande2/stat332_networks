@@ -239,9 +239,9 @@ table %>% gt()
 A collection of journal articles is provided for your consumption. I have provided csv files for both the nodes and links as well as code to read and create a network from this data. Using what you know from the code above, create a plot of this network and a table that summarizes the statistics describing this data.
 
 ```{r}
-nodes <- read.csv("Citation_vertices.csv", header = T, as.is = T)
-links <- read.csv("Citation_Edgelist.csv", header = T, as.is = T)
-net <- graph_from_data_frame(d = links, vertices = nodes, directed = T)
+nodes <- read.csv("Citation_vertices.csv", header = TRUE, as.is = TRUE)
+links <- read.csv("Citation_Edgelist.csv", header = TRUE, as.is = TRUE)
+net <- graph_from_data_frame(d = links, vertices = nodes, directed = TRUE)
 ```
 
 ### Plot (remember, this is a directed graph)

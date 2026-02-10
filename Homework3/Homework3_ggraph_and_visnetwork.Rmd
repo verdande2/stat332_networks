@@ -188,7 +188,7 @@ p <- ggraph(g, layout = "lgl") +
     repel = TRUE,
     size = 3
   ) +
-  
+
 # edge settings
 # - edge thickness does seem to vary, but it does not have a legend associated with it (assuming based on strength/degree?)
 # - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
@@ -301,9 +301,9 @@ Comparing the `data.frame`s of nodes and edges from with and without the `idToLa
 
 ```{r helper_func}
 # converts vertex `name` string to int `id` from graph `nodes`
-name_to_id <- function(nodes, name){
-  
-  # id_df <- nodes |> 
+name_to_id <- function(nodes, name) {
+
+  # id_df <- nodes |>
   #   rownames_to_column(var = "rowname") |>
   #   filter(rowname == name) |>
   #   select(id)
@@ -321,18 +321,18 @@ name_to_id(nodes, "Alicia Molik") # 3
 ```{r fix_the_bad_juju_pt1}
 # first, let's fix the from column:
 
-# I'm gonna learn the *apply() family, the purrr package and all the various map style functions god damnit. 
+# I'm gonna learn the *apply() family, the purrr package and all the various map style functions god damnit.
 
 # it would make sense to start with vapply, as I'm wanting a numeric vector output (the id)
 # vapply(edges$from, name_to_id)
 # Error in vapply(edges$from, name_to_id) : argument "FUN.VALUE" is missing, with no default
 
 # vapply(edges$from, FUN = name_to_id)
-# Error in vapply(edges$from, FUN = name_to_id) : 
+# Error in vapply(edges$from, FUN = name_to_id) :
 #   argument "FUN.VALUE" is missing, with no default
 
 # vapply(edges$from, FUN = name_to_id, FUN.VALUE = NULL)
-# Error in vapply(edges$from, FUN = name_to_id, FUN.VALUE = NULL) : 
+# Error in vapply(edges$from, FUN = name_to_id, FUN.VALUE = NULL) :
 #   'FUN.VALUE' must be a vector
 
 
@@ -351,7 +351,7 @@ name_to_id(nodes, "Alicia Molik") # 3
 # str shows vector datatype, index range/length of vector and contents
 
 # so if vapply is complaining that it isn't a data.frame, let's coerce the object and see if that is acceptable:
-e = edges$from
+e <- edges$from
 
 print("--original------------------------------------------------------")
 str(e)
@@ -359,7 +359,7 @@ print("-----After convert to DF-------------------------------------------")
 e <- as.data.frame(e)
 str(e)
 print("---Setting col names------------------------------------------------")
-colnames(e) <- c("name")
+colnames(e) <- "name"
 str(e)
 print("----apply convert name to id-----------------------------------------")
 e <- lapply(e["name"], FUN = name_to_id) # TODO WTF ALSKDJF LSDKJ FL
@@ -381,7 +381,7 @@ Now that we've remapped the edges from string labels to id integers again, we sh
 ```{r plot_visnetwork_graph_take_two}
 # let's try this again!
 visNetwork(nodes, edges, height = "800px", width = "100%") |>
-  visNodes(color = list(background = "lightblue", 
+  visNodes(color = list(background = "lightblue",
                         border = "darkblue",
                         highlight = "yellow"),
            shadow = list(enabled = TRUE, size = 10)

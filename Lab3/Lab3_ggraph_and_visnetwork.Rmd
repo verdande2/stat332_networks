@@ -109,7 +109,7 @@ Alright, that's the basics.
 
 ```{r make_more_graph}
 # For reference:
-# IGRAPH 52040ab DNW- 17 49 -- 
+# IGRAPH 52040ab DNW- 17 49 --
 # + attr: name (v/c), media (v/c), media.type (v/n), type.label (v/c), audience.size (v/n), strength_in (v/n),
 # | strength_out (v/n), strength_total (v/n), type (e/c), weight (e/n)
 
@@ -145,13 +145,13 @@ p <- g |> # Start with the graph object
   # the above linetype params both yield:
   #   Error in `as_discrete_pal()`:
   # ! Cannot convert `x` to a discrete palette. # TODO look into this behavior
-  
+
   labs(
     title    = "Media Networks Link to and Reference Each Other",
     subtitle = "A network plot of networks.",
     caption  = "Data from: https://kateto.net/network-visualization."
   )
-  
+
 p
 ```
 
@@ -302,7 +302,7 @@ shape_map <- setNames(shape_vals, node_types)
 
 # create graph using ggraph
 p <- ggraph(g_actors, layout = "lgl") +
-  
+
   # custom shapes
   # custom colors
   geom_node_point(
@@ -314,7 +314,7 @@ p <- ggraph(g_actors, layout = "lgl") +
       ),
     alpha = 0.6
   ) +
-  
+
   geom_node_text(
     aes(
       label = Actor
@@ -322,7 +322,7 @@ p <- ggraph(g_actors, layout = "lgl") +
     repel = TRUE,
     size = 3
   ) +
-  
+
   # custom edge widths
   # custom edge colors? maybe skip in favor of highlighting Command Team
   # use custom color AND type on edges to denote Command Team members
@@ -356,7 +356,7 @@ p <- ggraph(g_actors, layout = "lgl") +
       title = "Reference Type"
     )
   ) +
-  
+
   # title
   # subtitle
   # captions
@@ -475,7 +475,6 @@ How centralized is this network? Are there any key players that could be removed
 
 ```{r centrality_time}
 # TODO centrality measures
-
 ```
 
 **Answer:**

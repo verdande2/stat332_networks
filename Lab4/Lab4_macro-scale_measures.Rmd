@@ -60,7 +60,7 @@ For our dataset this week, we're going to use the Game of Thrones network from t
 Using `ctrl-alt-i` you can create a section where you are going to embed R code. We're going to start by loading in the `igraph` library.
 
 ```{r}
-library(igraph) 
+library(igraph)
 ```
 
 ```{r}
@@ -81,10 +81,10 @@ The first thing that we should do when considering any graph is go get the total
 library(data.table)
 library(gt)
 
-ID = c("Order", "Size", "Connected", "Directed", "Acyclic", "Weighted", "Simple", "Has Loops", "Is Multigraph", "Bipartite", "Tree", "Forest")
-  
-Value = c(gorder(g), ecount(g), is_connected(g), is_directed(g), is_acyclic(g), is_weighted(g), is_simple(g), any_loop(g), any_multiple(g), is_bipartite(g), is_tree(g), is_forest(g))
-  
+ID <- c("Order", "Size", "Connected", "Directed", "Acyclic", "Weighted", "Simple", "Has Loops", "Is Multigraph", "Bipartite", "Tree", "Forest")
+
+Value <- c(gorder(g), ecount(g), is_connected(g), is_directed(g), is_acyclic(g), is_weighted(g), is_simple(g), any_loop(g), any_multiple(g), is_bipartite(g), is_tree(g), is_forest(g))
+
 table <- data.table(ID, Value)
 table %>% gt() %>% fmt_tf(columns = Value, tf_style = "yes-no") # nice little formatting trick... clever girl...
 ```
@@ -102,7 +102,7 @@ g2 <- largest_component(g)
 First things first, we should look to see if there are any bridges or articulation points in the data.
 
 ```{r}
-cat("There are", length(bridges(g)), "bridges in this graph, and there are", 
+cat("There are", length(bridges(g)), "bridges in this graph, and there are",
     length(articulation_points(g)), "articulation points in this graph.")
 ```
 
@@ -168,11 +168,11 @@ get_diameter(g, weights = NA)
 One warning here: **do not conflate "connection strength" with "flow efficiency"**. They are related, but not the same thing. Large pipes carry more water, but longer pipes will still take longer. If you want to measure flow efficiency, you need to have an edge attribute for that (i.e. if you want to find the "Most Efficient" route it may be very different from what the diameter gives us). If the weights on our graph represented travel time between two towns, then the diameter ("longest shortest path") WOULD measure the longest travel time between two towns in the network. However, with weights representing the strength of ties, it would take a little more thought. One common method is to change weights to distances by using the reciprocal.
 
 ```{r}
-diameter(g, weights = 1/E(g)$weight)
+diameter(g, weights = 1 / E(g)$weight)
 ```
 
 ```{r}
-get_diameter(g, weights = 1/E(g)$weight)
+get_diameter(g, weights = 1 / E(g)$weight)
 ```
 
 And now we have a completely different answer for the longest of the shortest paths and who is involved in the process.
@@ -198,7 +198,7 @@ conductance_of_set <- function(g, S, weights = E(g)$weight) {
   S_flag[S] <- TRUE
 
   ep <- ends(g, E(g), names = FALSE)
-  crossing <- xor(S_flag[ep[,1]], S_flag[ep[,2]])
+  crossing <- xor(S_flag[ep[, 1]], S_flag[ep[, 2]])
   cut_w <- sum(weights[crossing], na.rm = TRUE)
 
   # weighted degrees
@@ -238,7 +238,7 @@ lambda_2 <- ev[length(ev) - 1]
 ```
 
 ```{r}
-cat("The conductance is bounded by", lambda_2/2, "and", sqrt(2*lambda_2), ".")
+cat("The conductance is bounded by", lambda_2 / 2, "and", sqrt(2 * lambda_2), ".")
 ```
 
 Okay, so now that we have upper bounds, it turns out there is a special vector $v_2$ associated with the eigenvalue $\lambda_2$. This is the associated eigenvector. Using this, we can find the associated Fiedler values for every vertex and order these from smallest to largest. By successively adding into the set of vertices and computing conductance for every one of them, we can find the set with minimum conductance.
@@ -250,7 +250,7 @@ fiedler_sweep_cut <- function(g) {
 
   # Make sure it's undirected and weighted sensibly
   if (is_directed(g)) {
-    g <- as_undirected(g, mode="collapse", edge.attr.comb = list(weight="sum"))
+    g <- as_undirected(g, mode = "collapse", edge.attr.comb = list(weight = "sum"))
   }
 
   # Compute symmetric normalized Laplacian
@@ -304,7 +304,7 @@ Since `page_rank()` is well defined in `igraph`, we can actually implement this 
 page_rank_sweep_cut <- function(g, alpha = 0.15) {
 
   if (is.directed(g)) {
-    g <- as.undirected(g, mode="collapse", edge.attr.comb=list(weight="sum"))
+    g <- as.undirected(g, mode = "collapse", edge.attr.comb = list(weight = "sum"))
   }
 
   # Weighted PageRank
@@ -320,7 +320,7 @@ page_rank_sweep_cut <- function(g, alpha = 0.15) {
   best_phi <- Inf
   best_S <- NULL
 
-  for (t in 1:(length(ord)-1)) {
+  for (t in 1:(length(ord) - 1)) {
     S <- ord[1:t]
     phi <- conductance_of_set(g, S)
     if (phi < best_phi) {
@@ -525,7 +525,7 @@ centr_degree(g, mode = "all")$centralization
 Remember how we said that degree is a useless measure in our graph (because it is an explicit multigraph) and strength matters more? And we have already calculated strengths. In cases like this, there is a general centralization function available.
 
 ```{r}
-centralize(strengths, theoretical.max = sum(strengths)*(length(strengths) - 1), normalized = TRUE)
+centralize(strengths, theoretical.max = sum(strengths) * (length(strengths) - 1), normalized = TRUE)
 ```
 
 #### Closeness Centralization
@@ -544,18 +544,18 @@ $$
 centr_clo_weighted <- function(g) {
   # convert tie strength → distance
   d <- 1 / E(g)$weight
-  
+
   # weighted closeness
   C <- closeness(g, weights = d)
-  
+
   # remove Inf or NA (isolates)
   C <- C[is.finite(C)]
-  
+
   C_max <- max(C)
   num <- sum(C_max - C)
   #Set a theoretical maximum based on the total distance represented in the network
-  denom <- (length(C) - 1) * C_max 
-  
+  denom <- (length(C) - 1) * C_max
+
   if (denom == 0) return(0)
   num / denom
 }
@@ -577,14 +577,14 @@ Betweenness demonstrates choke points and imbalance of brokerage power on shorte
 centr_betw_weighted <- function(g) {
   # Convert strength → distance
   d <- 1 / E(g)$weight
-  
+
   # weighted betweenness
   b <- betweenness(g, directed = FALSE, weights = d)
-  
+
   b_max <- max(b)
   num <- sum(b_max - b)
   denom <- (length(b) - 1) * b_max
-  
+
   if (denom == 0) return(0)
   num / denom
 }
@@ -603,21 +603,21 @@ Yay, this means... nothing because once again, our weight measures are actually 
 centr_eigen_weighted <- function(g) {
   # weighted EC scores
   ec <- eigen_centrality(g, weights = E(g)$weight)$vector
-  
+
   # remove missing values (rare but can occur)
   ec <- ec[is.finite(ec)]
-  
+
   ec_max <- max(ec)
-  
+
   # Freeman numerator
   num <- sum(ec_max - ec)
-  
+
   # theoretical maximum for normalized star
   # (one node gets ec_max, all others get 0)
   denom <- (length(ec) - 1) * ec_max
-  
+
   if (denom == 0) return(0)
-  
+
   num / denom
 }
 ```
@@ -633,7 +633,7 @@ Perfect, this is actually a meaningful measure for eigenvector centrality. Do yo
 So, once again, the weights on the edges being strengths rather than distances means that efficiency should be calculated based on the reciprocal values. Let's just store those as an edge attribute.
 
 ```{r}
-E(g)$dist = 1/E(g)$weight
+E(g)$dist <- 1 / E(g)$weight
 ```
 
 #### Global Efficiency
@@ -722,10 +722,10 @@ library(dplyr)
 
 # Color-blind-safe palette (Okabe-Ito)
 category_colors <- c(
-  "Structural"         = "#a6cee3",
-  "Interconnectedness" = "#b2df8a",
-  "Centralization"     = "#fdbf6f",
-  "Efficiency"         = "#cab2d6"
+  Structural         = "#a6cee3",
+  Interconnectedness = "#b2df8a",
+  Centralization     = "#fdbf6f",
+  Efficiency         = "#cab2d6"
 )
 
 global_measures_table |>
@@ -874,10 +874,10 @@ global_measures_table <- tribble(
 
 # Color-blind-safe palette (Okabe-Ito)
 category_colors <- c(
-  "Structural"         = "#a6cee3",
-  "Interconnectedness" = "#b2df8a",
-  "Centralization"     = "#fdbf6f",
-  "Efficiency"         = "#cab2d6"
+  Structural         = "#a6cee3",
+  Interconnectedness = "#b2df8a",
+  Centralization     = "#fdbf6f",
+  Efficiency         = "#cab2d6"
 )
 
 global_measures_table |>
@@ -894,7 +894,6 @@ global_measures_table |>
     }
   ) |>
   tab_options(table.font.size = 12)
-
 ```
 
 Next, please provide a few paragraphs regarding these measures and what they imply about the resilience, strengths, and weaknesses of this drug smuggling network.

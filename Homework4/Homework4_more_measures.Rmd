@@ -55,7 +55,7 @@ g <- igraph::graph_from_data_frame(d = links, vertices = nodes, directed = FALSE
 0.) Your first step, before doing any other work, will be to create a subgraph that is limited to only those nodes where the `page_type` is "tvshow". Then overwrite this network with an induced subgraph where the isolates are removed (you should have **3,282** nodes)
 
 ```{r create_subgraph}
-sg  <- g |> 
+sg  <- g |>
   activate("nodes") |>
   filter(page_type == "tvshow") |>
   filter(!node_is_isolated())

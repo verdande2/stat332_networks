@@ -91,7 +91,7 @@ print_big_fancy_summary_table <- function(graph) {
       mean_distance(graph)
     )
   )
-  big_fancy_igraph_table |> 
+  big_fancy_igraph_table |>
     gt()
 }
 
@@ -111,7 +111,7 @@ print_igraph_attr <- function(graph) {
 # editor's note: splitting table into two subtables, first for T/F values and the second for the component counts
 print_metadata_summary_TF_table <- function(graph) {
   tbl_TF <- data.table(
-    Label <- c(
+    Label = c(
       "Directed?",
       "Weighted?",
       "Not Simple?",
@@ -119,7 +119,7 @@ print_metadata_summary_TF_table <- function(graph) {
       "Weakly Connected?",
       "Strongly Connected?"
     ),
-    Value <- c(
+    Value = c(
       igraph::is_directed(g),
       igraph::is_weighted(g),
       !igraph::is_simple(g),
@@ -129,25 +129,25 @@ print_metadata_summary_TF_table <- function(graph) {
     )
   )
   colnames(tbl_TF) <- c("Label", "Value")
-  tbl_TF |> 
-    gt() |> 
+  tbl_TF |>
+    gt() |>
     fmt_tf(columns = where(~ is.numeric(.x)), tf_style = "true-false")
 }
 
 print_metadata_summary_components_table <- function(g) {
   tbl_components <- data.table(
-    Label <- c(
+    Label = c(
       "# of Strongly-connected components:",
       "# of Weakly-connected components:"
     ),
-    Value <- c(
+    Value = c(
       components(g, mode = "strong")$no,
       components(g, mode = "weak")$no # mode = weak is the default
     )
   )
   colnames(tbl_components) <- c("Label", "Value")
-  tbl_components |> 
-    gt() |> 
+  tbl_components |>
+    gt() |>
     fmt_number(columns = where(~ is.numeric(.x)), decimals = 0, use_seps = TRUE)
 }
 ```
@@ -206,7 +206,7 @@ In Lab 2 we looked at how to create a summary of the metadata for the graph. Use
 # editor's note: splitting table into two subtables, first for T/F values and the second for the component counts
 print_metadata_summary_TF_w_compare <- function(g) {
   tbl_TF <- data.table(
-    Label <- c(
+    Label = c(
       "Directed?",
       "Weighted?",
       "Not Simple?",
@@ -214,7 +214,7 @@ print_metadata_summary_TF_w_compare <- function(g) {
       "Weakly Connected?",
       "Strongly Connected?"
     ),
-    Value <- c(
+    Value = c(
       igraph::is_directed(g),
       igraph::is_weighted(g),
       !igraph::is_simple(g),
@@ -222,7 +222,7 @@ print_metadata_summary_TF_w_compare <- function(g) {
       is_connected(g, mode = "weak"), # mode = weak is the default
       is_connected(g, mode = "strong")
     ),
-    Expected <- c(
+    Expected = c(
       TRUE, # Directed
       TRUE, # Weighted
       TRUE, # Not Simple
@@ -232,29 +232,29 @@ print_metadata_summary_TF_w_compare <- function(g) {
     )
   )
   colnames(tbl_TF) <- c("Label", "Value", "Expected")
-  tbl_TF |> 
-    gt() |> 
+  tbl_TF |>
+    gt() |>
     fmt_tf(columns = where(~ is.numeric(.x)), tf_style = "true-false")
 }
-  
+
 print_metadata_summary_components_w_compare <- function(g) {
   tbl_components <- data.table(
-    Label <- c(
+    Label = c(
       "# of Strongly-connected components:",
       "# of Weakly-connected components:"
     ),
-    Value <- c(
+    Value = c(
       components(g, mode = "strong")$no,
       components(g, mode = "weak")$no # mode = weak is the default
     ),
-    Expected <- c(
+    Expected = c(
       2, # Strongly-Connected Components
       1 # Weakly-Connected Components
     )
   )
   colnames(tbl_components) <- c("Label", "Value", "Expected")
-  tbl_components |> 
-    gt() |> 
+  tbl_components |>
+    gt() |>
     fmt_number(columns = where(~ is.numeric(.x)), decimals = 0, use_seps = TRUE)
 }
 
@@ -287,7 +287,7 @@ Also, read in your nodes file the same way you did for the edges file and update
 ```{r load_dem_nodes}
 # read in your nodes file
 node_list <- readr::read_csv(node_filename)
-node_type_list <- node_list[, c("type")]
+node_type_list <- node_list[, "type"]
 ```
 
 Now, we have the nodes list csv file loaded, and have pulled out the columns for name and type for later use.
@@ -336,7 +336,7 @@ Of note, the edge attribute `type` still exists at this point, to be overwritten
 
 ```{r assign_type_based_on_fruit}
 # so if it's a fruit type, it gets a TRUE, else FALSE
-V(g)$type <- ifelse(V(g)$classification == "Fruit", TRUE, FALSE) # so type isn't /really/ a "type" anyone, it's an is_fruit bool flag... Got it.
+V(g)$type <- V(g)$classification == "Fruit" # so type isn't /really/ a "type" anyone, it's an is_fruit bool flag... Got it.
 ```
 
 Now, start by using the `layout_as_bipartite` in your plot.
