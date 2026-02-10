@@ -247,7 +247,7 @@ p
 ```{r prepare_visnetwork_graph_data}
 
 library("igraph", quietly = TRUE, warn.conflicts = FALSE, verbose = FALSE)
-data <- visNetwork::toVisNetworkData(g, idToLabel = TRUE)
+data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
 
 # we currently have an igraph object with all our data in it. Let's convert it to data.frames for visNetwork consumption
 nodes <- data$nodes
@@ -277,45 +277,63 @@ visNetwork::visIgraph(g, idToLabel = FALSE, physics = TRUE)
 
 ```
 
-Well, while `physics = TRUE` is rather amusing to toy with, I'm not getting any edges showing up... Let's investigate...
+Well, while `physics = TRUE` is rather amusing to toy with, I'm still not getting any edges showing up... Let's investigate. Further investigation into this issue can be found in the appendices at the end. The TL;DR would be that the edge list has to/from columns as the strings of the player names, **not** the ids, which are required for `visNetwork`.
 
-```{r edge_check}
-edges
-```
+I'll have to replace the strings with their `id` programmatically, so let's program some helper functions that will likely make things go easier:
 
-```{r nodes_check}
-nodes
-```
+```{r helper_funcs}
 
-Reading through `?visNetwork` and `?toVisNetworkData` learned me some new information: the parameters `nodes` and `edges` passed into `visNetwork()` require id (an int) in the `to` and `from` columns, and the edges that their dumb helper function `toVisNetworkData()` failed to do, despite throwing the flag to _not_ convert id to label... Let's confirm that suspicion, correct that and continue...
+# # converts vertex `name` string to int `id` from graph `nodes`
+# name_to_id <- function(name, nodes = nodes) {
+#   id_df <- nodes |>
+#     rownames_to_column(var = "rowname") |>
+#     filter(rowname == name) |>
+#     select(id)
+#   id <- id_df[[1]] # extract id from df
+#   id # TODO some kind of error checking. If name is not found in nodes, this func shits the bed
+# }
+# 
+# 
+# get_node_id_from_name <- function(nodes, name) {
+#   print("get_node_id_from_name() call")
+#   print(nodes)
+#   print(name)
+#   id_df <- nodes |>
+#     filter(name == name) |>
+#     select(id)
+#   id_df[[1]]
+# }
+# 
+# get_node_id_from_name_vec <- Vectorize(get_node_id_from_name)
+# 
+# get_node_name_from_id <- function(nodes, id) {
+#   print("get_node_name_from_id() call")
+#   print(nodes)
+#   print(id)
+#   name_df <- nodes |>
+#     filter(id == id) |>
+#     select(name)
+#   name_df[[1]]
+# }
+# 
+# get_node_name_from_id_vec <- Vectorize(get_node_name_from_id)
+# 
+# # test:
+# get_node_id_from_name(nodes, "Lauren Albanese") # = 14
+# get_node_name_from_id(nodes, 14) # "Lauren Albanese"
+# 
+# get_node_id_from_name(nodes, "Samantha Stosur") # = 23
+# get_node_name_from_id(nodes, 23) # "Samantha Stosur"
+# 
+# get_node_id_from_name(nodes, "Alicia Molik") # = 3
+# get_node_name_from_id(nodes, 3) # "Alicia Molik"
 
-```{r confirm_breaking_the_thing}
-d_with_flag <- visNetwork::toVisNetworkData(g, idToLabel = TRUE)
-d_without_flag <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+# these helper functions are fine and dandy, but because I wrote them to handle the nodes variable after converting the igraph obj to visNetwork, and in doing so, I lost much of the useful functionality of igraph. In the future, I'll keep the graph as an igraph and manipulate it then, and only then plot and do visNetwork and things... I also tried to Vectorize the functions, but that wasn't needed in the end, and produced some interesting output...
 
-d_with_flag
-d_without_flag
-```
-
-Comparing the `data.frame`s of nodes and edges from with and without the `idToLabel` flag set. So the `idToLabel` flag parameter in `toVisNetworkData()` doesn't do what I thought it does. If it's `TRUE`, it will add another column to the nodes `data.frame` called `label` containing the id... It doesn't seem to _convert_ anything past that, ie. it doesn't rename the from/to attributes of the edges to match the id. I'll have to replace the strings with their `id` programmatically:
-
-```{r helper_func}
-# converts vertex `name` string to int `id` from graph `nodes`
-name_to_id <- function(nodes, name) {
-
-  # id_df <- nodes |>
-  #   rownames_to_column(var = "rowname") |>
-  #   filter(rowname == name) |>
-  #   select(id)
-  # id <- id_df[[1]] # extract id from df
-  # id # TODO some kind of error checking. If name is not found in nodes, this func shits the bed
+# using the igraph obj g, let's rewrite our function a bit differently
+get_node_id_from_name <- function(g, name) {
+  which(V(g)$name == name)
 }
-
-# test:
-# TODO update, need to changes nodes to an individual node, to emulate the map/apply below
-name_to_id(nodes, "Lauren Albanese") # 14
-name_to_id(nodes, "Samantha Stosur") # 23
-name_to_id(nodes, "Alicia Molik") # 3
 ```
 
 ```{r fix_the_bad_juju_pt1}
@@ -335,7 +353,6 @@ name_to_id(nodes, "Alicia Molik") # 3
 # Error in vapply(edges$from, FUN = name_to_id, FUN.VALUE = NULL) :
 #   'FUN.VALUE' must be a vector
 
-
 # vapply(edges$from, FUN = name_to_id, FUN.VALUE = c(0))
 # Error in rownames_to_column(nodes, var = "rowname") :
 # is.data.frame(df) is not TRUE
@@ -350,22 +367,16 @@ name_to_id(nodes, "Alicia Molik") # 3
 # class is character
 # str shows vector datatype, index range/length of vector and contents
 
-# so if vapply is complaining that it isn't a data.frame, let's coerce the object and see if that is acceptable:
-e <- edges$from
+# maybe give sapply a shot? using third parameter to pass nodes obj for get_node_id_from_name
 
-print("--original------------------------------------------------------")
-str(e)
-print("-----After convert to DF-------------------------------------------")
-e <- as.data.frame(e)
-str(e)
-print("---Setting col names------------------------------------------------")
-colnames(e) <- "name"
-str(e)
-print("----apply convert name to id-----------------------------------------")
-e <- lapply(e["name"], FUN = name_to_id) # TODO WTF ALSKDJF LSDKJ FL
-str(e)
-print("----final------------------------------------------------")
+#test <- sapply(E(g)$_from, FUN = get_node_id_from_name, nodes = nodes) # TODO WTF ALSKDJF LSDKJ FL
+#str(test)
 
+get_node_id_from_name <- function(name, g = g) {
+  which(V(g)$name == name)
+}
+
+sapply(E(g)$from, get_node_id_from_name, g = g)
 ```
 
 
@@ -397,3 +408,65 @@ visNetwork(nodes, edges, height = "800px", width = "100%") |>
   visLayout(randomSeed = 12) # TODO remove me before submit!
 ```
 
+
+
+
+
+## Appendices
+
+### A1: Why no edges?!?!
+
+```{r setup_environment_like_it_was_to_reproduce}
+# reproduce the original g and nodes/edges from the original graph above, just in case we modified it inadvertently above
+g <- igraph::read_graph(gml_filename, format = "gml")
+data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+
+nodes <- data$nodes
+edges <- data$edges
+```
+
+```{r edge_check}
+glimpse(edges)
+```
+
+```{r nodes_check}
+glimpse(nodes)
+```
+
+Reading through `?visNetwork` and `?toVisNetworkData` learned me some new information: the parameters `nodes` and `edges` passed into `visNetwork()` require id (an int) in the `to` and `from` columns, and the edges that their dumb helper function `toVisNetworkData()` failed to do, despite throwing the flag to _not_ convert id to label... Let's confirm that suspicion, correct that and continue...
+
+```{r confirm_breaking_the_thing}
+d_with_flag <- visNetwork::toVisNetworkData(g, idToLabel = TRUE)
+d_without_flag <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+
+d_with_flag$nodes
+d_without_flag$nodes
+d_with_flag$edges
+d_with_flag$edges
+```
+
+Comparing the `data.frame`s of nodes and edges from with and without the `idToLabel` flag set. So the `idToLabel` flag parameter in `toVisNetworkData()` doesn't do what I thought it does. If it's `TRUE`, it will add another column to the nodes `data.frame` called `label` containing the id... It doesn't seem to _convert_ anything past that, ie. it doesn't rename the from/to attributes of the edges to match the id.
+
+So in conclusion, the `idToLabel` parameter in `toVisNetworkData()` (if `TRUE`) simply copies the `id` (dbl) to a column named `label` (also dbl) as shown below in a toy example:
+
+```{r make_toy_graph}
+# let's make a small simple graph with igraph
+g <- igraph::make_full_graph(5, loops = FALSE, directed = FALSE)
+
+node_attr_names <- c("Jim", "Joe", "Bob", "Bill", "Susan")
+V(g)$name <- node_attr_names
+
+g
+```
+
+```{r id_to_label_test}
+#g <- igraph::from_data_frame(g = node_attr_names, from =, to=)
+
+visNetwork_g_true <- visNetwork::toVisNetworkData(g, idToLabel = TRUE)
+visNetwork_g_false <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+
+visNetwork_g_true$nodes
+visNetwork_g_false$nodes
+```
+
+Here we can see that setting that flag to `TRUE` simply copied the `id` col to a new col `label`, with identical datatype. That's ... minorly useful I guess?
