@@ -1,8 +1,8 @@
 Version: 1.0
 
-RestoreWorkspace: Default
-SaveWorkspace: Default
-AlwaysSaveHistory: Default
+RestoreWorkspace: No
+SaveWorkspace: No
+AlwaysSaveHistory: No
 
 EnableCodeIndexing: Yes
 UseSpacesForTab: Yes
@@ -14,3 +14,11 @@ LaTeX: pdfLaTeX
 
 AutoAppendNewline: Yes
 StripTrailingWhitespace: Yes
+
+UseNativePipeOperator: Yes
+
+PythonType: system
+PythonVersion: 3.14.2
+PythonPath: C:/Users/RobynPfeifer/AppData/Local/Python/bin/python.exe
+
+SpellingDictionary: en_US
