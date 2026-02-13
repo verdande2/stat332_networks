@@ -23,6 +23,7 @@ library(grid) # for unit()
 library(ggrepel) # for stronger label repel
 library(visNetwork) # for network graphs
 library(ggplot2) # for ploots
+library(igraphdata)
 ```
 
 ```{r user_configurable_settings}
@@ -48,6 +49,8 @@ You **DO NOT** need to use the _full_ network. You may subset or aggregate the d
 
 ```{r load_in_dataset}
 # TODO load in data
+data("USairports")
+USairports
 ```
 
 # Pretty Graphs
