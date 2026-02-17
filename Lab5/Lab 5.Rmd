@@ -1,0 +1,386 @@
+---
+title: "Lab 5"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+# STAT 332: Lab 5
+
+## 1.) Setup
+
+Welcome to Lab 5. This week we are going to be focused on macso-scale measures on networks.\
+
+For our dataset this week, we're going to use the classic karate network
+
+## 2.) Lab Walkthrough
+
+### 2.a) Getting started.
+
+```{r}
+library(igraph) 
+library(igraphdata)
+data(karate)
+g <- karate
+```
+
+As always, let's make sure we print out our vertex and edge attributes
+
+```{r}
+summary(g)
+```
+
+So 34 nodes, undirected, weighted, and 78 edges.
+
+And again, lets use a summary for finding out other properties.
+
+```{r, message = FALSE, warning=FALSE}
+library(data.table)
+library(gt)
+
+ID = c("Order", "Size", "Connected", "Directed", "Acyclic", "Weighted", "Simple", "Has Loops", "Is Multigraph", "Bipartite", "Tree", "Forest")
+  
+Value = c(gorder(g), ecount(g), is_connected(g), is_directed(g), is_acyclic(g), is_weighted(g), is_simple(g), any_loop(g), any_multiple(g), is_bipartite(g), is_tree(g), is_forest(g))
+  
+table <- data.table(ID, Value)
+table %>% gt() %>% fmt_tf(columns = Value, tf_style = "yes-no")
+```
+
+It's connected, so we don't need to worry about the larges component. If we did, you could use: g2 \<- largest_component(g) to extract it to g2.
+
+This still isn't quite enough information to work with. We have a weighted graph, so we need to know if the edge weigts are distances or strengths.
+
+```{r}
+?karate
+```
+
+So, it looks like these are STRENGTH based associations. Distances should then be calculated and added as an edge property. Let's do that (normalizing based on Osphel's suggestion.)
+
+```{r}
+E(g)$distance_weight <- 1 / (E(g)$weight / mean(E(g)$weight))
+```
+
+I think that's enough for the setup, so let's move on to clustering.
+
+# 3.) Community Detection
+
+Remember how we discussed a LOT of community detection methods. Some were density based, some were structure/truss based, and some are clique based? Very few of the ones we discussed are implemented in igraph, but it's enough for our purposes. Let's start with the general density based ones.
+
+In R we have the following functions readily available:
+
+-   cluster_leiden()
+
+-   cluster_louvain()
+
+-   cluster_edge_betweenness() \<- this is the Girvan-Newman algorithm
+
+-   cluster_fast_greedy() \<- maximizes modularity directly using the Clauset Newman and Moore method for very large networks. Doesn't actually find the max, but goes straight for it.
+
+-   cluster_leading_eigen()
+
+-   cluster_spinglass() \<- can work with networks that have negative weights on edges.
+
+-   cluster_walktrap()
+
+-   cluster_infomap()
+
+-   cluster_fluid_communities() \<- cluster based on interacting fluids
+
+-   cluster_label_prop() \<- neighborhood voting membership
+
+-   cluster_optimal() \<- not recommended. Maximizes modularity using an NP-complete problem method based on integer programming. May take a LONG time.
+
+-   coreness() \<- k-core decomposition
+
+-   cliques() \<- find fully connected subgraphs.
+
+As an interesting note, communities objects in igraph are a special type of object that have an entire we have a set of methods at our disposal for.
+
+<https://r.igraph.org/reference/communities.html>
+
+Let's go ahead.
+
+![Reminder of community detection methods based on density](Community Based Detection.png)
+
+## Cluster Leiden
+
+<https://r.igraph.org/reference/cluster_leiden.html>
+
+```         
+cluster_leiden(graph,   
+  objective_function = c("CPM", "modularity"),   
+  ...,   
+  weights = NULL,   
+  resolution = 1,   
+  resolution_parameter = deprecated(),   
+  beta = 0.01,   
+  initial_membership = NULL,   
+  n_iterations = 2,   
+  vertex_weights = NULL )
+```
+
+Since we covered modularity in class, let's go with that. For our weights, we want to use the right weights, but reading the documentation "A larger edge weight means a stronger connection for this function." This means that the default weights are correct. Resolution is the parameter for granularity (higher is more granular, lower leads to broader communities). beta is a randomness parameter for the refinement.
+
+```{r}
+leiden_g <- cluster_leiden(g,
+                           objective_function = "modularity",
+                           weights = E(g)$weight,
+                           resolution = 1,
+                           n_iterations = 6,
+                           vertex_weights = NULL)
+```
+
+Okay, we ran it. Now what? Well, leiden_g is a graph object. Try plotting it!
+
+```{r}
+plot(leiden_g, g)
+```
+
+Hey!!! We get something cool! \
+Let's explore the community results a little bit more.
+
+```{r}
+membership(leiden_g)
+```
+
+Membership gives us the list of membership values for every node in the network. \
+For a small network, it's easy to see the total number of communities. But...
+
+```{r}
+length(leiden_g)
+```
+
+```{r}
+sizes(leiden_g)
+```
+
+If we wanted to know the relative sizes of the communities we can use sizes(). And, just in case you don't remember what algorithm you used to get that specific type of membership...
+
+```{r}
+algorithm(leiden_g)
+```
+
+By the way, you might expect that the communities were stored into the original graph object, but...
+
+```{r}
+summary(g)
+```
+
+Merges won't do anything for us right now because Leiden isn't a hierarchical method so we'll come back to that along with dendograms. If you want to test that, you can use is_hierarchical(leiden_g).
+
+That's about it for the general overview, and we aren't going to do this for every method, but we can move along now.
+
+## Cluster Louvain
+
+-   cluster_louvain() <https://r.igraph.org/reference/cluster_louvain.html>
+
+Once again, larger edge weight means a stronger connection, so we're good with the default weights, but this is a MUCH simpler function on our part.
+
+```         
+cluster_louvain(graph, weights = NULL, resolution = 1)
+```
+
+```{r}
+louvain_g  <- cluster_louvain(g, weights = E(g)$weight, resolution = 1)
+```
+
+```{r}
+plot(louvain_g, g)
+```
+
+Woah! Well that looks different. By the way, the node colors are from the vertex "faction" value so, that might be something interesting to consider.
+
+## Cluster Edge Betweenness
+
+<https://r.igraph.org/reference/cluster_edge_betweenness.html>
+
+```         
+cluster_edge_betweenness(graph,   
+  weights = NULL,   
+  directed = TRUE,   
+  edge.betweenness = TRUE,   
+  merges = TRUE,   
+  bridges = TRUE,   
+  modularity = TRUE,   
+  membership = TRUE )
+```
+
+Going back to the documentation, this time "Edges are interpreted as distances, not as connection strengths." So this time, we need to use our normalized and inverted weights.
+
+```{r}
+gn_g <- cluster_edge_betweenness(g,
+                                 weights = E(g)$distance_weight)
+```
+
+Just a quick note on this one; merges = TRUE. We can print out the merges (I'll just print the first few). This is the order the tree was built in.
+
+```{r}
+head(merges(gn_g))
+```
+
+```{r}
+plot(gn_g, g)
+```
+
+But this one identifies two (overlapping) communities based on these results? Actually, if you look carefully at the membership values, they aren't overlapping. Remember that there are 34 vertices?
+
+```{r}
+sizes(gn_g)
+```
+
+The geometry of the plot just makes it look that way. But, we can get a little more information out of this method.
+
+```{r}
+is_hierarchical(gn_g)
+```
+
+```{r}
+as.dendrogram(gn_g, use.modularity = TRUE)
+```
+
+```{r}
+plot_dendrogram(gn_g)
+```
+
+## Cluster Leading Eigenvector
+
+<https://r.igraph.org/reference/cluster_leading_eigen.html>
+
+```         
+cluster_leading_eigen(graph,  
+  steps = -1,   
+  weights = NULL,   
+  start = NULL,   
+  options = arpack_defaults(),   
+  callback = NULL,   
+  extra = NULL,   
+  env = parent.frame() )
+```
+
+Once again, we have to check the weights. This time, we're back to large value being strength of ties so we can use the built in strengths. We don't have to change anything else, so...
+
+```{r}
+eigen_g <- cluster_leading_eigen(g, weights = E(g)$weight)
+```
+
+```{r}
+plot(eigen_g, g)
+```
+
+I think you've got the idea by now. We haven't explored walktrap or infomap for these (both random walk methods where the edge weight has a "stronger is higher" needed.) But, I think it's time that we get to the other two that are available.
+
+## K Core Decomposition
+
+<https://r.igraph.org/reference/coreness.html>
+
+![Figure showing K-core decomposition algorithm](K-core.png)
+
+K core looks for cores of the network. There isn't too much to the code.
+
+```         
+coreness(graph, mode = c("all", "out", "in"))
+```
+
+```{r}
+k_core_g <- coreness(g, mode = "all")
+```
+
+k_core_g is not a graph object. It records the k-index when the nodes are removed from the graph.
+
+```{r}
+library(patchwork)
+library(ggraph)
+
+V(g)$core <- k_core_g
+
+set.seed(1)
+L <- layout_with_fr(g)
+
+ks <- sort(unique(V(g)$core))
+ks <- ks[ks > 0]  # drop 0-core isolates (not necessary here, but if you want to use this code it might help)
+
+plots <- lapply(ks, function(k){
+  keep <- V(g)$core >= k
+  sg <- induced_subgraph(g, vids = V(g)[keep])
+
+  # subset the full-graph layout to this subgraph's vertices (keeps positions stable)
+  idx <- as.integer(V(g)[keep])        # vertex ids in original graph
+  Lk  <- L[idx, , drop = FALSE]
+
+  ggraph(sg, layout = "manual", x = Lk[,1], y = Lk[,2]) +
+    geom_edge_link(alpha = 0.25, colour = "grey60") +
+    geom_node_point(aes(color = core), size = 2.5) +
+    geom_node_text(aes(label = name),
+                 size = 3,
+                 vjust = 1.5) +
+    scale_color_viridis_c(option = "C", end = 0.95) +
+    ggtitle(paste0(k, "-core (core ≥ ", k, "), n=", vcount(sg), ", m=", ecount(sg))) +
+    theme_void(base_size = 11) +
+    theme(legend.position = "none",
+          plot.title = element_text(size = 10, face = "bold"))
+})
+
+wrap_plots(plots, ncol = 2)
+
+```
+
+```{r}
+
+
+shell_plots <- lapply(ks, function(k){
+  keep <- V(g)$core == k
+  sg <- induced_subgraph(g, vids = V(g)[keep])
+
+  idx <- as.integer(V(g)[keep])
+  Lk  <- L[idx, , drop = FALSE]
+
+  ggraph(sg, layout = "manual", x = Lk[,1], y = Lk[,2]) +
+    geom_node_point(size = 2.5, color = "#2C7FB8") +
+    geom_node_text(aes(label = name),
+                 size = 3,
+                 vjust = 1.5) +
+    ggtitle(paste0(k, "-shell (core == ", k, "), n=", vcount(sg))) +
+    theme_void(base_size = 11)
+})
+
+wrap_plots(shell_plots, ncol = 2)
+
+```
+
+## Cliques
+
+Finally, let's find the cliques in the graph. <https://r.igraph.org/reference/cliques.html>
+
+```         
+cliques(graph, min = NULL, max = NULL, ..., callback = NULL)
+```
+
+```{r}
+clique_num(g)
+```
+
+The maximum clique size within this graph is 5 individuals.
+
+```{r}
+cliques(g, min = 5)
+```
+
+These are the actors which form the full graphs in the network. Four of the members are the same in these cliques and only one actor is different. If you inspect the factions of the vertex labels (after the split in the karate club), you'll notice that this entire clique stuck with Mr Hi. This is unsurprising and could have been easily predicted. An interesting question to explore would be if the size 4 cliques splintered between factions or if they remained cohesive through the split.
+
+## 4.) Your turn:
+
+```         
+Caviar  Description:       Project Caviar was a unique investigation that targeted a network      of hashish and cocaine importers operating out of Montreal. The      network was targeted between 1994 and 1996 by a tandem      investigation uniting the Montreal Police, the Royal Canadian      Mounted Police, and other national and regional law-enforcement      agencies from various countries (i.e., England, Spain, Italy,      Brazil, Paraguay, and Colombia). The case is unique because it      involved a specific investigative approach that will be referred      to as a “seize and wait” strategy. Unlike most law-enforcement      strategies, the mandate set forward in the Project Caviar case was      to seize identified drug consignments, but not to arrest any of      the identified participants. This took place over a 2-year period.      Thus, although 11 importation consignments were seized at      different moments throughout this period, arrests only took place      at the end of the investigation. What this case offers is a rare      opportunity to study the evolution of a criminal network      phenomenon as it was being disrupted by law-enforcement agents.      The inherent investigative strategy permits an assessment of      change in the network structure and an inside look into how      network participants react and adapt to the growing constraints      set upon them. The principal data source was comprised of      information submitted as evidence during the trials of 22      participants in the Caviar network. It included 4,279 paragraphs      of information (over 1,000 pages) revealing electronically      intercepted telephone conversations between network participants.      These transcripts were used to create the overall matrix of the      drug-trafficking operation’s communication system throughout the      course of the investigation. Individuals falling in the      surveillance net were not all participants in the trafficking      operation. An initial extraction of all names appearing in the      surveillance data led to the identification of 318 individuals.      From this pool, 208 individuals were not implicated in the      trafficking operations. Most were simply named during the many      transcripts of conversations, but never detected. Others who were      detected had no clear participatory role within the network (e.g.,      family members or legitimate entrepreneurs). The final network was      thus composed of 110 participants. NETWORK 11 1-mode matrices      person by person, representing the 11 phases of the investigation.      Ties are directed and valued. Number of nodes = 1) 15x15, 2)      24x24, 3) 33x33, 4) 33x33, 5) 32x32, 6) 27x27, 7) 34x34, 8) 42x42,      9) 34x34, 10) 42x42, 11) 41x41 1-mode matrix 110 x 110 person by      person of the complete network. Ties are communication exchanges      between criminals. Values represent level of communication      activity. Data comes from police wiretapping.
+```
+
+You worked with this same graphml object last week. I'd like you to use a variety of the above algorithms to try to discover meso-scale structural patterns within this dataset. Who are the core members? Are there membership cliques? What communities can you find using density methods and how could this be helpful at finding the key operations?
+
+```{r}
+
+```
+
+Next, please provide a few paragraphs regarding these measures and what they imply about the structure of this drug smuggling network.
+
+## 5.) Results
+
+What you need to do next is to "knit" your document into an html using the "Knit" button near the top of the screen. This will give you an HTML that you can turn in.
