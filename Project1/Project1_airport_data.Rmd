@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(igraph) # Our standard graph object.
 library(readr) # Reading in the data
+library(gbRd)
 library(ggraph) # Plotting
 library(tidygraph) # Managing our graph object
 library(RColorBrewer) # Getting Colors
@@ -30,6 +31,21 @@ library(igraphdata)
 # user config
 
 ```
+
+```{r helper_functions}
+print_igraph_attr <- function(graph) {
+  print("--- Graph Attributes ------")
+  print(graph_attr(graph))
+
+  print("--- Vertex Attributes ------")
+  print(vertex_attr(graph))
+
+  print("--- Edge Attributes ------")
+  print(edge_attr(graph))
+}
+```
+
+
 
 For your midterm project, I would like you use use the data from the `igraphdata` package. You need to use the US airport network, **2010 December** dataset (which has **755** nodes and **23,473** edges) to write your report. This network has a number of node and edge attributes.
 
@@ -48,9 +64,213 @@ You **DO NOT** need to use the _full_ network. You may subset or aggregate the d
 # Story
 
 ```{r load_in_dataset}
-# TODO load in data
 data("USairports")
-USairports
+```
+
+> This graph was created by an old(er) igraph version."
+> ℹ Call `igraph::upgrade_graph()` on it to use with the current igraph version.
+> For now we convert it on the fly...
+
+Well, what is this?!?! Our airport/flight data is old right out of the gate? Considering it was based on data collected around December 2010, I'd suppose maybe it'd make sense for the dataset to potentially be created originally with an older versions of `igraph`, but let's investigate this a little to determine if this is a something negligible or a real problem. This warning says that the original graph was created by an old version, but it then proceeds to say that `igraph` will convert it on the fly... So, I guess no need to call `igraph::upgrade_graph(USairports)` then and we can carry on despite the weird info/warning popping up.... but.... let's embrace the paranoia and confirm:
+
+```{r could_it_be_true}
+graph_version() == graph_version(USairports)
+```
+
+Well, okay then... our versions apparently _do_ match up! But this still triggers that informational... That's an exploration for another day. Now, onward!
+
+Now, let's do what most people never do, and see what we can learn from the manual (!) by using the built-in help function `?`:
+
+```{r}
+?USairports
+```
+
+Reading what the help documentation says in the _Help_ pane, we learn all kinds of context and descriptions about the data in our graph. A brief summary of what we learn and what it means about our graph object:
+- the graph represents a network of airports and passenger connecting flights compiled based on December 2010 data
+- that the edges (flights) are directed (ie. the flights have a directed orientation from A to B)
+- that each edge is specific to a single carrier aircraft type
+- that multiple carriers between the same two airports are denoted by multiple edges (we're looking at a multigraph object)
+- that the graph itself has a `name` attribute: `r igraph::get_graph_attr(g, "name")`
+- that each vertex (airport) has the following attributes:
+  - name: the three-letter IATA airport code
+  - City: city and state where the airport is located
+  - Position: the geographical/physical coordinates of the airport, in WGS coordinates
+- that each edge (flight) has the following attributes:
+  - Carrier: the name of the airline
+  - Departures: the number of departures for a given airline and aircraft type
+  - Seats: the _total_ number of seats available on flights carried out by a given airline on a given aircraft type
+  - Passengers: the _total_ number of passengers on the flight carried out by a given airline on a given aircraft type
+  - Aircraft: the type of the aircraft used for the flight
+  - Distance: the distance between the source and destination airports, in miles
+- the file also has some additional information about data collection and sources, but that information is largely irrelevant for our purposes.
+
+So, let's distill that back into something a little more readable: we know some data about airports (_what_ they're named, _where_ they are located geographically, and _what_ city/state they're in) and flights between them (the airport coming _from_, the airport going _to_, the _carrier_, the number of _departures_ for airline/aircraft combo, the number of _seats_ and the number of _passengers_ on the flight, the _aircraft_ type, and the _distance_ between the origin and destination airports).
+
+That's a fairly good start at a general grasp of what kind of data points we have and what they describe in the real world, and we can even deduce some graph, vertex and edge attributes from the dataset's help file text, but that is more qualitative, but what about the _quantitative_, the actual data? Let's actually load our dataset into our R environment (and give it a shorthand alias of `g` to save some keystrokes):
+
+```{r load_in_data}
+g <- USairports # rename/alias to g
+rm(USairports) # remove the original from environment for less opportunity for confusion
+
+# let's confirm we got our igraph object created by coercing it to a string (and then extracting more information about it):
+g
+```
+
+Now that we actually have the dataset loaded in and aliased for ease of use, we should consider a high level overview of _graph_-scale information, then we'll look at _vertices_ and their attributes, and finally we'll look at the _edges_ and their attributes. Once we have a rough idea of what data is actually in our dataset and how its related and represented, we'll be better able to get a good direction to explore a subset and analyze various measures and metrics to learn about the relationships therein. But let's not get ahead of ourselves, let's get back to that string summary of our graph `g`, see what's next and what we can learn about it: 
+
+> IGRAPH bf6202d DN-- 755 23473 -- US airports
+
+First off, this line tells us a few (well, quite a few) things in a short number of characters. Right off, we know:
+- it's an `igraph` object (as we expected)
+- its first $7$ characters of the hexidecimal (unique) identifier for the graph object (`bf6202d`)
+- its four-letter `igraph` code string, indicating we have a **D**irected, **N**amed, unweighted, and is nonbipartite
+- it has $755$ vertices (airports)
+- it has $23,473$ edges (carrier flights)
+- the `name` of the graph is `US airports`
+
+Well now, that is a fair number of edges! We'll certainly have to subset this graph down to a more manageable subgraph to analyze, but let's continue extracting more information about the dataset from its string summary and look at the second line: 
+
+> + attr: name (g/c), name (v/c), City (v/c), Position (v/c), Carrier (e/c), Departures (e/n), Seats (e/n), Passengers (e/n), Aircraft (e/n), Distance (e/n)
+
+From this very information-dense line, we learn that the graph `g`:
+- has the following attributes:
+  - graph has attribute `name`, a `chr` type
+  - vertices have attribute `name`, a `chr` type
+  - vertices have attribute `City`, a `chr` type
+  - vertices have attribute `Position`, a `chr` type
+  - edges have attribute `Carrier`, a `chr` type
+  - edges have attribute `Departures`, a `numeric` type
+  - edges have attribute `Seats`, a `numeric` type
+  - edges have attribute `Passengers`, a `numeric` type
+  - edges have attribute `Aircraft`, a `numeric` type
+  - edges have attribute `Distance`, a `numeric` type
+
+
+
+
+```{r}
+summary(unique(edge_attr(g)$Carrier))
+unique(edge_attr(g)$Carrier)[:10]
+```
+
+```{r}
+cat(gbRd::help_console("USairports"))
+```
+
+
+```{r help_on_dataset, results=asis}
+#gbRd::help_console("USairports")
+gbRd::Rd_help2txt("USairports", topic = None)
+
+```
+
+```{r, results='asis'}
+# shit don't work....
+reprex::reprex({
+  ??USairports
+})
+
+```
+
+<sup>Created on 2026-02-16 with [reprex v2.1.1](https://reprex.tidyverse.org)</sup>
+
+```{r, results='markup'}
+cat(capture.output(help("USairports")), sep = "\n")
+```
+
+
+
+First, let's get a rough idea of what we are working with. Our dataset is an imported `igraph` object, spanning some $755$ airports as vertices, and $23,473$ edges representing directed flights between them, with vertex data containing attributes for the airport's standard 3-character identifier, 
+
+
+Possible avenues of interest.
+Average occupancy percentage for flights from ALSDKJFALFDJS to LAKSDJFLAKSDJFSDLK, passengers/seat_count
+
+Comparing average occupancy for flights that are longer distance vs shorter distance, or east/west cost, etc
+
+Most popular inbound location, outbound locations, min/max distance flight
+
+
+
+
+subset our graph into a few subgraphs and see if we can notice any interesting patterns
+
+
+
+```{r}
+glimpse(edge_attr(USairports))
+glimpse(vertex_attr(USairports))
+```
+
+```{r visnetwork}
+# Build nodes
+nodes <- igraph::as_data_frame(g, what = "vertices") |>
+  tibble::rownames_to_column("id") |> # this is an important function call, looking ahead to visNetwork's obsession with int ids
+  mutate(
+    id    = as.character(id),
+    label = media,
+    value = audience.size,
+    group = type.label
+  )
+
+# Shape mapping
+node_types <- sort(unique(nodes$group))
+shape_vals <- c("dot", "square", "triangle")[seq_along(node_types)]
+shape_map <- setNames(shape_vals, node_types)
+nodes$shape <- shape_map[nodes$group]
+
+# Node colors (background)
+node_colors <- setNames(scales::hue_pal()(length(node_types)), node_types)
+nodes$color.background <- node_colors[nodes$group]
+nodes$color.border <- "#444444"
+
+nodes$title <- paste("Media Name: ", nodes$media, "<br>Media Type: ", nodes$type.label, "<br>Audience Size: ", nodes$audience.size)
+
+# Build edges
+edges <- igraph::as_data_frame(g, what = "edges") |>
+  mutate(
+    from   = as.character(from),
+    to     = as.character(to),
+    width  = scales::rescale(weight, to = c(0.5, 1.5)),
+    arrows = "to",
+    smooth = TRUE
+  )
+
+# Edge colors
+edge_types <- sort(unique(edges$type))
+edge_colors <- setNames(scales::hue_pal()(length(edge_types)), edge_types)
+edges$color <- edge_colors[edges$type]
+
+# Dash mapping (linetype analogue)
+edges$dashes <- edges$type == edge_types[2] # example: second type dashed
+
+edges$title <- paste("Reference Type: ", edges$type)
+```
+
+There are disadvantages to storing data this way (for example, what if the title attribute was naturally in the dataset to represent a political title?). But, once the data is in, it becomes very easy to produce a really good plot automatically.
+
+```{r}
+vis <- visNetwork(nodes, edges,
+  main = "Media Networks Link to and Reference Each Other",
+  submain = "A network plot of networks.",
+  footer = "Data from: https://kateto.net/network-visualization.",
+  width = "100%"
+) |>
+  visNodes(scaling = list(min = 5, max = 30)) |>
+  visEdges(smooth = list(enabled = TRUE, type = "dynamic")) |>
+  visOptions(
+    highlightNearest = TRUE,
+    nodesIdSelection = TRUE,
+    collapse = TRUE
+  ) |>
+  visInteraction(
+    dragNodes = TRUE,
+    dragView  = TRUE,
+    zoomView  = TRUE
+  ) |>
+  visPhysics(stabilization = TRUE)
+
+vis
 ```
 
 # Pretty Graphs
