@@ -1,0 +1,716 @@
+---
+title: "Network Attack & Robustness Simulation Framework"
+author:  "Joseph Reid"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Network Attack & Robustness Simulation Framework 
+
+# (R / igraph)
+
+------------------------------------------------------------------------
+
+## Overview
+
+This framework provides a **design-first, metric-driven engine** for
+simulating attacks, failures, and contagion processes on networks
+represented as `igraph` objects in R.
+
+> **All metrics are defined by the user, and all decisions are driven by
+> those metrics.**
+
+Nothing is implicit. Nothing is hard-coded. Everything is logged.
+
+------------------------------------------------------------------------
+
+## Key Features
+
+-   Works with **any `igraph` graph** (directed/undirected,
+    weighted/unweighted) because the USER defines the metric
+    calculations!
+-   Supports **multi-stage attack profiles**
+-   User-defined metrics at **micro**, **meso**, and **graph** levels
+    (micro is currently called "node" because edge attacks are not
+    currently implemented.)
+-   Metrics may be used for:
+    -   selection
+    -   stopping conditions
+    -   analysis and visualization
+-   Complete **round-by-round trajectory logging** (logging may be very
+    large in output depending on the number of metrics tracked and the
+    order/size of the network)
+
+------------------------------------------------------------------------
+
+## Setup
+
+You will need the igraph library and then to source the file where the
+functions are stored.
+
+```{r setup, include=FALSE}
+library(igraph)
+source("attack_functions.R")
+```
+
+------------------------------------------------------------------------
+
+## Step 1: Create a Graph
+
+Any igraph object will work just fine.
+
+```{r}
+set.seed(42)
+g <- sample_gnp(
+  n = 100,
+  p = 0.05,
+  directed = FALSE
+)
+g
+```
+
+------------------------------------------------------------------------
+
+## Step 2: Define a Scoring Function
+
+The critical part of this function
+
+```{r}
+scoring_fun <- function(g, state) {
+  n <- vcount(g)
+  comps <- components(g)
+
+  # from here down is the critical part that must be a list of three lists with the names node, meso, graph.  Each contains a list of objects.
+  list(
+    node = list(
+      degree = degree(g),
+      eigenvector = eigen_centrality(g)$vector
+    ),
+    meso = list(
+      clustering = transitivity(g, type = "local", isolates = "zero"),
+      modularity = modularity(cluster_louvain(g))
+    ),
+    graph = list(
+      frac_giant = max(comps$csize) / n
+    )
+  )
+}
+```
+
+------------------------------------------------------------------------
+
+## Step 3: Define an Attack Stage
+
+This is the most important structure you will define. Further
+instructions are presented later on in this document!
+
+```{r}
+S1 <- list(
+  id = "degree_attack",
+  mode = "removal",
+  selection = list(
+    level  = "node",
+    metric = "degree",
+    rule   = "pct",
+    pct    = 0.05
+  ),
+  loop = list(
+    type = "until",
+    until_fun = function(state, metrics_post, metrics_pre) {
+      metrics_post$graph$frac_giant < 0.30
+    }
+  ),
+  eligibility = list(set = "all")
+)
+
+
+# When you have created your stages, put them in an ordered list.
+stages <- list(S1)
+```
+
+------------------------------------------------------------------------
+
+## Defining a Stage: User Options and Semantics
+
+A **stage** defines one phase of an attack, failure, or contagion
+process. Stages are executed sequentially and are the primary way users
+control *what happens*, *to whom*, and *when the process stops*.
+
+A stage answers four questions:
+
+1.  What happens?
+2.  Who is affected?
+3.  Who is eligible?
+4.  When does the stage end?
+
+------------------------------------------------------------------------
+
+### Minimal Stage Structure
+
+``` r
+stage <- list(
+  id = "stage_name",
+  mode = "...",
+  selection = list(...),
+  loop = list(...),
+  eligibility = list(...)
+)
+```
+
+Not all fields are required for all modes.
+
+------------------------------------------------------------------------
+
+## 1. id — Stage Identifier
+
+``` r
+id = "degree_attack"
+```
+
+-   A human‑readable identifier
+-   Used in logging and trajectory records
+-   Must be unique across stages
+
+------------------------------------------------------------------------
+
+## 2. mode — What the Stage Does
+
+``` r
+mode = "removal"
+```
+
+Allowed values:
+
+-   `"removal"`
+-   `"infection"`
+-   `"infection_removal"`
+
+### mode = "removal"
+
+-   Nodes are selected and removed
+-   No infection dynamics occur
+-   Typical use: robustness and attack studies
+
+### mode = "infection"
+
+-   Infection spreads according to a model
+-   Nodes are not removed
+-   Typical use: contagion or diffusion modeling
+
+### mode = "infection_removal"
+
+-   Infection spreads
+-   Infected nodes are removed probabilistically
+-   Typical use: cascading failures
+
+------------------------------------------------------------------------
+
+## 3. selection — Who Is Targeted
+
+The `selection` block determines which nodes are acted upon each round.
+
+``` r
+selection = list(
+  level  = "node",
+  metric = "degree",
+  rule   = "pct",
+  pct    = 0.05
+)
+```
+
+### 3.1 level
+
+``` r
+level = "node" | "meso"
+```
+
+-   `"node"`: node‑level metrics (degree, centrality, etc.)
+-   `"meso"`: meso‑level metrics (roles, participation, communities)
+
+The metric must be returned by `scoring_fun()`.
+
+------------------------------------------------------------------------
+
+### 3.2 metric
+
+``` r
+metric = "degree"
+```
+
+-   Name of a metric returned by `scoring_fun()`
+-   Used directly for selection
+-   Metric values are logged verbatim
+
+Examples: - `"degree"` - `"eigenvector"` - `"bridge_score"` -
+`"custom_metric"`
+
+------------------------------------------------------------------------
+
+### 3.3 rule — How Many Are Selected
+
+``` r
+rule = "n" | "pct" | "threshold"
+```
+
+#### rule = "n"
+
+Select exactly `n` nodes:
+
+``` r
+n = 5
+```
+
+#### rule = "pct"
+
+Select a fraction of eligible nodes:
+
+``` r
+pct = 0.10
+```
+
+#### rule = "threshold"
+
+Select all nodes whose metric exceeds a cutoff:
+
+``` r
+tau = 0.8
+```
+
+Important: threshold selection may select zero nodes if `tau` is too
+high.
+
+------------------------------------------------------------------------
+
+## 4. eligibility — Who Can Be Selected
+
+The `eligibility` block restricts the pool of nodes considered.
+
+``` r
+eligibility = list(set = "all")
+```
+
+### Common options
+
+``` r
+set = "all"
+```
+
+-   All nodes are eligible
+
+``` r
+set = "non_infected"
+```
+
+-   Only nodes not currently infected are eligible
+
+### Custom eligibility function
+
+``` r
+eligibility = list(
+  fun = function(g) {
+    degree(g) > 2
+  }
+)
+```
+
+The function must return a logical vector of length `vcount(g)`.
+
+------------------------------------------------------------------------
+
+## 5. loop — When the Stage Stops
+
+The `loop` block defines how long the stage runs.
+
+------------------------------------------------------------------------
+
+### 5.1 Fixed number of rounds
+
+``` r
+loop = list(
+  type = "rounds",
+  max_rounds = 10
+)
+```
+
+-   Runs for a fixed number of iterations
+-   Guaranteed termination
+
+------------------------------------------------------------------------
+
+### 5.2 Conditional loop (until)
+
+``` r
+loop = list(
+  type = "until",
+  until_fun = function(state, metrics_post, metrics_pre) {
+    metrics_post$graph$frac_giant < 0.3
+  }
+)
+```
+
+-   Continues until `until_fun()` returns TRUE
+-   Evaluated after each round
+-   Uses post‑mechanism metrics
+
+Strong recommendation: include a safety cap.
+
+``` r
+loop = list(
+  type = "until",
+  safety_max_rounds = 100,
+  until_fun = function(state, post, pre) {
+    post$graph$frac_giant < 0.3
+  }
+)
+```
+
+------------------------------------------------------------------------
+
+## 6. Infection‑Specific Options
+
+Required when:
+
+``` r
+mode %in% c("infection", "infection_removal")
+```
+
+------------------------------------------------------------------------
+
+### 6.1 Infection model
+
+``` r
+infection = list(
+  update = list(
+    type = "SI",
+    params = list(p_transmit = 0.2)
+  )
+)
+```
+
+Supported models include: - `"SI"` - `"SIS"` - `"threshold"` -
+`"independent_failure"`
+
+------------------------------------------------------------------------
+
+### 6.2 Infection seeding (optional)
+
+``` r
+infection = list(
+  seed = list(
+    method = "pct_random",
+    value = 0.05
+  ),
+  update = ...
+)
+```
+
+Seeding occurs once at stage start.
+
+------------------------------------------------------------------------
+
+## 7. Removal After Infection
+
+Required when:
+
+``` r
+mode = "infection_removal"
+```
+
+``` r
+removal_prob = list(
+  p_remove = 0.2,
+  min_age  = 1
+)
+```
+
+-   `p_remove`: probability of removal per infected node per round
+-   `min_age`: minimum infection age before removal
+
+------------------------------------------------------------------------
+
+## Conceptual Summary
+
+-   Stages define attack logic
+-   Metrics define meaning
+-   Selection uses metrics
+-   Loops define time
+-   Everything is logged
+
+A stage is a formal description of a dynamical process.
+
+------------------------------------------------------------------------
+
+## Step 4: Run the Simulation
+
+```{r}
+traj <- attack_graph(
+  g0 = g,
+  stages = stages,
+  scoring_fun = scoring_fun,
+  seed = 123,
+  version = "demo_run",
+  store_graphs = FALSE
+)
+```
+
+------------------------------------------------------------------------
+
+## Inspect Results
+
+### Number of Rounds
+
+```{r}
+length(traj$rounds)
+```
+
+### Robustness Curve
+
+```{r}
+frac_giant <- sapply(
+  traj$rounds,
+  function(r) r$metrics$post$graph$frac_giant
+)
+
+plot(
+  frac_giant,
+  type = "o",
+  xlab = "Round",
+  ylab = "Fraction in Giant Component",
+  main = "Targeted Degree Attack"
+)
+```
+
+------------------------------------------------------------------------
+
+## Design Philosophy
+
+-   User defines **all metrics**
+-   User defines **all attack logic**
+-   Engine only orchestrates
+-   All decisions are logged
+
+This makes the framework suitable for:
+
+-   robustness studies
+-   reliability modeling
+-   cascading failure simulation
+-   teaching network science
+
+------------------------------------------------------------------------
+
+## Notes on Safety
+
+-   Always ensure progress in `until` loops
+-   Prefer adding a safety max-round cap
+-   Disable graph storage for long simulations
+
+------------------------------------------------------------------------
+
+## Worked Examples and Reference: Defining Stages
+
+This section provides **concrete worked examples** for each stage mode,
+followed by a **complete reference table** of all stage options.
+
+------------------------------------------------------------------------
+
+# Worked Examples
+
+## Example 1: Targeted Removal (Robustness Study)
+
+**Goal:**\
+Remove the most important nodes (by degree) until the giant component
+collapses.
+
+``` r
+S_removal <- list(
+  id = "targeted_degree_attack",
+
+  mode = "removal",
+
+  selection = list(
+    level  = "node",
+    metric = "degree",
+    rule   = "pct",
+    pct    = 0.05
+  ),
+
+  loop = list(
+    type = "until",
+    until_fun = function(state, post, pre) {
+      post$graph$frac_giant < 0.3
+    }
+  ),
+
+  eligibility = list(set = "all")
+)
+```
+
+**Interpretation:** - Each round removes the top 5% of nodes by degree -
+Metrics are recomputed dynamically - Stops when the network fragments
+
+------------------------------------------------------------------------
+
+## Example 2: Infection Spread Only (Contagion Model)
+
+**Goal:**\
+Model the spread of an infection without removing nodes.
+
+``` r
+S_infection <- list(
+  id = "si_spread",
+
+  mode = "infection",
+
+  infection = list(
+    seed = list(
+      method = "pct_random",
+      value  = 0.05
+    ),
+    update = list(
+      type   = "SI",
+      params = list(p_transmit = 0.2)
+    )
+  ),
+
+  loop = list(
+    type = "rounds",
+    max_rounds = 20
+  ),
+
+  eligibility = list(set = "non_infected")
+)
+```
+
+**Interpretation:** - 5% of nodes are initially infected - Infection
+spreads via an SI process - No nodes are removed - Runs for a fixed
+number of rounds
+
+------------------------------------------------------------------------
+
+## Example 3: Infection With Removal (Cascading Failure)
+
+**Goal:**\
+Allow infection to spread, then remove infected nodes probabilistically.
+
+``` r
+S_cascade <- list(
+  id = "infection_cascade",
+
+  mode = "infection_removal",
+
+  infection = list(
+    seed = list(
+      method = "pct_random",
+      value  = 0.03
+    ),
+    update = list(
+      type   = "threshold",
+      params = list(frac_threshold = 0.25)
+    )
+  ),
+
+  removal_prob = list(
+    p_remove = 0.2,
+    min_age  = 1
+  ),
+
+  loop = list(
+    type = "until",
+    safety_max_rounds = 100,
+    until_fun = function(state, post, pre) {
+      post$graph$frac_giant < 0.4
+    }
+  ),
+
+  eligibility = list(set = "non_infected")
+)
+```
+
+**Interpretation:** - Nodes become infected if ≥25% of neighbors are
+infected - Infected nodes are removed with probability 0.2 per round -
+Produces cascading structural failure
+
+------------------------------------------------------------------------
+
+# Complete Stage Option Reference
+
+## Core Stage Fields
+
+| Field | Required | Description |
+|----|----|----|
+| `id` | Yes | Unique identifier for the stage |
+| `mode` | Yes | `"removal"`, `"infection"`, or `"infection_removal"` |
+| `selection` | Sometimes | Defines how nodes are targeted |
+| `infection` | Sometimes | Defines infection dynamics |
+| `removal_prob` | Sometimes | Controls removal after infection |
+| `loop` | Yes | Controls when the stage ends |
+| `eligibility` | Optional | Restricts which nodes can be selected |
+
+------------------------------------------------------------------------
+
+## `mode` Options
+
+| Mode                  | Meaning                                     |
+|-----------------------|---------------------------------------------|
+| `"removal"`           | Targeted node removal only                  |
+| `"infection"`         | Infection spread only                       |
+| `"infection_removal"` | Infection followed by probabilistic removal |
+
+------------------------------------------------------------------------
+
+## `selection` Options
+
+| Field    | Values                        | Meaning                             |
+|----------|-------------------------------|-------------------------------------|
+| `level`  | `"node"`, `"meso"`            | Metric level used                   |
+| `metric` | character                     | Name of metric from `scoring_fun()` |
+| `rule`   | `"n"`, `"pct"`, `"threshold"` | How many nodes to select            |
+| `n`      | integer                       | Exact number selected               |
+| `pct`    | numeric                       | Fraction selected                   |
+| `tau`    | numeric                       | Threshold cutoff                    |
+
+------------------------------------------------------------------------
+
+## `eligibility` Options
+
+| Field                  | Meaning                        |
+|------------------------|--------------------------------|
+| `set = "all"`          | All nodes eligible             |
+| `set = "non_infected"` | Only uninfected nodes eligible |
+| `fun = function(g)`    | Custom logical eligibility     |
+
+------------------------------------------------------------------------
+
+## `loop` Options
+
+| Field               | Meaning                             |
+|---------------------|-------------------------------------|
+| `type = "rounds"`   | Run fixed number of rounds          |
+| `max_rounds`        | Number of rounds                    |
+| `type = "until"`    | Run until condition satisfied       |
+| `until_fun`         | Function returning TRUE/FALSE       |
+| `safety_max_rounds` | Hard stop to prevent infinite loops |
+
+------------------------------------------------------------------------
+
+## `infection$update$type` Options
+
+| Type                    | Meaning                  |
+|-------------------------|--------------------------|
+| `"SI"`                  | Susceptible → Infected   |
+| `"SIS"`                 | Infection with recovery  |
+| `"threshold"`           | Fraction-based infection |
+| `"independent_failure"` | Random per-node failure  |
+
+------------------------------------------------------------------------
+
+## `removal_prob` Options
+
+| Field      | Meaning                                  |
+|------------|------------------------------------------|
+| `p_remove` | Probability of removal per infected node |
+| `min_age`  | Minimum infection age before removal     |
+
+## End

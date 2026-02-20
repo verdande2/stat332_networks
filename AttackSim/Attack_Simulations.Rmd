@@ -1,0 +1,233 @@
+---
+title: "Attack_Simulations"
+output: html_document
+---
+
+```{r message = FALSE, warning=FALSE}
+library(igraph)
+```
+
+```{r}
+source("attack_functions.R")
+cat("Sourcing done at:", Sys.time(), "\n")
+gc()
+
+```
+
+```{r}
+set.seed(42)
+
+g <- sample_gnp(n = 100, p = 0.05, directed = FALSE)
+V(g)$name <- as.character(seq_len(vcount(g)))
+summary(g)
+```
+
+```{r}
+scoring_fun <- function(g, state) {
+
+  n <- vcount(g)
+  comps <- components(g)
+  giant_id <- which.max(comps$csize)
+  frac_giant <- max(comps$csize) / n
+
+  # Average path length on giant component only
+  giant_nodes <- which(comps$membership == giant_id)
+  apl <- if (length(giant_nodes) > 1) {
+    mean(distances(induced_subgraph(g, giant_nodes)))
+  } else {
+    NA_real_
+  }
+  
+  # define the list of node, meso, and graph level metrics that will be returned 
+  list(
+    # Node level measures that will be returned.  These are a vector that is the length of the graph
+    node = list(
+      degree = degree(g),
+      degree_centrality = centr_degree(g)$res,
+      eigenvector = eigen_centrality(g)$vector
+    ),
+    # meso-calse measures ike local transitivity or community membership
+    meso = list(
+      clustering = transitivity(g, type = "local", isolates = "zero"),
+      modularity = modularity(cluster_louvain(g))
+    ),
+    # graph level metrics to track graph level metrics.
+    graph = list(
+      frac_giant = frac_giant,
+      avg_path_length = apl
+    )
+  )
+}
+```
+
+```{r}
+
+S_degree_attack <- list(
+  id = "degree_attack",
+
+  mode = "removal",
+
+  selection = list(
+    level  = "node",
+    metric = "degree_centrality",        # <- provided by scoring_fun
+    rule   = "n",           # <- remove highest-degree nodes
+    n      = 3               # <- remove 1 node per round (classic attack)
+    # alternatively: pct = 0.01 for 1% per round
+  ),
+
+  loop = list(
+    type = "until",
+    until_fun = function(state, metrics_post, metrics_pre) {
+      metrics_post$graph$frac_giant < 0.20
+    },
+    safety_max_rounds = 25L   # guardrail
+  )
+)
+
+
+stages <- list(S_degree_attack)
+
+```
+
+```{r}
+traj <- attack_graph(
+  g0 = g,
+  stages = stages,
+  scoring_fun = scoring_fun,
+  seed = 123,
+  version = "test_random_graph",
+  store_graphs = TRUE
+)
+
+```
+
+```{r}
+summarize_trajectory(traj)
+```
+
+```{r}
+
+p <- plot_metric_over_rounds(traj, "frac_giant",
+                                    level = "graph",
+                                    when = "pre",
+                                    rounds = NULL,
+                                    bins = 30,
+                                    ridge_scale = 1.2,
+                                    alpha = 0.7,
+                                    title = "Plot of the fraction of the giant component after rounds of removal.",
+                                    subtitle = NULL)
+
+p
+```
+
+```{r}
+
+p2 <- plot_metric_over_rounds(traj, "degree_centrality",
+                                    level = "node",
+                                    when = "pre",
+                                    rounds = NULL,
+                                    bins = 30,
+                                    ridge_scale = 1.2,
+                                    alpha = 0.7,
+                                    title = NULL,
+                                    subtitle = NULL)
+p2
+```
+
+```{r}
+
+plot_graph_trajectory_gif(
+    traj,
+    layout_fun = igraph::layout_with_fr,
+    
+    node_size_metric = "degree_centrality",
+    edge_weight_attr = NULL,
+    graph_metric_label = "avg_path_length",
+    
+    title = NULL,
+    subtitle = NULL,
+    caption = NULL,
+    
+    fps = 5,
+    width = 800,
+    height = 600,
+    file = "removal_attack.gif"
+)
+```
+
+```{r}
+S_infection_removal <- list(
+  id = "si_removal",
+
+  mode = "infection_removal",
+
+  infection = list(
+    seed = list(
+      method = "pct_random",
+      value  = 0.05
+    ),
+    update = list(
+      type   = "SI",
+      params = list(p_transmit = 0.1)
+    )
+  ),
+
+  # IMPORTANT: must be removal_prob, not removal
+  removal_prob = list(
+    p_remove = 0.05,
+    min_age  = 2L    # optional; set 0L to allow immediate removal after infection
+  ),
+
+  loop = list(
+    type = "rounds",
+    max_rounds = 20
+  ),
+
+  eligibility = list(set = "non_infected")
+)
+
+stages <- list(S_infection_removal)
+```
+
+```{r}
+traj <- attack_graph(
+  g0 = g,
+  stages = stages,
+  scoring_fun = scoring_fun,
+  seed = 123,
+  version = "test_random_graph",
+  store_graphs = TRUE
+)
+
+```
+
+```{r}
+plot_infection_dynamics(
+  traj,
+  title = "SI spread",
+  subtitle = "Counts shown represent total infected",
+  caption = "Simulation output from attack_graph()",
+  xlab = "Attack round",
+  segment_label_color = "black"   # default now, but explicit is fine
+)
+```
+
+```{r}
+plot_graph_trajectory_gif(
+    traj,
+    layout_fun = igraph::layout_with_fr,
+    
+    node_size_metric = "degree_centrality",
+    edge_weight_attr = NULL,
+    graph_metric_label = "avg_path_length",
+    
+    title = NULL,
+    subtitle = NULL,
+    caption = NULL,
+    
+    fps = 5,
+    width = 800,
+    height = 600,
+    file = "infect_remove.gif"
+)
+```
