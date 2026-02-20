@@ -1,0 +1,150 @@
+---
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 6 - Prof. Joe Reid"
+author: "Andrew Sparkes"
+date: "`r Sys.Date()`"
+due: "30-01-2026"
+link-citations: true
+natbib: true
+output:
+  html_document:
+    self_contained: true
+    df_print: paged
+  pdf_document: default
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r user_configurable_settings}
+```
+
+
+## Background
+
+You are given an **undirected, weighted network** representing
+interactions between characters in *Game of Thrones*. Nodes represent
+characters, and edge weights represent the **strength of interaction**
+between pairs of characters.
+
+You should treat this as a **social network** and analyze it using the
+concepts and tools from class.
+
+**Important:**\
+For each task below, **you must decide which network measure(s) are
+appropriate**. There is no single correct answer—but there *are*
+incorrect or poorly justified ones.
+
+For every task:
+
+1.   State which measure(s) you used
+
+2.   Briefly explain *why* that measure fits the goal
+
+3.   Identify the character(s) with the highest values
+
+4.   Include a small table or list of the top results
+
+##  Task 1: Central Characters 
+
+**Goal:**\
+Identify the character(s) who are most *central* to the overall network
+structure.
+
+**Guidance:**\
+“Central” here refers to characters who are structurally important
+across the network, not just locally popular. You should consider how
+information, influence, or interaction potential flows through the
+network.
+
+**Deliverables:**
+
+-   The measure(s) you selected
+
+-    The top 3 characters by that measure
+
+-    A brief justification of your choice and what it indicates about
+    these characters.
+
+## Task 2: Powerful Intermediaries
+
+**Goal:**\
+Identify characters who act as **intermediaries** between otherwise
+weakly connected parts of the network.
+
+**Guidance:**\
+These characters may not have the strongest direct ties, but their
+position allows them to connect groups or clusters. Focus on *structural
+mediation*, not popularity.
+
+**Deliverables:**
+
+-    The measure(s) you used to capture this information
+
+-    The top 3 characters and what kind of connection they provide
+
+-    A short explanation of how your measure captures this information
+
+## Task 3: Prominence
+
+**Goal:**\
+Identify the most **prestigious** characters in the network.
+
+**Guidance:**\
+Prestige is not just about how many connections a character has, but
+*who* they are connected to and how strong those ties are. Think
+carefully about how prestige differs from simple centrality.
+
+**Deliverables:**
+
+-   The prestige-related measure(s) you selected
+
+-   The top 3 characters by prestige
+
+-    A brief justification of your choice and what it means for these
+    character roles.
+
+## Task 4: Social Embeddedness
+
+**Goal:**\
+Identify characters who are most **embedded in tightly knit social
+environments**.
+
+**Guidance:**\
+These characters tend to be surrounded by others who are also connected
+to one another. They may be influential within a clique or local group,
+even if they are not globally central.
+
+**Deliverables:**
+
+-    The measure(s) you used
+
+-   The top 3 characters by this criterion
+
+-    A brief explanation of what “embeddedness” means in network terms\
+
+## Task 5: Strength of Influence
+
+**Goal:**\
+Identify characters whose **relationships are strongest overall**, not
+merely numerous.
+
+**Guidance:**\
+This task explicitly requires you to use the **edge weights**. Focus on
+characters whose total interaction strength is high, and reflect on how
+this differs from unweighted analyses.
+
+**Deliverables:**
+
+-   The measure(s) you used
+
+-   The top 3 characters by strength-based influence and what it means
+    for these characters.
+
+-   A brief explanation of why weights matter for this task
+
+## References
