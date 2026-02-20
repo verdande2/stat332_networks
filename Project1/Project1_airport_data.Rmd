@@ -46,7 +46,6 @@ print_igraph_attr <- function(graph) {
 ```
 
 
-
 For your midterm project, I would like you use use the data from the `igraphdata` package. You need to use the US airport network, **2010 December** dataset (which has **755** nodes and **23,473** edges) to write your report. This network has a number of node and edge attributes.
 
 You may augment the node/edge attributes if it will help you with this project, but please remember to reference all data sources.
