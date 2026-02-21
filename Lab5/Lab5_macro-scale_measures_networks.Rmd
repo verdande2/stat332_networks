@@ -7,7 +7,7 @@ output:
   html_document:
     self_contained: true
     df_print: paged
-    code_folding: hide
+    code_folding: show
   pdf_document: default
 ---
 
@@ -30,7 +30,7 @@ library(ggraph)
 ```{r user_configurable_settings}
 gml_file <- "Caviar.graphml"
 
-SKIP_AHEAD <- TRUE # to skip outputting the introductory sections, TRUE for omit, FALSE for display all
+SKIP_AHEAD <- FALSE # to skip outputting the introductory sections, TRUE for omit, FALSE for display all
 ```
 
 ```{r extra_functions}
@@ -84,7 +84,7 @@ print_igraph_attr(g)
 
 And again, lets use a summary for finding out other properties.
 
-```{r, message = FALSE, warning=FALSE}
+```{r make_table_of_properties, message = FALSE, warning=FALSE}
 #library(data.table) # moved all imports to top of file
 #library(gt) # moved all imports to top of file
 
@@ -232,11 +232,11 @@ Once again, larger edge weight means a stronger connection, so we're good with t
 cluster_louvain(graph, weights = NULL, resolution = 1)
 ```
 
-```{r create_louvain_graph}
+```{r create_louvain_clustering}
 louvain_g  <- cluster_louvain(g, weights = E(g)$weight, resolution = 1)
 ```
 
-```{r plot_the_louvain_graph}
+```{r plot_the_louvain_clustering}
 plot(louvain_g, g)
 ```
 
@@ -392,7 +392,7 @@ plots <- lapply(ks, function(k){
   # no explicit return, so that ggraph is the return obj
 })
 
-# from what I am guessing, this will distribute the plots among a 2-col grid layout, for as many plots exist in ... well, plots. I'm relating this to patchwork or kinda like faceting behavior... edit 27 minutes later, when I notice that what package wrap_plots is from....
+# from what I am guessing, this will distribute the plots among a 2-col grid layout, for as many plots exist in ... well, plots. I'm relating this to patchwork or kinda like faceting behavior... edit 27 minutes later, when I notice what package wrap_plots is from, and didn't notice when copying its library call to top of file.... Argh!
 wrap_plots(plots, ncol = 2)
 
 ```
@@ -453,16 +453,20 @@ cliques(g, min = 5) # finds cliques that are 5 members or larger? that's what I'
 
 These are the actors which form the full graphs in the network. Four of the members are the same in these cliques and only one actor is different. If you inspect the factions of the vertex labels (after the split in the karate club), you'll notice that this entire clique stuck with Mr Hi. This is unsurprising and could have been easily predicted. An interesting question to explore would be if the size $4$ cliques splintered between factions or if they remained cohesive through the split.
 
+---
+
+
+
 ## 4.) Your turn:
 
-### Dataset description:
+### Dataset Description:
 
-#### Description:
+_Project Caviar_ was a unique investigation that targeted a network of hashish and cocaine importers operating out of Montreal. The network was targeted between **1994** and **1996** by a tandem investigation uniting the Montreal Police, the Royal Canadian Mounted Police, and other national and regional law-enforcement agencies from various countries (i.e. England, Spain, Italy, Brazil, Paraguay, and Colombia). The case is unique because it involved a specific investigative approach that will be referred to as a “seize and wait” strategy. Unlike most law-enforcement strategies, the mandate set forward in the _Project Caviar_ case was to seize identified drug consignments, but not to arrest any of the identified participants. This took place over a **2**-year period. Thus, although **11** importation consignments were seized at different moments throughout this period, arrests only took place at the end of the investigation. What this case offers is a rare opportunity to study the evolution of a criminal network phenomenon as it was being disrupted by law-enforcement agents. The inherent investigative strategy permits an assessment of change in the network structure and an inside look into how network participants react and adapt to the growing constraints set upon them. 
 
-_Project Caviar_ was a unique investigation that targeted a network of hashish and cocaine importers operating out of Montreal. The      network was targeted between **1994** and **1996** by a tandem investigation uniting the Montreal Police, the Royal Canadian Mounted Police, and other national and regional law-enforcement agencies from various countries (i.e. England, Spain, Italy, Brazil, Paraguay, and Colombia). The case is unique because it involved a specific investigative approach that will be referred to as a “seize and wait” strategy. Unlike most law-enforcement strategies, the mandate set forward in the _Project Caviar_ case was to seize identified drug consignments, but not to arrest any of the identified participants. This took place over a **2**-year period. Thus, although **11** importation consignments were seized at different moments throughout this period, arrests only took place at the end of the investigation. What this case offers is a rare opportunity to study the evolution of a criminal network phenomenon as it was being disrupted by law-enforcement agents. The inherent investigative strategy permits an assessment of change in the network structure and an inside look into how network participants react and adapt to the growing constraints set upon them. The principal data source was comprised of information submitted as evidence during the trials of **22** participants in the Caviar network. It included **4,279** paragraphs of information (over **1,000** pages) revealing electronically intercepted telephone conversations between network participants. These transcripts were used to create the overall matrix of the drug-trafficking operation’s communication system throughout the course of the investigation. Individuals falling in the surveillance net were not all participants in the trafficking operation. An initial extraction of all names appearing in the surveillance data led to the identification of **318** individuals. From this pool, **208** individuals were not implicated in the trafficking operations. Most were simply named during the many transcripts of conversations, but never detected. Others who were detected had no clear participatory role within the network (e.g., family members or legitimate entrepreneurs). The final network was thus composed of **110** participants. 
+The principal data source was comprised of information submitted as evidence during the trials of **22** participants in the Caviar network. It included **4,279** paragraphs of information (over **1,000** pages) revealing electronically intercepted telephone conversations between network participants. These transcripts were used to create the overall matrix of the drug-trafficking operation’s communication system throughout the course of the investigation. Individuals falling in the surveillance net were not all participants in the trafficking operation. An initial extraction of all names appearing in the surveillance data led to the identification of **318** individuals. From this pool, **208** individuals were not implicated in the trafficking operations. Most were simply named during the many transcripts of conversations, but never detected. Others who were detected had no clear participatory role within the network (e.g., family members or legitimate entrepreneurs). The final network was thus composed of **110** participants. 
 
-#### Network
-
+### Network
+# TODO FORMAT THIS BETTER
 **11**x **1**-mode matrices person by person, representing the **11** phases of the investigation. **_Ties_** are _directed_ **and** _valued_. Number of nodes:
 1) **15**x**15**
 2) **24**x**24**
