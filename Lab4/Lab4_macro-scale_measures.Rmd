@@ -4,14 +4,12 @@ author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
 due: "06-02-2026"
 output:
-  html_document:
-    self_contained: true
-    df_print: paged
-    code_folding: hide
+  html_document: 
+    code_folding: show
   pdf_document: default
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(igraph)
@@ -20,13 +18,14 @@ library(tidyverse)
 library(gt)
 library(tibble)
 library(dplyr)
+library(Dict)
 ```
 
 
 ```{r user_configurable_settings}
 gml_file <- "Caviar.graphml"
 
-SKIP_AHEAD <- TRUE # to skip outputting the introductory sections, TRUE for omit, FALSE for display all
+SKIP_AHEAD <- FALSE # to skip outputting the introductory sections, TRUE for omit, FALSE for display all
 ```
 
 ```{r extra_functions}
@@ -52,6 +51,10 @@ Welcome to Lab 4. This week we are going to be focused on macro-scale measures o
 For our dataset this week, we're going to use the Game of Thrones network from the popular book (I'll admit, I tried, but only got through the first couple of chapters before I was too disturbed to read it, but it is popular...).
 
 ![A bad visualization of the Game of Thrones Network](Game of Thrones Network.png)
+
+---
+
+
 
 ## 2.) Lab Walkthrough
 
@@ -168,11 +171,11 @@ get_diameter(g, weights = NA)
 One warning here: **do not conflate "connection strength" with "flow efficiency"**. They are related, but not the same thing. Large pipes carry more water, but longer pipes will still take longer. If you want to measure flow efficiency, you need to have an edge attribute for that (i.e. if you want to find the "Most Efficient" route it may be very different from what the diameter gives us). If the weights on our graph represented travel time between two towns, then the diameter ("longest shortest path") WOULD measure the longest travel time between two towns in the network. However, with weights representing the strength of ties, it would take a little more thought. One common method is to change weights to distances by using the reciprocal.
 
 ```{r}
-diameter(g, weights = 1 / E(g)$weight)
+diameter(g, weights = 1 / E(g)$weight) # reciprocal weights
 ```
 
 ```{r}
-get_diameter(g, weights = 1 / E(g)$weight)
+get_diameter(g, weights = 1 / E(g)$weight) # reciprocal weights
 ```
 
 And now we have a completely different answer for the longest of the shortest paths and who is involved in the process.
@@ -189,7 +192,9 @@ $$
 \phi(G) = \min\limits_{S \subset V} \phi(S) = \min\limits_{S \subset V} \frac{vol(E(S))}{min\{vol(S), vol(\bar{S}\}} 
 $$
 
+
 ```{r}
+# TODO line by line debug this WTFery
 conductance_of_set <- function(g, S, weights = E(g)$weight) {
   if (is.null(weights)) weights <- rep(1, ecount(g))
 
@@ -231,9 +236,9 @@ where $\lambda_2$ is the second smallest eigenvalue to the normalized Laplacian.
 
 ```{r}
 
-L <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
-ev <- eigen(L, symmetric = TRUE, only.values = TRUE)$values
-lambda_2 <- ev[length(ev) - 1]
+Laplacian <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
+eigenvalues <- eigen(Laplacian, symmetric = TRUE, only.values = TRUE)$values
+lambda_2 <- eigenvalues[length(eigenvalues) - 1]
 
 ```
 
@@ -246,6 +251,7 @@ Okay, so now that we have upper bounds, it turns out there is a special vector $
 Since we have this method to get a potential set to work with, we can implement these sweeps.
 
 ```{r}
+# TODO line by line this function and comment it out
 fiedler_sweep_cut <- function(g) {
 
   # Make sure it's undirected and weighted sensibly
@@ -301,6 +307,7 @@ An alternative to this method is the Andersen-Chung-Lang (ACL) Local Graph Parti
 Since `page_rank()` is well defined in `igraph`, we can actually implement this very easily, but because this is geared towards local calculations, it is very likely to find a much higher value than the true global value. It's more of a sanity check than a real calculation of conductance.
 
 ```{r}
+# TODO line by line this func
 page_rank_sweep_cut <- function(g, alpha = 0.15) {
 
   if (is.directed(g)) {
@@ -415,6 +422,7 @@ Where $\lambda(u,v)$ is the number of pairwise local edges between $u$ and $v$ f
 In social networks, we defined cohesion to be the "reachability ratio." I.e. the proportion of nodes where a path exists between them. This ratio depends on whether or not the graph is directed or not:
 
 ```{r}
+# TODO line by line this
 #Note that we are specifying directed reachability for directed graphs
 reachability_cohesion <- function(g, mode = c("undirected", "weak", "strong")) {
   mode <- match.arg(mode)
@@ -463,6 +471,7 @@ transitivity(g, type = "globalundirected", isolates = "NaN")
 Now we have a choice. There are multiple "correct" ways of getting a global measure for a weighted graph, but the most common is to use the arithmetic mean of local transitiveness. This isn't all that hard, but requires that we write another function.
 
 ```{r}
+# TODO line by line
 global_weighted_transitivity <- function(g, mode = c("undirected", "directed")) {
   mode <- match.arg(mode)
 
@@ -488,7 +497,7 @@ global_weighted_transitivity <- function(g, mode = c("undirected", "directed")) 
 global_weighted_transitivity(g, mode = "undirected")
 ```
 
-I'm going to pause here because these two measures actually tell us two different things. The unweighted transitivity is based on the proportion of triangles that exist when compared to the total that could exist. The weighted version actually tells us the strength of the embedding for the node based on intensity. The average of this being much higher tells us that there are some clusters with very strong ties. I.e. it answers the question of how strongly do triads reinforce each other? It is common to look at a distribution of these weighted triads to understand whether this comes from a lot of moderately strong connections or from a few VERY strong connections.
+I'm going to pause here because these two measures actually tell us two different things. The unweighted transitivity is based on the proportion of triangles that exist when compared to the total that _could_ exist. The weighted version actually tells us the strength of the embedding for the node based on intensity. The average of this being much higher tells us that there are some clusters with very strong ties. I.e. it answers the question of how strongly do triads reinforce each other? It is common to look at a distribution of these weighted triads to understand whether this comes from a lot of moderately strong connections or from a few **VERY** strong connections.
 
 #### Assortativity
 
@@ -498,7 +507,7 @@ We talked about degree assortativity in class, so let's implement that first.
 assortativity_degree(g)
 ```
 
-That's it. Essentially, because this value is negative, it indicates that individuals with high degree don't necessarily aggregate together (except that this measure doesn't account for the fact that the weights on our edges indicate the number of associations between individuals, so this measure DOES NOT WORK because this graph would naturally be a multigraph.
+That's it. Essentially, because this value is negative, it indicates that individuals with high degree don't _necessarily_ aggregate together (except that this measure doesn't account for the fact that the weights on our edges indicate the number of associations between individuals, so this measure DOES NOT WORK because this graph would naturally be a multigraph.
 
 This is critical. Do NOT just apply functions without thinking. Remember the measure we talked about called strength?
 
@@ -541,6 +550,7 @@ d_{ij} = 1/w_{ij}
 $$
 
 ```{r}
+# TODO line by line and comment
 centr_clo_weighted <- function(g) {
   # convert tie strength → distance
   d <- 1 / E(g)$weight
@@ -574,9 +584,10 @@ centr_betw(g)$centralization
 Betweenness demonstrates choke points and imbalance of brokerage power on shortest paths. This means that the weights matter, and once again, costs needs to be measured based on the strength of association (or reciprocal weights) yet again. I'm not just making this up either. <https://toreopsahl.com/tnet/weighted-networks/node-centrality/>
 
 ```{r}
+# TODO line by line
 centr_betw_weighted <- function(g) {
   # Convert strength → distance
-  d <- 1 / E(g)$weight
+  d <- 1 / E(g)$weight # reciprocalize!
 
   # weighted betweenness
   b <- betweenness(g, directed = FALSE, weights = d)
@@ -600,6 +611,7 @@ centr_eigen(g)$centralization
 Yay, this means... nothing because once again, our weight measures are actually implicitly defining a multigraph where the degree measure is misleading! We need to create our same functionality again:
 
 ```{r}
+# TODO line by line comment
 centr_eigen_weighted <- function(g) {
   # weighted EC scores
   ec <- eigen_centrality(g, weights = E(g)$weight)$vector
@@ -633,7 +645,7 @@ Perfect, this is actually a meaningful measure for eigenvector centrality. Do yo
 So, once again, the weights on the edges being strengths rather than distances means that efficiency should be calculated based on the reciprocal values. Let's just store those as an edge attribute.
 
 ```{r}
-E(g)$dist <- 1 / E(g)$weight
+E(g)$dist <- 1 / E(g)$weight # reciprocalize!
 ```
 
 #### Global Efficiency
@@ -658,15 +670,18 @@ So we have very strongly tied local networks when compared to the overall global
 
 I purposefully chose a difficult dataset where the weights have a common (but annoying) underlying interpretation. If you don't understand the nuance of the measures, it is common to perform these calculations incorrectly and get results that are outright meaningless if not the opposite of what you are truly looking for!
 
+---
+
+
+
 ## 3.) Summary:
 
 Strength-based weights: weights encode tie strength → larger = closer / faster / more interaction
 
 Distance-based weights (opposite case): weights encode cost → larger = farther / harder / more expensive
 
-Distance metric: For strength-based weights →
-
-$$\text{distance} = \frac{1}{\text{weight}}$$
+Distance metric: For strength-based weights → 
+$$ \text{distance} = \frac{1}{\text{weight}} $$
 
 ```{r message=FALSE}
 
@@ -747,17 +762,20 @@ global_measures_table |>
 
 I have to admit, that is a nicely made table. Well done!
 
+---
 `r if(SKIP_AHEAD) {"\\end{comment}"}`
+
+
 
 ## 4.) Your turn:
 
 ### Dataset description:
 
-#### Description:
+_Project Caviar_ was a unique investigation that targeted a network of hashish and cocaine importers operating out of Montreal. The network was targeted between **1994** and **1996** by a tandem investigation uniting the Montreal Police, the Royal Canadian Mounted Police, and other national and regional law-enforcement agencies from various countries (i.e. England, Spain, Italy, Brazil, Paraguay, and Colombia). The case is unique because it involved a specific investigative approach that will be referred to as a “seize and wait” strategy. Unlike most law-enforcement strategies, the mandate set forward in the _Project Caviar_ case was to seize identified drug consignments, but not to arrest any of the identified participants. This took place over a **2**-year period. Thus, although **11** importation consignments were seized at different moments throughout this period, arrests only took place at the end of the investigation. What this case offers is a rare opportunity to study the evolution of a criminal network phenomenon as it was being disrupted by law-enforcement agents. The inherent investigative strategy permits an assessment of change in the network structure and an inside look into how network participants react and adapt to the growing constraints set upon them. 
 
-_Project Caviar_ was a unique investigation that targeted a network of hashish and cocaine importers operating out of Montreal. The      network was targeted between **1994** and **1996** by a tandem investigation uniting the Montreal Police, the Royal Canadian Mounted Police, and other national and regional law-enforcement agencies from various countries (i.e. England, Spain, Italy, Brazil, Paraguay, and Colombia). The case is unique because it involved a specific investigative approach that will be referred to as a “seize and wait” strategy. Unlike most law-enforcement strategies, the mandate set forward in the _Project Caviar_ case was to seize identified drug consignments, but not to arrest any of the identified participants. This took place over a **2**-year period. Thus, although **11** importation consignments were seized at different moments throughout this period, arrests only took place at the end of the investigation. What this case offers is a rare opportunity to study the evolution of a criminal network phenomenon as it was being disrupted by law-enforcement agents. The inherent investigative strategy permits an assessment of change in the network structure and an inside look into how network participants react and adapt to the growing constraints set upon them. The principal data source was comprised of information submitted as evidence during the trials of **22** participants in the Caviar network. It included **4,279** paragraphs of information (over **1,000** pages) revealing electronically intercepted telephone conversations between network participants. These transcripts were used to create the overall matrix of the drug-trafficking operation’s communication system throughout the course of the investigation. Individuals falling in the surveillance net were not all participants in the trafficking operation. An initial extraction of all names appearing in the surveillance data led to the identification of **318** individuals. From this pool, **208** individuals were not implicated in the trafficking operations. Most were simply named during the many transcripts of conversations, but never detected. Others who were detected had no clear participatory role within the network (e.g., family members or legitimate entrepreneurs). The final network was thus composed of **110** participants. 
+The principal data source was comprised of information submitted as evidence during the trials of **22** participants in the Caviar network. It included **4,279** paragraphs of information (over **1,000** pages) revealing electronically intercepted telephone conversations between network participants. These transcripts were used to create the overall matrix of the drug-trafficking operation’s communication system throughout the course of the investigation. Individuals falling in the surveillance net were not all participants in the trafficking operation. An initial extraction of all names appearing in the surveillance data led to the identification of **318** individuals. From this pool, **208** individuals were not implicated in the trafficking operations. Most were simply named during the many transcripts of conversations, but never detected. Others who were detected had no clear participatory role within the network (e.g., family members or legitimate entrepreneurs). The final network was thus composed of **110** participants. 
 
-#### Network
+### Network
 
 **11**x **1**-mode matrices person by person, representing the **11** phases of the investigation. **_Ties_** are _directed_ **and** _valued_. Number of nodes:
 1) **15**x**15**
@@ -780,115 +798,367 @@ I have provided a `graphml` object containing the **110** person network for you
 
 ```{r load_in_the_gml_file}
 g <- igraph::read_graph(gml_file, format = "graphml")
+```
+
+Excellent. Now, let's do a dump on the `igraph` object just to make sure things are looking right:
+
+```{r verify_graph_data_import}
 g
 print_igraph_attr(g)
 ```
+> IGRAPH db08044 DNW- 110 205 -- CAVIAR_FULL
+> + attr: name (g/c), name (v/c), id (v/c), weight (e/n)
 
-```{r}
-# TODO calculate a tribble full of the various measurement values
-global_measures_data <- tribble(
-  ~Measure, ~Meaning, ~Category, ~Disconnected, ~Multigraphs_Loops, ~Strength_Weights, ~Distance_Weights,
+I see that the `igraph` is named `CAVIAR_FULL`, which checks out. I see that the graph is **D**directed, **N**amed, **W**eighted and is **not** bipartite. It is composed of $110$ vertices and $205$ edges. Each vertex has a `name` and `id` attribute. Each edge has only `weight`. That sounds right to spec as described above! 
 
-  # --------------------- STRUCTURAL ---------------------
-  "Diameter", "Longest shortest path", "Structural", "Largest Component", "Collapse; remove loops", "1/weight", "✓",
+Now, that we have our dataset imported and in `igraph` object form, we can begin to consider the various tools in our cram-packed "measures and metrics of graphs" toolbox we've added from the first few sections of this lab. Eventually, I'd like to produce a nicely formatted table like the above `gt` styled one, but first, let's consider exactly _which_ measures are valid, meaningful or even possible for our particular graph. Mirroring the structure above, let's start by looking at this graph's various graph's structural measures:
 
-  "Conductance", "Global bottleneck ratio", "Structural", "Largest Component", "Collapse", "✓", "✓",
+```{r display_graph_properties}
 
-  "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural", "✓", "Collapse or merge multiplicity", "✓", "✓",
-
-  "Vertex Connectivity", "Minimum vertices to disconnect", "Structural", "✓", "Collapse", "Irrelevant", "Irrelevant",
-
-  "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural", "Largest Component", "Collapse; remove loops", "✓", "Do NOT use",
-
-  # --------------------- INTERCONNECTEDNESS ---------------------
-  "Edge Density", "Edges ÷ possible edges", "Interconnectedness", "✓", "Collapse", "Irrelevant", "Irrelevant",
-
-  "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness", "✓", "Collapse", "Irrelevant", "Irrelevant",
-
-  "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness", "✓", "Collapse", "✓ (Barrat local → mean)", "Irrelevant",
-
-  "Assortativity", "Mixing by attribute", "Interconnectedness", "✓", "Collapse", "✓ (strength assort.)", "✓ (degree assort.)",
-
-  # --------------------- CENTRALIZATION ---------------------
-  "Degree Centralization", "Inequality of degree distribution", "Centralization", "✓", "Collapse", "Consider Strength Centralization", "✓",
-
-  "Strength Centralization", "Inequality of weighted degree", "Centralization", "✓", "Collapse", "✓", "Irrelevant",
-
-  "Closeness Centralization", "Inequality in closeness", "Centralization", "Largest Component", "Collapse", "1/weight", "✓",
-
-  "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization", "Largest Component", "Collapse", "1/weight", "✓",
-
-  "Eigenvector Centralization", "Inequality in spectral influence", "Centralization", "✓", "Collapse", "✓", "Do NOT use",
-
-  # --------------------- EFFICIENCY ---------------------
-  "Global Efficiency", "Global ease of communication", "Efficiency", "✓", "Collapse", "1/weight", "✓",
-
-  "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency", "✓", "Collapse", "1/weight", "✓",
-
-  "Average Shortest Path Length", "Mean geodesic distance", "Efficiency", "Largest Component", "Collapse", "1/weight", "✓"
+graph_properties <- tribble(
+  ~Property, ~Value,
+  "Order", gorder(g),
+  "Size", ecount(g), # size defined as # of edges in graph
+  "Connnected", is_connected(g),
+  "Directed", is_directed(g),
+  "Acyclic", is_acyclic(g),
+  "Weighted", is_weighted(g),
+  "Simple", is_simple(g),
+  "Has Loops", any_loop(g),
+  "Is Multigraph", any_multiple(g), 
+  "Bipartite", is_bipartite(g), 
+  "Tree", is_tree(g), 
+  "Forest", is_forest(g)
 )
+
+graph_properties |>
+  gt() |>
+  tab_header(
+    title = "Graph Stats & Properties",
+    subtitle = "Stats and metrics about the Caviar dataset"
+  ) |>
+  # data_color(
+  #   columns = everything(),   # columns to tint
+  #   fn = function(cols) {
+  #     category <- global_measures_table$Category
+  #     category_colors[category]
+  #   }
+  # ) |> # TODO fix colors eventually
+  fmt_number(columns = Value, rows = 1:2, decimals = 0, use_seps = TRUE) |> # special formatting for numeric values
+  fmt_tf(columns = Value, rows = 3:length(Value), true_val = "✓", false_val = "✗") |>  #  special formating for the bools
+  tab_options(table.font.size = 12)
+
 ```
 
-```{r display_measures}
-global_measures_table <- tribble(
-  ~Measure, ~Meaning, ~Category, ~Disconnected, ~Multigraphs_Loops, ~Strength_Weights, ~Distance_Weights,
+```{r largest_component}
+# probably unneeded
+largest_compoent_of_g <- largest_component(g)
 
-  # --------------------- STRUCTURAL ---------------------
-  "Diameter", "Longest shortest path", "Structural", "Largest Component", "Collapse; remove loops", "1/weight", "✓",
+```
 
-  "Conductance", "Global bottleneck ratio", "Structural", "Largest Component", "Collapse", "✓", "✓",
+```{r precompute_strengths}
+# precompute and store all strengths as vertex attributes
+strengths <- strength(g, mode = "all", weights = E(g)$weight)
+# and might as well set them as a vertex attr
+V(g)$strength <- strengths
 
-  "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural", "✓", "Collapse or merge multiplicity", "✓", "✓",
+```
 
-  "Vertex Connectivity", "Minimum vertices to disconnect", "Structural", "✓", "Collapse", "Irrelevant", "Irrelevant",
+```{r setup_for_laplacian_matrix}
+# set up the laplacian matrix and calculate eigenvalues to pluck the Fiedler's number below
+Laplacian <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
+eigenvalues <- eigen(Laplacian, symmetric = TRUE, only.values = TRUE)$values
+lambda_2 <- eigenvalues[length(eigenvalues) - 1]
+#cat("The conductance is bounded by", lambda_2 / 2, "and", sqrt(2 * lambda_2), ".")
+```
 
-  "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural", "Largest Component", "Collapse; remove loops", "✓", "Do NOT use",
+The above code chunk yields:
+> Error in get_laplacian_sparse_impl(graph, "out", normalization, weights) :
+> At vendor/cigraph/src/properties/spectral.c:324 : Found non-isolated vertex with zero out-strength, cannot perform symmetric normalization of Laplacian with 'out' mode. Invalid value
+> 2. get_laplacian_sparse_impl(graph, "out", normalization, weights)
+> 1. laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
 
-  # --------------------- INTERCONNECTEDNESS ---------------------
-  "Edge Density", "Edges ÷ possible edges", "Interconnectedness", "✓", "Collapse", "Irrelevant", "Irrelevant",
+Interesting error result. Let's explore what it's telling us... First, let's see if the graph `g` has any non-isolated vertices with an out-degree of zero:
 
-  "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness", "✓", "Collapse", "Irrelevant", "Irrelevant",
+```{r check_for_isolates}
+isolate_indices <- which(igraph::degree(g, mode = "out") == 0) # get vertex indices of any zero out
+isolates <- V(g)[isolate_indices] # pluck the vertices by index
+print(isolates)
 
-  "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness", "✓", "Collapse", "✓ (Barrat local → mean)", "Irrelevant",
+cat(paste0(
+  "Confirming by summing the count of all vertices with a out-degree of zero, we see ",
+  sum(igraph::degree(g, mode="out") == 0),
+  " isolated vertices in the graph.\n"
+))
+```
 
-  "Assortativity", "Mixing by attribute", "Interconnectedness", "✓", "Collapse", "✓ (strength assort.)", "✓ (degree assort.)",
 
-  # --------------------- CENTRALIZATION ---------------------
-  "Degree Centralization", "Inequality of degree distribution", "Centralization", "✓", "Collapse", "Consider Strength Centralization", "✓",
+```{r unused_extra_functions}
+# unused
+res <- fiedler_sweep_cut(g)
+#cat("Best φ from spectral sweep:", res$phi, "\n")
 
-  "Strength Centralization", "Inequality of weighted degree", "Centralization", "✓", "Collapse", "✓", "Irrelevant",
+# unused
+conductance_2 <- page_rank_sweep_cut(g)
+#cat("Best φ from PageRank sweep:", conductance_2$phi, "\n")
+```
 
-  "Closeness Centralization", "Inequality in closeness", "Centralization", "Largest Component", "Collapse", "1/weight", "✓",
 
-  "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization", "Largest Component", "Collapse", "1/weight", "✓",
-
-  "Eigenvector Centralization", "Inequality in spectral influence", "Centralization", "✓", "Collapse", "✓", "Do NOT use",
-
-  # --------------------- EFFICIENCY ---------------------
-  "Global Efficiency", "Global ease of communication", "Efficiency", "✓", "Collapse", "1/weight", "✓",
-
-  "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency", "✓", "Collapse", "1/weight", "✓",
-
-  "Average Shortest Path Length", "Mean geodesic distance", "Efficiency", "Largest Component", "Collapse", "1/weight", "✓"
-)
-
-# Color-blind-safe palette (Okabe-Ito)
+```{r setup_a_beautiful_color_palette}
+# Color-blind-safe palette for category coloring (Okabe-Ito)
 category_colors <- c(
+  `Special Point`    = "#e41a1c",
   Structural         = "#a6cee3",
   Interconnectedness = "#b2df8a",
   Centralization     = "#fdbf6f",
-  Efficiency         = "#cab2d6"
+  Efficiency         = "#cab2d6",
+  Other              = "#ffff99"
+)
+
+```
+  
+Now that we have our environment prepared, let's start aggregating all our measure data into tribbles to turn into tables later
+
+```{r render_special_points_table}
+special_points <- tribble(
+  # Headers---------------------------------------------------------------------
+  ~Property, ~Value,
+  
+  # Bridges and Articulation Points---------------------------------------------
+  "# of Bridges", length(bridges(g)),
+  "# of Articulation Points", length(articulation_points(g))
+)
+
+special_points |>
+  gt() |>
+  tab_header(
+    title = "Graph Special Points",
+    subtitle = "Special Points within the Caviar dataset"
+  ) |>
+  # data_color(
+  #   columns = everything(),   # columns to tint
+  #   fn = function(cols) {
+  #     category <- global_measures_table$Category
+  #     category_colors[category]
+  #   }
+  # ) |> # TODO fix colors eventually
+  fmt_number(columns = Value, rows = 1:2, decimals = 0, use_seps = TRUE) |> # special formatting for numeric values
+  tab_options(table.font.size = 12)
+
+```
+
+```{r render_structural_measures_table}
+structural_measures <- tribble(
+  # Headers---------------------------------------------------------------------
+  ~Measure, ~Value,
+  
+  # Diameter measures-----------------------------------------------------------
+  
+  "Diameter", diameter(g, weights = NA), # g is undirected, connected and has weights, but need to ignore weights for diameter to make sense
+  "Diameter Path", get_diameter(g, weights = NA), # need to ignore weights for this to make sense
+  "Farthest Vertices", farthest_vertices(g, weights = NA), # need to ignore weights for this to make sense
+  "Diameter with Reciprocal Weights", diameter(g, weights = 1/E(g)$weight),
+  "Diameter Path with Reciprocal Weights", get_diameter(g, weights = 1/E(g)$weight),
+  "Farthest Vertices with Reciprocal Weights", farthest_vertices(g, weights = 1 / E(g)$weight), # does this measure even make any sense?
+  
+  # Conductance measures--------------------------------------------------------
+  
+  # Adhesion
+  "Adhesion", adhesion(g),
+  
+  # Vertex Connectivity
+  "Vertex Connectivity", vertex_connectivity(g),
+  
+  # Fiedler's value (second smallest eigenvalue)
+  "Fiedler's Value (λ₂)", lambda_2
+)
+
+structural_measures |>
+  gt() |>
+  tab_header(
+    title = "Graph Structural Measures",
+    subtitle = "Structural-related metrics about the Caviar dataset"
+  ) |>
+  # data_color(
+  #   columns = everything(),   # columns to tint
+  #   fn = function(cols) {
+  #     category <- global_measures_table$Category
+  #     category_colors[category]
+  #   }
+  # ) |> # TODO fix colors eventually
+  fmt_number(columns = Value, decimals = 6, use_seps = TRUE) |> # special formatting for numeric values
+  tab_options(table.font.size = 12)
+
+```
+
+```{r render_interconnectedness_measures_table}
+interconnectedness_measures <- tribble(
+  # Headers---------------------------------------------------------------------
+  ~Measure, ~Value,
+  
+  # Interconnectedness measures ------------------------------------------------
+  
+  # Edge Density
+  "Edge Density (%)", edge_density(g, loops = FALSE), # TODO add formatting for percentage
+  
+  # Network Cohesion
+  "`igraph` Network Cohesion", cohesion(g),
+  "Graph Theory Network Cohesion aka Reachability Ratio", reachability_cohesion(g),
+  
+  # Global Clustering Coefficient (Transitivity)
+  "Local Transitivity", transitivity(g, type = "globalundirected", isolates = "NaN"),
+  "Global Weighted Transitivity", global_weighted_transitivity(g, mode = "undirected"),
+  
+  # Assortativity
+  "Naive Assortativity Degree", assortativity_degree(g),
+  "Assortativity with Strengths", assortativity(g,
+                                                strengths = strength(g, mode = "all", weights = E(g)$weight),
+                                                directed = FALSE)
+  )
+interconnectedness_measures |>
+  gt() |>
+  tab_header(
+    title = "Graph Interconnectedness Measures",
+    subtitle = "Interconnectedness-related metrics about the Caviar dataset"
+  ) |>
+  # data_color(
+  #   columns = everything(),   # columns to tint
+  #   fn = function(cols) {
+  #     category <- global_measures_table$Category
+  #     category_colors[category]
+  #   }
+  # ) |> # TODO fix colors eventually
+  fmt_number(columns = Value, decimals = 6, use_seps = TRUE) |> # special formatting for numeric values
+  tab_options(table.font.size = 12)
+
+```
+
+```{r render_centralization_measures_table}
+centralization_measures <- tribble(
+  # Headers---------------------------------------------------------------------
+  ~Measure, ~Value,
+  
+  # Centralization measures ----------------------------------------------------
+  
+  # Degree Centralization
+  "Degree Centralization", centr_degree(g, mode = "all")$centralization,
+  "Strength Centralization (?)", centralize(strengths, theoretical.max = sum(strengths) * (length(strengths) - 1), normalized = TRUE),
+  
+  # Closeness Centralization
+  "Closeness Centralization", centr_clo(g, mode = "all")$centralization,
+  "Closeness Centralization with Reciprocal Weights", centr_clo_weighted(g),
+  
+  # Betweenness Centralization
+  "Betweenness Centralization", centr_betw(g)$centralization,
+  "Betweenness Centralization with Reciprocal Weights", centr_betw_weighted(g),
+  
+  # Eigenvector Centralization
+  "Eigenvector Centralization", centr_eigen(g)$centralization,
+  "Eigenvector Centralization with Strength Weights", centr_eigen_weighted(g)
+)
+
+centralization_measures |>
+  gt() |>
+  tab_header(
+    title = "Graph Centralization Measures",
+    subtitle = "Centralization-related metrics about the Caviar dataset"
+  ) |>
+  # data_color(
+  #   columns = everything(),   # columns to tint
+  #   fn = function(cols) {
+  #     category <- global_measures_table$Category
+  #     category_colors[category]
+  #   }
+  # ) |> # TODO fix colors eventually
+  fmt_number(columns = Value, decimals = 6, use_seps = TRUE) |> # special formatting for numeric values
+  tab_options(table.font.size = 12)
+
+```
+
+```{r render_efficiency_measures_table}
+efficiency_measures <- tribble(
+  # Headers---------------------------------------------------------------------
+  ~Measure, ~Value,
+  
+  # Efficiency measures --------------------------------------------------------
+  "Global Efficiency with Reciprocal Weights", global_efficiency(g, weights = 1 / E(g)$weight),
+  "Average Local Efficiency with Reciprocal Weights", average_local_efficiency(g, weights = 1 / E(g)$weight, mode = "all"),
+  "Average Shortest Path Length/Mean Distance with Reciprocal Weights", mean_distance(g, weights = 1 / E(g)$weight)
+)
+efficiency_measures |>
+  gt() |>
+  tab_header(
+    title = "Graph Efficiency Measures",
+    subtitle = "Efficiency-related metrics about the Caviar dataset"
+  ) |>
+  # data_color(
+  #   columns = everything(),   # columns to tint
+  #   fn = function(cols) {
+  #     category <- global_measures_table$Category
+  #     category_colors[category]
+  #   }
+  # ) |> # TODO fix colors eventually
+  fmt_number(columns = Value, decimals = 6, use_seps = TRUE) |> # special formatting for numeric values
+  tab_options(table.font.size = 12)
+
+```
+
+
+
+```{r render_the_grand_master_measure_table}
+# TODO calculate a tribble full of the various measurement values, adding a column for interpretation
+global_measures_table <- tribble(
+  ~Category, ~Measure, ~Value, ~Interpretation, # TODO finish master table!
+
+  # --------------------- STRUCTURAL ---------------------
+  "Diameter", "Longest shortest path", "Structural", "Largest Component",
+
+  "Conductance", "Global bottleneck ratio", "Structural", "Largest Component",
+
+  "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural", "✓",
+
+  "Vertex Connectivity", "Minimum vertices to disconnect", "Structural", "✓",
+
+  "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural", "Largest Component",
+
+  # --------------------- INTERCONNECTEDNESS ---------------------
+  "Edge Density", "Edges ÷ possible edges", "Interconnectedness", "✓",
+
+  "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness", "✓",
+
+  "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness", "✓",
+
+  "Assortativity", "Mixing by attribute", "Interconnectedness", "✓",
+
+  # --------------------- CENTRALIZATION ---------------------
+  "Degree Centralization", "Inequality of degree distribution", "Centralization", "",
+
+  "Strength Centralization", "Inequality of weighted degree", "Centralization", "✓",
+
+  "Closeness Centralization", "Inequality in closeness", "Centralization", "Largest Component",
+
+  "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization", "Largest Component",
+
+  "Eigenvector Centralization", "Inequality in spectral influence", "Centralization", "✓",
+
+  # --------------------- EFFICIENCY ---------------------
+  "Global Efficiency", "Global ease of communication", "Efficiency", "✓",
+
+  "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency", "✓",
+
+  "Average Shortest Path Length", "Mean geodesic distance", "Efficiency", "Largest Component"
 )
 
 global_measures_table |>
   gt() |>
   tab_header(
-    title = "Drug Smuggling Graph - Measures",
-    subtitle = "Various measures and metrics for Caviar Drug Smuggling network"
+    title = "Caviar Full Drug Smuggling Graph - Various Measures",
+    subtitle = "Various measures and metrics for the Caviar Drug Smuggling network"
   ) |>
   data_color(
-    columns = everything(),   # columns to tint
+    columns = everything(), # columns to tint
     fn = function(cols) {
+      # we're stealing the exact colors from the previous table, so no change needed here
       category <- global_measures_table$Category
       category_colors[category]
     }
@@ -899,9 +1169,13 @@ global_measures_table |>
 Next, please provide a few paragraphs regarding these measures and what they imply about the resilience, strengths, and weaknesses of this drug smuggling network.
 
 **Answer:**
-
-TODO finish me!
+```{r}
+# TODO answer me!
+```
 
 ## 5.) Results
 
 What you need to do next is to "knit" your document into an html using the "Knit" button near the top of the screen. This will give you an HTML that you can turn in.
+
+
+
