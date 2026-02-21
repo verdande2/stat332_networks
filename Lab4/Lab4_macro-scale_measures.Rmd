@@ -878,7 +878,7 @@ The above code chunk yields:
 > 2. get_laplacian_sparse_impl(graph, "out", normalization, weights)
 > 1. laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
 
-Interesting error result. Let's explore what it's telling us... First, let's see if the graph `g` has any non-isolated vertices with an out-degree of zero:
+Interesting error result. Let's explore what it's telling us... First, let's doublecheck if the graph `g` has any non-isolated vertices with an out-degree of zero:
 
 ```{r check_for_isolates}
 isolate_indices <- which(igraph::degree(g, mode = "out") == 0) # get vertex indices of any zero out
@@ -892,6 +892,7 @@ cat(paste0(
 ))
 ```
 
+Well now, that's not good...
 
 ```{r unused_extra_functions}
 # unused
