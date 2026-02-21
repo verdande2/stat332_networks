@@ -46,8 +46,6 @@ make_table_happen <- function(graph) {
 ```
 
 
-# STAT 332: Lab 2
-
 ---
 `r if(SKIP_TO_PART_3) {"Commenting out parts 1 and 2 to skip to the relevant bits!\\n\\n... snip ...\\n\\begin{comment}"}`
 
