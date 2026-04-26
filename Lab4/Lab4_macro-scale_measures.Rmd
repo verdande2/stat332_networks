@@ -251,7 +251,7 @@ Okay, so now that we have upper bounds, it turns out there is a special vector $
 Since we have this method to get a potential set to work with, we can implement these sweeps.
 
 ```{r}
-# TODO line by line this function and comment it out
+# TODO line by line this function and comment it all out
 fiedler_sweep_cut <- function(g) {
 
   # Make sure it's undirected and weighted sensibly
@@ -825,9 +825,9 @@ graph_properties <- tribble(
   "Weighted", is_weighted(g),
   "Simple", is_simple(g),
   "Has Loops", any_loop(g),
-  "Is Multigraph", any_multiple(g), 
-  "Bipartite", is_bipartite(g), 
-  "Tree", is_tree(g), 
+  "Is Multigraph", any_multiple(g),
+  "Bipartite", is_bipartite(g),
+  "Tree", is_tree(g),
   "Forest", is_forest(g)
 )
 
@@ -845,14 +845,14 @@ graph_properties |>
   #   }
   # ) |> # TODO fix colors eventually
   fmt_number(columns = Value, rows = 1:2, decimals = 0, use_seps = TRUE) |> # special formatting for numeric values
-  fmt_tf(columns = Value, rows = 3:length(Value), true_val = "✓", false_val = "✗") |>  #  special formating for the bools
+  fmt_tf(columns = Value, rows = 3:length(Value), true_val = "✓", false_val = "✗", colors = c("#0072B2", "#E69F00")) |>  # special formating for the bools
   tab_options(table.font.size = 12)
 
 ```
 
 ```{r largest_component}
 # probably unneeded
-largest_compoent_of_g <- largest_component(g)
+largest_component_of_g <- largest_component(g)
 
 ```
 
@@ -878,21 +878,225 @@ The above code chunk yields:
 > 2. get_laplacian_sparse_impl(graph, "out", normalization, weights)
 > 1. laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
 
-Interesting error result. Let's explore what it's telling us... First, let's doublecheck if the graph `g` has any non-isolated vertices with an out-degree of zero:
+Well now, looks like it is time for a debugging and troubleshooting diversion! Very interesting error result. Let's explore what it's telling us... The error occurred in the `laplacian_matrix()` call, being passed our `igraph` object, its weight vector, the `normalization` parameter set to "symmetric" and the `sparse` parameter has been omitted. Taking a peek at the docs with `?laplacian_matrix`, we can doublecheck we're passing the correct objects to the `laplacian_matrix()` call. The signature of the function is: 
+
+```
+laplacian_matrix(
+  graph,
+  weights = NULL,
+  sparse = igraph_opt("sparsematrices"),
+  normalization = c("unnormalized", "symmetric", "left", "right"),
+  normalized
+)
+```
+
+So, we are indeed passing our `igraph` correctly, and our string for the `normalization` parameter appears to be acceptable as well. The default value for the `weights` parameter is NULL, which according to the documentation, will lead to using the graph edges' `weight` attribute. In this case, we're just being explicit by passing the weights opaquely. We don't have any concern for the `sparse` parameter at this time, and the `normalized` parameter has been deprecated. Our `laplacian_matrix()` call appears to be okay from this angle. Let's investigate further...
+
+Before we deep dive into the R source code for these `igraph` functions, let's take a quick look at the actual error text:
+
+> At vendor/cigraph/src/properties/spectral.c:324 : Found non-isolated vertex with zero out-strength, cannot perform symmetric normalization of Laplacian with 'out' mode. Invalid value
+
+So, `igraph` is complaining that in the graph that was passed has vertices with zero out-strength (no outbound edges) that are also non-isolated (they have a degree $> 0$, ie. at least one edge connects to this vertex), and this is preventing it from doing the symmetric normalization. It says `Invalid value` but doesn't indicate exactly _which_ value is invalid. Could the issue be more related to the "out" mode perhaps? First, let's confirm that we _do_ in fact have non-isolated vertices with zero out-strength:
+
+Let's check our graph `g`:
 
 ```{r check_for_isolates}
-isolate_indices <- which(igraph::degree(g, mode = "out") == 0) # get vertex indices of any zero out
+isolate_indices <- which(igraph::strength(g, mode = "out") == 0) # get vertex indices of any zero out-strength vertices
 isolates <- V(g)[isolate_indices] # pluck the vertices by index
 print(isolates)
 
 cat(paste0(
-  "Confirming by summing the count of all vertices with a out-degree of zero, we see ",
-  sum(igraph::degree(g, mode="out") == 0),
-  " isolated vertices in the graph.\n"
+  "Confirming by summing the count of all vertices with a out-strength of zero, we see ",
+  sum(igraph::strength(g, mode = "out") == 0),
+  " vertices in the graph.\n"
 ))
 ```
 
-Well now, that's not good...
+Well now, that's not good... With the assumption of user error being the cause, let's see what we can deduce from what we have:
+
+First,
+
+```{r}
+# TODO resume here
+
+num_isolates <- sum(igraph::degree(g, mode = "out") == 0) # isolates by definition have degree = 0, but technically, their strength would _also_ be zero, so it is kinda moot here
+cat(paste0(
+  "There are ",
+  num_isolates,
+  " isolated vertices present in the graph.\n"
+))
+```
+
+
+
+
+
+# TODO investigate "out" mode issue?
+
+
+
+
+
+
+
+
+
+
+
+Okay, I've exhausted all the easy options. Time to get our hands dirty in the source code...
+
+From <https://rdrr.io/cran/igraph/man/laplacian_matrix.html>, we can see the man page for the function (which appears to be identical to the result from `?laplacian_matrix`). We unfortunately can't learn anything additional from the documentation pages, so let's go deeper and investigate the function definition for `laplacian_matrix()` and find out what it is actually doing, mainly the context around how it is calling `get_laplacian_sparse_impl()`. Skimming the documentation for Laplacian-related things, I came across a few interesting possibly-related tidbits:
+- graph.laplacian() is the _old_ deprecated function related to creating Laplacian matrices. This shouldn't be related to our issue.
+
+Pulling up the raw source for the function (docstring header omitted for brevity, as it is the exact same information in the man page/help file), we can investigate further:
+
+```
+laplacian_matrix <- function(
+  graph,
+  weights = NULL,
+  sparse = igraph_opt("sparsematrices"),
+  normalization = c("unnormalized", "symmetric", "left", "right"),
+  normalized
+) {
+  # Argument checks
+  if (lifecycle::is_present(normalized)) {
+    lifecycle::deprecate_soft(
+      "2.0.3",
+      "make_lattice(normalized = 'provide normalization instead')",
+      details = c(
+        "`normalized` is now deprecated, use `normalization` instead."
+      )
+    )
+    normalized <- as.logical(normalized)
+
+    normalization <- "unnormalized"
+    if (normalized) {
+      if (is_directed(graph)) {
+        normalization <- "left"
+      } else {
+        normalization <- "symmetric"
+      }
+    }
+  }
+  ensure_igraph(graph)
+  if (is.null(weights) && "weight" %in% edge_attr_names(graph)) {
+    weights <- E(graph)$weight
+  }
+  if (!is.null(weights) && any(!is.na(weights))) {
+    weights <- as.numeric(weights)
+  } else {
+    weights <- NULL
+  }
+  sparse <- as.logical(sparse)
+
+  on.exit(.Call(R_igraph_finalizer))
+  # Function call
+  if (sparse) {
+    res <- get_laplacian_sparse_impl(graph, "out", normalization, weights)
+  } else {
+    res <- get_laplacian_impl(graph, "out", normalization, weights)
+  }
+  if (sparse) {
+    res <- igraph.i.spMatrix(res)
+  }
+  if (igraph_opt("add.vertex.names") && is_named(graph)) {
+    rownames(res) <- colnames(res) <- V(graph)$name
+  }
+  res
+}
+```
+
+Alright, let's read through the (uncommented) package function definition and put it in my own words to understand what's going on:
+1.) First, the function does some basic argument checks, throwing a (soft) deprecated warning if `normalized` parameter is passed, converting it to a logical/boolean and determining what normalization method to use based on if the graph is directed or not.
+2.) Now, the function calls `ensure_igraph()`, which I'm assuming validates the passed object as a proper `igraph` object.
+3.) A check is done if the weights were passed as a parameter (or set to NULL) and assigns the weights appropriately.
+4.) Another check is done to ensure the weights variable is numeric, else it assigns NULL.
+5.) The parameter `sparse` is converted to a logical/boolean.
+6.) A exit handler called `R_igraph_finalizer()` is added.
+7.) In the next chunk, for `sparse == TRUE`, a call is made to `get_laplacian_sparse_impl(graph, "out", normalization, weights)` and assigned to `res`, and in the case of `sparse == FALSE`, does the same, but calling `get_laplacian_impl(graph, "out", normalization, weights)`.
+8.) If `sparse == TRUE`, we assign the result of `igraph.i.spMatrix(res)` to our `res` variable.
+9.) A quick check is performed to check the igraph option to add vertex names, and if the option is set, rows and columns will be named with the `name` attribute of the vertices.
+10.) Finally, the function returns the `res` object.
+
+So, from analyzing what this function is doing, we can identify where and how `get_laplacian_sparse_impl()` is called. It appears to only be called when the `sparse` parameter is `TRUE`. The default for `sparse` is `igraph_opt("sparsematrices")` is `r igraph::igraph_opt("sparsematrices")`, so perhaps I just need to set `sparse` to `FALSE`? Let's give that a shot!
+
+```{r}
+laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric", sparse = FALSE)
+```
+
+And that results in the exact same error we initial received, with the slight modification that now `get_laplacian_impl()` is throwing the error, possibly indicating that whatever the issue is, it's shared between both the sparse and non-sparse laplacian functions:
+
+> Error in get_laplacian_impl(graph, "out", normalization, weights) :
+At vendor/cigraph/src/properties/spectral.c:173 : Found non-isolated vertex with zero out-strength, cannot perform symmetric normalization of Laplacian with 'out' mode. Invalid value
+2. get_laplacian_impl(graph, "out", normalization, weights)
+1. laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric", sparse = FALSE)
+
+Climbing up the call stack, we see that our `laplacian_matrix()` call makes calls to `get_laplacian_impl()` and `get_laplacian_sparse_impl()`, and trying to pass `sparse = FALSE` to either results in the same error. The source of the error must be deeper, perhaps in the implementation of `get_laplacian_sparse_impl()` or `get_laplacian_impl()` (or both)? 
+
+Trying to learn more via documentation, I find that `?get_laplacian_impl` and `??get_laplacian_impl` return nothing. After a trip to Google with the "get_laplacian_impl igraph" query in hand, I was led to the main Laplacian matrix documentation from `igraph` here: <https://igraph.org/r/html/1.3.2/laplacian_matrix.html>, which offered little to no additional information.
+
+Likewise, using `?get_laplacian_sparse_impl` resulted in zero results found. Trying `??get_laplacian_sparse_impl` _also_ resulted in no results. Taking my search to Google, using just "get_laplacian_sparse_impl" as my query, I got the following results:
+
+![Google has failed me...](Google_Results.png)
+
+Without many remaining options, let's explore this single documentation result. The documentation link had an alphabetized index of all API functions for the `igraph` package, and lo and behold, I see `get_laplacian_impl` AND `get_laplacian_sparse_impl` with links to their source code definitions! We're getting closer!
+
+```
+get_laplacian_impl <- function(graph, mode=c("out", "in", "all", "total"), normalization=c("unnormalized", "symmetric", "left", "right"), weights=NULL) {
+  # Argument checks
+  ensure_igraph(graph)
+  mode <- switch(igraph.match.arg(mode), "out"=1L, "in"=2L, "all"=3L, "total"=3L)
+  normalization <- switch(igraph.match.arg(normalization), "unnormalized"=0L, "symmetric"=1L, "left"=2L, "right"=3L)
+  if (is.null(weights) && "weight" %in% edge_attr_names(graph)) {
+    weights <- E(graph)$weight
+  }
+  if (!is.null(weights) && !all(is.na(weights))) {
+    weights <- as.numeric(weights)
+  } else {
+    weights <- NULL
+  }
+
+  on.exit( .Call(R_igraph_finalizer) )
+  # Function call
+  res <- .Call(R_igraph_get_laplacian, graph, mode, normalization, weights)
+
+  res
+}
+```
+
+
+```
+get_laplacian_sparse_impl <- function(graph, mode=c("out", "in", "all", "total"), normalization=c("unnormalized", "symmetric", "left", "right"), weights=NULL) {
+  # Argument checks
+  ensure_igraph(graph)
+  mode <- switch(igraph.match.arg(mode), "out"=1L, "in"=2L, "all"=3L, "total"=3L)
+  normalization <- switch(igraph.match.arg(normalization), "unnormalized"=0L, "symmetric"=1L, "left"=2L, "right"=3L)
+  if (is.null(weights) && "weight" %in% edge_attr_names(graph)) {
+    weights <- E(graph)$weight
+  }
+  if (!is.null(weights) && !all(is.na(weights))) {
+    weights <- as.numeric(weights)
+  } else {
+    weights <- NULL
+  }
+
+  on.exit( .Call(R_igraph_finalizer) )
+  # Function call
+  res <- .Call(R_igraph_get_laplacian_sparse, graph, mode, normalization, weights)
+
+  res
+}
+```
+
+Well, those definitions don't clear up much... They're _nearly_ identical, save for the different call at the end of the function. This suggests to me that perhaps the issue is present in _both_ functions, or elsewhere. Granting the `igraph` developers the benefit of the doubt, I'd assume their code is fine, and the error is in how I'm using it.
+
+
+
+
+
+
+
+
 
 ```{r unused_extra_functions}
 # unused
