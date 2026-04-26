@@ -1,0 +1,102 @@
+---
+title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 5 - Prof. Joe Reid"
+author: "Andrew Sparkes"
+date: "`r Sys.Date()`"
+due: "27-02-2026"
+output:
+  html_document:
+    self_contained: true
+    df_print: paged
+    code_folding: show
+  pdf_document: default
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(igraph) # Our standard graph object.
+library(readr) # Reading in the data
+library(gbRd)
+library(ggraph) # Plotting
+library(tidygraph) # Managing our graph object
+library(RColorBrewer) # Getting Colors
+library(scales) # scaling factors
+library(grid) # for unit()
+library(ggrepel) # for stronger label repel
+library(visNetwork) # for network graphs
+library(ggplot2) # for ploots
+library(igraphdata)
+```
+
+```{r user_configurable_settings}
+# user config
+football_gml_file_path <- "football/football.gml"
+football_txt_file_path <- "football/football.txt"
+
+```
+
+```{r helper_functions}
+print_igraph_attr <- function(graph) {
+  print("--- Graph Attributes ------")
+  print(graph_attr(graph))
+
+  print("--- Vertex Attributes ------")
+  print(vertex_attr(graph))
+
+  print("--- Edge Attributes ------")
+  print(edge_attr(graph))
+}
+```
+
+
+I've given you a gml file for this homework. This one happens to be
+college football teams.\
+Now, I really know little to nothing about college football, but I'm
+pretty sure there are "communities" of teams that should be able to be
+identified. There are also teams that everyone wants to play in order to
+increase their rankings (cores?) etc...
+
+Using a collection of the methods from class, find the subgroups within
+this network that might indicate clusters of teams. :)
+
+# 0.) Load the dataset.
+
+```{r}
+
+```
+
+
+# 1.) Plot things out.
+
+```{r}
+
+```
+
+
+# 2.) Use multiple methods and create matrices that represent how much
+agreement or disagreement the methods have.
+
+```{r}
+
+```
+
+
+# 3.) Find the cores.
+
+```{r}
+
+```
+
+
+# 4.) Find the cliques.
+
+```{r}
+
+```
+
+
+# 5.) Explain the results.
+
+```{r}
+
+```
