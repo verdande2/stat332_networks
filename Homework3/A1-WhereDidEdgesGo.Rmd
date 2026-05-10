@@ -1,0 +1,92 @@
+---
+title: 'A1 - Why no edges?!?! Where did they all go?!!'
+author: "Andrew Sparkes"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+  self_contained: true
+df_print: paged
+pdf_document: default
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(cache = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
+
+library(igraph) # TODO look into quietly = TRUE, warn.conflicts = FALSE, verbose = FALSE params in library()
+library(networkdata)
+library(ggplot2)
+library(tidygraph)
+library(ggraph)
+library(visNetwork)
+library(tibble)
+library(purrr)
+```
+
+
+```{r user_configurable_settings}
+gml_filename <- "Homework_3_filtered_data.gml"
+```
+
+Now, we have
+
+```{r setup_environment_like_it_was_to_reproduce}
+# reproduce the original g and nodes/edges from the original graph above, just in case we modified it inadvertently above
+g <- igraph::read_graph(gml_filename, format = "gml")
+data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+
+nodes <- data$nodes
+edges <- data$edges
+```
+
+```{r edge_check}
+glimpse(edges)
+```
+
+```{r nodes_check}
+glimpse(nodes)
+```
+
+Reading through `?visNetwork` and `?toVisNetworkData` learned me some new information: the parameters `nodes` and `edges` passed into `visNetwork()` require id (an int) in the `to` and `from` columns, and the edges that their dumb helper function `toVisNetworkData()` failed to do, despite throwing the flag to _not_ convert id to label... Let's confirm that suspicion, correct that and continue...
+
+```{r confirm_breaking_the_thing}
+d_with_flag <- visNetwork::toVisNetworkData(g, idToLabel = TRUE)
+d_without_flag <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+```
+
+```{r}
+glimpse(d_with_flag$nodes)
+glimpse(d_without_flag$nodes)
+```
+
+```{r}
+glimpse(d_with_flag$edges)
+glimpse(d_without_flag$edges)
+```
+
+Comparing the `data.frame`s of nodes and edges from with and without the `idToLabel` flag set. So the `idToLabel` flag parameter in `toVisNetworkData()` doesn't do what I thought it does. If it's `TRUE`, it will add another column to the nodes `data.frame` called `label` containing the id... It doesn't seem to _convert_ anything past that, ie. it doesn't rename the from/to attributes of the edges to match the id.
+
+So in conclusion, the `idToLabel` parameter in `toVisNetworkData()` (if `TRUE`) simply copies the `id` (dbl) to a column named `label` (also dbl) as shown below in a toy example:
+
+```{r make_toy_graph}
+# let's make a small simple graph with igraph
+g <- igraph::make_full_graph(5, loops = FALSE, directed = FALSE)
+
+node_attr_names <- c("Jim", "Joe", "Bob", "Bill", "Susan")
+V(g)$name <- node_attr_names
+
+g
+plot(g) # ugly default plot for sanity check
+```
+
+```{r id_to_label_test}
+#g <- igraph::from_data_frame(g = node_attr_names, from =, to=)
+
+visNetwork_g_true <- visNetwork::toVisNetworkData(g, idToLabel = TRUE)
+visNetwork_g_false <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+
+glimpse(visNetwork_g_true$nodes)
+glimpse(visNetwork_g_false$nodes)
+```
+
+Here we can see that setting that flag to `TRUE` simply copied the `id` col to a new col `label`, with identical datatype. That's ... minorly useful I guess?
