@@ -196,10 +196,11 @@ $$
 ```{r}
 # TODO line by line debug this WTFery
 conductance_of_set <- function(g, S, weights = E(g)$weight) {
+  # if weights=null is passed, start weights at vector of 1s
   if (is.null(weights)) weights <- rep(1, ecount(g))
 
-  S <- as.integer(S)
-  S_flag <- rep(FALSE, vcount(g))
+  S <- as.integer(S) # integerize the set
+  S_flag <- rep(FALSE, vcount(g)) # set flags to false for all vertices
   S_flag[S] <- TRUE
 
   ep <- ends(g, E(g), names = FALSE)
@@ -274,6 +275,7 @@ fiedler_sweep_cut <- function(g) {
   best_phi <- Inf
   best_S <- NULL
 
+  # seek out lowest conductance of set S on g
   for (t in 1:(length(ord) - 1)) {
     S <- ord[1:t]
     phi_S <- conductance_of_set(g, S)

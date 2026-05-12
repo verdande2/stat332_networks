@@ -11,7 +11,7 @@ output:
   pdf_document: default
 ---
 
-```{r setup}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(igraph) # Our standard graph object.
@@ -133,8 +133,7 @@ Well now, that is a fair number of edges! We'll certainly have to subset this gr
 
 > + attr: name (g/c), name (v/c), City (v/c), Position (v/c), Carrier (e/c), Departures (e/n), Seats (e/n), Passengers (e/n), Aircraft (e/n), Distance (e/n)
 
-From this very information-dense line, we learn that the graph `g`:
-- has the following attributes:
+From this very information-dense line, we learn that the graph `g` has the following attributes:
   - graph has attribute `name`, a `chr` type
   - vertices have attribute `name`, a `chr` type
   - vertices have attribute `City`, a `chr` type
@@ -151,7 +150,7 @@ From this very information-dense line, we learn that the graph `g`:
 
 ```{r}
 summary(unique(edge_attr(g)$Carrier))
-unique(edge_attr(g)$Carrier)[1:10]
+unique(edge_attr(g)$Carrier)
 ```
 
 ```{r}

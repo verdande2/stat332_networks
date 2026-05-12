@@ -293,7 +293,7 @@ command_team_edges <- E(g_actors)[.inc(V(g_actors)[Role == "Command Team"])]
 command_team_edges
 ```
 
-```{r setup_the_ploot}
+```{r setup_the_ploot, eval=FALSE}
 
 # Shape mapping (3 shapes)
 node_types <- sort(unique(V(g)$type.label))
@@ -307,7 +307,7 @@ p <- ggraph(g_actors, layout = "lgl") +
   # custom colors
   geom_node_point(
     aes(
-      size = audience.size,
+      size = 5,#audience.size,
       fill = type.label,
       shape = type.label,
       color = "blue"
@@ -384,7 +384,7 @@ p + theme(
 
 As opposed to the `ggplot2` framework where most of the plot information is taken care of within the plot code, in `visNetwork`, the work is generally done by taking care of most of the information outside of the plotting code. This is done by creating data frames for the nodes and edges separately and then adding attributes with special names to them. For example, a node or edge attribute of "title" will be the information for the tooltip which pops up on hover-over by the mouse. The "group" is specifically used for the legend.
 
-```{r}
+```{r, eval=FALSE}
 # Build nodes
 nodes <- igraph::as_data_frame(g, what = "vertices") |>
   tibble::rownames_to_column("id") |> # this is an important function call, looking ahead to visNetwork's obsession with int ids
@@ -431,7 +431,7 @@ edges$title <- paste("Reference Type: ", edges$type)
 
 There are disadvantages to storing data this way (for example, what if the title attribute was naturally in the dataset to represent a political title?). But, once the data is in, it becomes very easy to produce a really good plot automatically.
 
-```{r}
+```{r, eval=FALSE}
 vis <- visNetwork(nodes, edges,
   main = "Media Networks Link to and Reference Each Other",
   submain = "A network plot of networks.",
@@ -462,7 +462,7 @@ Reproduce the same graph as above (or close to it, showing the same information)
 ```{r adjust_the_graph_and_replot}
 # we already kinda made this graph in visNetwork, so we just need to make the tooltips happen.
 
-vis
+# vis
 
 # TODO tooltip w/ individual's name and role
 

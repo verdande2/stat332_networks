@@ -293,12 +293,52 @@ p
 
 # 3.) Graph with `visNetwork`
 
-```{r prepare_visnetwork_graph_data, eval=FALSE}
+```{r prepare_the_graph_data_part_deux}
+  # command_team_edges <- E(g_actors)[.inc(V(g_actors)[Role == "Command Team"])]
+
+# load up the needed data, wta[[40]]
+g <- wta[[40]] |> # load dataset from correct year, 2007
+
+  # tidygraph::as_tbl_graph() |> # convert to tidygraph to filter below
+  # activate("nodes") |> # activate nodes to filter them
+  # filter(country %in% c("USA", "GBR", "AUS")) |> # only USA/GBR/AUS data
+  filter(!node_is_isolated()) # no isolates!
+g
+```
+
+```{r prepare_for_visnetwork}
 data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
 
-# we currently have an igraph object with all our data in it. Let's convert it to data.frames for visNetwork consumption
-nodes <- data$nodes
-edges <- data$edges
+# visnetwork wants every node to have an id (integer) and every edge set to be a pairing of those ids (integers), so we need to adjust a bit here
+
+# data$nodes[data$edges$from]
+
+
+
+g_nodes <- g |>
+  tidygraph::as_tbl_graph() |>
+  activate("nodes") |>
+  mutate(id = name,
+         name = as.numeric(factor(data$nodes$id))
+  )
+
+g_edges <- g |>
+  tidygraph::as_tbl_graph() |>
+  activate("nodes") |>
+  mutate(from = as.numeric(factor(from))
+  )
+
+data$nodes$name <- rownames(data$nodes) # preserve original names
+# data$nodes$id <- 
+rownames(data$nodes) <- c() # blank out original rownames
+
+
+# now, adjust edge data
+# from, to get the same treatment
+# data$edges$from <- id_map[data$edges$from]
+# data$edges$to   <- id_map[data$edges$to]
+
+data
 ```
 
 ```{r plot_visnetwork_graph, eval=FALSE}
