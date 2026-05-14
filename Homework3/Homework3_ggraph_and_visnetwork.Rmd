@@ -31,7 +31,6 @@ gml_filename <- "Homework_3_filtered_data.gml"
 DUMP_FONT_INFO_TO_FILE <- TRUE # true to dump font import log to file
 FONT_INFO_LOG <- "extrafonts.log"
 
-SKIP_AHEAD <- FALSE # skips ahead and truncates off the demo code/markdown (uses a TeX comment to omit output) # TODO disable this, not needed
 ```
 
 
@@ -44,14 +43,12 @@ library(extrafont)
 library(extrafontdb)
 
 
-
 if (DUMP_FONT_INFO_TO_FILE){
   font_log_filepath = FONT_INFO_LOG
 } else {
   font_log_filepath = NULL
 }
-# loadfonts(device="win")
-# eh, who knows, maybe we'll need it at some point
+
 capture.output({
   extrafont::font_import(prompt = FALSE)
   extrafont::loadfonts(device = "win", quiet = FALSE)
@@ -86,8 +83,6 @@ This homework is focused on plotting with `ggraph` and `visNetwork` but will als
 ## Instructions:
 
 Please complete this homework assignment by the due data posted on canvas. Please submit your work in an html file with solutions and code presented completely.
-
-`r if(SKIP_AHEAD) {"Commenting out middle chunks to skip to the relevant bits!\\n\\n... snip ...\\n\\begin{comment}"}`
 
 First, make sure to install the `networkdata` package. This package isn't located in CRAN so it takes a little bit of work using remotes library to get. If you don't have remotes, install that first. Then, install network data using these instructions: <https://www.rdocumentation.org/packages/networkdata/versions/0.1.6>
 
@@ -172,19 +167,18 @@ Your job is to produce the code/graph which reproduces or improves on this graph
 # 2.) Graph with `ggraph`
 
 First off, let's take a look at this graph and note the important features:
-```
+
  - There are **4** legends at each of the 4 corners:
-  - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
-  - vertex size based on `age` (legend only showing min, max) in bottom left
-  - vertex shape based on `hand` (legend showing U, R, L) in top right
-  - edge color based on `surface` (legend showing Hard, Grass, Clay, Carpet)
+   - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
+   - vertex size based on `age` (legend only showing min, max) in bottom left
+   - vertex shape based on `hand` (legend showing U, R, L) in top right
+   - edge color based on `surface` (legend showing Hard, Grass, Clay, Carpet)
  - We can see one isolated component to the right, with **4** nodes, and a main more-connected component to the center
  - edge thickness does seem to vary, but it does not have a legend associated with it (assuming based on strength/degree?)
  - title top center: "Tennis Losses from 2007", color black, bolded
  - subtitle top center (below title): "Data represents players from USA, GBR, and AUS", color black, normal font size
  - caption bottom center: "Data from `networkdata` R package", wta dataset, color gray, small
  - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
-```
 
 Now, using each of those bullet points to make a code chunk beginning:
 
@@ -297,18 +291,18 @@ p
   # command_team_edges <- E(g_actors)[.inc(V(g_actors)[Role == "Command Team"])]
 
 # load up the needed data, wta[[40]]
-g <- wta[[40]] |> # load dataset from correct year, 2007
+g <- wta[[40]] # |> # load dataset from correct year, 2007
 
   # tidygraph::as_tbl_graph() |> # convert to tidygraph to filter below
   # activate("nodes") |> # activate nodes to filter them
   # filter(country %in% c("USA", "GBR", "AUS")) |> # only USA/GBR/AUS data
-  filter(!node_is_isolated()) # no isolates!
+  # filter(!node_is_isolated()) # no isolates!
 g
 ```
 
 ```{r prepare_for_visnetwork}
 data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
-
+# TODO Fix this part!
 # visnetwork wants every node to have an id (integer) and every edge set to be a pairing of those ids (integers), so we need to adjust a bit here
 
 # data$nodes[data$edges$from]
@@ -341,26 +335,26 @@ rownames(data$nodes) <- c() # blank out original rownames
 data
 ```
 
-```{r plot_visnetwork_graph, eval=FALSE}
-visNetwork(nodes, edges, height = "800px", width = "100%") |>
-  visNodes(color = list(background = "lightblue",
-                        border = "darkblue",
-                        highlight = "yellow"),
-           shadow = list(enabled = TRUE, size = 10)
-           ) |>
-  visEdges(shadow = TRUE,
-           arrows = list(
-             to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
-             ),
-           color = list(
-             color = "lightblue", # make 'em pretty
-             highlight = "red")
-           ) |>
-  visLayout(randomSeed = 12) # TODO remove me before submit!
+```{r plot_visnetwork_graph}
+# visNetwork(nodes, edges, height = "800px", width = "100%") |>
+#   visNodes(color = list(background = "lightblue",
+#                         border = "darkblue",
+#                         highlight = "yellow"),
+#            shadow = list(enabled = TRUE, size = 10)
+#            ) |>
+#   visEdges(shadow = TRUE,
+#            arrows = list(
+#              to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
+#              ),
+#            color = list(
+#              color = "lightblue", # make 'em pretty
+#              highlight = "red")
+#            ) |>
+#   visLayout(randomSeed = 12) # TODO remove me before submit!
 ```
 
-```{r try_the_visigraph_plot, eval=FALSE}
-visNetwork::visIgraph(g, idToLabel = FALSE, physics = TRUE)
+```{r try_the_visigraph_plot}
+# visNetwork::visIgraph(g, idToLabel = FALSE, physics = TRUE)
 
 ```
 
@@ -368,51 +362,51 @@ Well, while `physics = TRUE` is rather amusing to toy with, I'm still not gettin
 
 I'll have to replace the strings with their `id` programmatically, so let's write some helper functions (for the details of their construction, see appendices) that will likely make things go easier:
 
-```{r final_helper_functions, eval=FALSE}
+```{r final_helper_functions}
 # TODO copy/paste funcs here
-
-igraph_node_name_to_id <- function(g, name) {
-  which(V(g)$name == name)
-}
-
-igraph_convert_names_to_ids <- function(g) {
-  g
-}
+# 
+# igraph_node_name_to_id <- function(g, name) {
+#   which(V(g)$name == name)
+# }
+# 
+# igraph_convert_names_to_ids <- function(g) {
+#   g
+# }
 
 
 ```
 
 
-```{r fix_the_bad_juju, eval=FALSE}
-g <- igraph_convert_names_to_ids(g) # TODO fix this function
+```{r fix_the_bad_juju}
+# g <- igraph_convert_names_to_ids(g) # TODO fix this function
 
 
 # remember, we need to convert our igraph/ggraph into a node and edge list for use with visNetwork
-graph <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
-
-nodes <- graph$nodes
-edges <- graph$edges
+# graph <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+# 
+# nodes <- graph$nodes
+# edges <- graph$edges
 ```
 
 Now that we've remapped the edges from string labels to id integers again, we should be able to construct the visNetwork object anew and re-plot, and we _should_ get our edges back!
 
-```{r plot_visnetwork_graph_take_two, eval=FALSE}
+```{r plot_visnetwork_graph_take_two}
 # let's try this again!
-visNetwork(nodes, edges, height = "800px", width = "100%") |>
-  visNodes(color = list(background = "lightblue",
-                        border = "darkblue",
-                        highlight = "yellow"),
-           shadow = list(enabled = TRUE, size = 10)
-           ) |>
-  visEdges(shadow = TRUE,
-           arrows = list(
-             to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
-             ),
-           color = list(
-             color = "lightblue", # make 'em pretty
-             highlight = "red")
-           ) |>
-  visLayout(randomSeed = 12) # TODO remove me before submit!
+# visNetwork(nodes, edges, height = "800px", width = "100%") |>
+#   visNodes(color = list(background = "lightblue",
+#                         border = "darkblue",
+#                         highlight = "yellow"),
+#            shadow = list(enabled = TRUE, size = 10)
+#            ) |>
+#   visEdges(shadow = TRUE,
+#            arrows = list(
+#              to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
+#              ),
+#            color = list(
+#              color = "lightblue", # make 'em pretty
+#              highlight = "red")
+#            ) |>
+#   visLayout(randomSeed = 12) # TODO remove me before submit!
 ```
 
 
