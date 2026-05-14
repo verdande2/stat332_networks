@@ -50,14 +50,11 @@ print_igraph_attr <- function(graph) {
 
 
 I've given you a gml file for this homework. This one happens to be
-college football teams.\
-Now, I really know little to nothing about college football, but I'm
-pretty sure there are "communities" of teams that should be able to be
-identified. There are also teams that everyone wants to play in order to
-increase their rankings (cores?) etc...
+college football teams.
 
-Using a collection of the methods from class, find the subgroups within
-this network that might indicate clusters of teams. :)
+Now, I really know little to nothing about college football, but I'm pretty sure there are "communities" of teams that should be able to be identified. There are also teams that everyone wants to play in order to increase their rankings (cores?) etc...
+
+Using a collection of the methods from class, find the subgroups within this network that might indicate clusters of teams. :)
 
 # 0.) Load the dataset.
 
@@ -73,8 +70,7 @@ this network that might indicate clusters of teams. :)
 ```
 
 
-# 2.) Use multiple methods and create matrices that represent how much
-agreement or disagreement the methods have.
+# 2.) Use multiple methods and create matrices that represent how much agreement or disagreement the methods have.
 
 ```{r}
 
