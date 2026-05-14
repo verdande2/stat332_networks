@@ -648,7 +648,7 @@ summary(g)
 The dolphins dataset is stored as a .rds object (igraph in r) same as
 this dataset was. This is a network from observations of dolphins and is
 a pretty fun one to consider for this task. It is unweighted,
-undirected, and pretty straight forward for this excersize.
+undirected, and pretty straight forward for this exercise.
 
 Please walk back through this lab and see what it shows you about node
 and edge level measures for this community (or communities) of dolphins.
@@ -656,6 +656,10 @@ Identify important dolphins using the measures we have defined. Is it
 always the same dolphin? What does this say about their roles within the
 pod? How many communities are there and how do members play brokerage
 roles in these communities?
+
+```{r}
+# TODO copy/paste the above code, adapt to dolphins, dataset, win.
+```
 
 ## 5.) Results
 
