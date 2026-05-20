@@ -893,6 +893,9 @@ cat(paste0(
 ))
 ```
 
+```{r}
+autograph(g)
+```
 
 
 ```{r unused_extra_functions}
