@@ -194,7 +194,7 @@ $$
 
 
 ```{r}
-# TODO line by line debug this WTFery
+# TODO line by line debug this
 conductance_of_set <- function(g, S, weights = E(g)$weight) {
   if (is.null(weights)) weights <- rep(1, ecount(g))
 
@@ -683,7 +683,7 @@ Distance-based weights (opposite case): weights encode cost → larger = farther
 Distance metric: For strength-based weights → 
 $$ \text{distance} = \frac{1}{\text{weight}} $$
 
-```{r message=FALSE}
+```{r prep_table_headers, message=FALSE}
 
 library(tibble)
 
@@ -730,7 +730,7 @@ global_measures_table <- tribble(
 )
 ```
 
-```{r message = FALSE}
+```{r output_measures_table, message = FALSE}
 
 library(gt)
 library(dplyr)
@@ -850,59 +850,222 @@ graph_properties |>
 
 ```
 
+Looking at the largest component (ie, the graph itself, because it's connected) to verify:
+
 ```{r largest_component}
 # probably unneeded
-largest_compoent_of_g <- largest_component(g)
+largest_component_of_g <- largest_component(g)
+largest_component_of_g
 
 ```
 
-```{r precompute_strengths}
-# precompute and store all strengths as vertex attributes
-strengths <- strength(g, mode = "all", weights = E(g)$weight)
-# and might as well set them as a vertex attr
-V(g)$strength <- strengths
+```{r precompute_degrees_and_strengths}
+# precompute and store all weights/strengths as vertex attributes
+deg_all <- igraph::degree(g, mode = "all")
+deg_in  <- igraph::degree(g, mode = "in")
+deg_out <- igraph::degree(g, mode = "out")
+
+str_all <- igraph::strength(g, mode = "all", weights = E(g)$weight)
+str_in  <- igraph::strength(g, mode = "in",  weights = E(g)$weight)
+str_out <- igraph::strength(g, mode = "out", weights = E(g)$weight)
+
+# set them as a vertex attr
+V(g)$deg_all <- deg_all
+V(g)$deg_in  <- deg_in
+V(g)$deg_out <- deg_out
+
+V(g)$str_all <- str_all
+V(g)$str_in  <- str_in
+V(g)$str_out <- str_out
 
 ```
 
-```{r setup_for_laplacian_matrix}
-# set up the laplacian matrix and calculate eigenvalues to pluck the Fiedler's number below
-Laplacian <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
-eigenvalues <- eigen(Laplacian, symmetric = TRUE, only.values = TRUE)$values
-lambda_2 <- eigenvalues[length(eigenvalues) - 1]
-#cat("The conductance is bounded by", lambda_2 / 2, "and", sqrt(2 * lambda_2), ".")
+Now that we have things somewhat prepared, let's start by analyzing some basics...
+
+```{r find_bridges}
+bridges(g)
+cat("There are", length(bridges(g)), "bridges in this graph")
 ```
 
-The above code chunk yields:
-> Error in get_laplacian_sparse_impl(graph, "out", normalization, weights) :
-> At vendor/cigraph/src/properties/spectral.c:324 : Found non-isolated vertex with zero out-strength, cannot perform symmetric normalization of Laplacian with 'out' mode. Invalid value
-> 2. get_laplacian_sparse_impl(graph, "out", normalization, weights)
-> 1. laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
-
-Interesting error result. Let's explore what it's telling us... First, let's doublecheck if the graph `g` has any non-isolated vertices with an out-degree of zero:
-
-```{r check_for_isolates}
-isolate_indices <- which(igraph::degree(g, mode = "out") == 0) # get vertex indices of any zero out
-isolates <- V(g)[isolate_indices] # pluck the vertices by index
-print(isolates)
-
-cat(paste0(
-  "Confirming by summing the count of all vertices with a out-degree of zero, we see ",
-  sum(igraph::degree(g, mode="out") == 0),
-  " isolated vertices in the graph.\n"
-))
+```{r find_articulation_points}
+articulation_points(g)
+cat("There are", length(articulation_points(g)), "articulation points in this graph")
 ```
 
-Well now, that's not good...
+```{r find_diameter}
+get_diameter(g, weights = NA) # overriding weights because we just want max diameter w/o weight influence
+```
+
+```{r find_farthest_vertices}
+farthest_vertices(g, weights = NA) # overriding weights because we just want max diameter w/o weight influence
+```
+
+# TODO laplacian section here!
+
+
+That gives us our Cheeger Bounds for the Fiedler's value for the datset, now let's compare to the spectral sweep and the PageRank sweep above:
 
 ```{r unused_extra_functions}
 # unused
 res <- fiedler_sweep_cut(g)
-#cat("Best φ from spectral sweep:", res$phi, "\n")
+cat("Best φ from spectral sweep:", res$phi, "\n")
 
 # unused
 conductance_2 <- page_rank_sweep_cut(g)
-#cat("Best φ from PageRank sweep:", conductance_2$phi, "\n")
+cat("Best φ from PageRank sweep:", conductance_2$phi, "\n")
 ```
+
+## Adhesion
+
+Now, we consider adhesion:
+
+```{r find_adhesion}
+adhesion(g)
+```
+
+```{r}
+vertex_connectivity(g)
+```
+
+Now, let's calculate the fiedler's value for the graph:
+
+```{r find_fiedlers_value}
+
+# had to make the graph undirected to calculate the laplacian below, else get:
+# > Error in get_laplacian_sparse_impl(graph, "out", normalization, weights) :
+# > At vendor/cigraph/src/properties/spectral.c:324 : Found non-isolated vertex with zero out-strength, cannot perform symmetric normalization of Laplacian with 'out' mode. Invalid value
+g_undirected <- igraph::as_undirected(g)
+
+L <- laplacian_matrix(g_undirected, weights = E(g)$weight, normalization = "symmetric")
+ev <- eigen(L, symmetric = TRUE, only.values = TRUE)$values
+lambda_2 <- ev[length(ev) - 1]
+lambda_2
+```
+
+## Interconnectedness
+
+### Edge Density
+
+```{r}
+edge_density(g)
+```
+
+### Network Cohesion
+
+```{r}
+cat(paste0(
+  "The graph theory cohesion is: ",
+  cohesion(g),
+  ", but the social network (reachability cohesion) cohesion is: ",
+  reachability_cohesion(g)
+))
+```
+
+### Transitivity
+
+```{r}
+transitivity(g, type = "globalundirected", isolates = "NaN")
+```
+
+```{r}
+global_weighted_transitivity(g, mode = "undirected")
+```
+
+### Assortativity
+
+```{r}
+assortativity_degree(g)
+```
+
+This dataset has numeric values for edge weights indicating the amount of communication between members of the CAVIAR group, so that qualifies it as a multigraph, so further assortativity measures aren't worth considering.
+
+## Centralization
+
+### Degree Centralization
+
+Looking at the basic degree centralization measure:
+
+```{r}
+centr_degree(g, mode = "all")
+```
+
+which is largely useless, but looking at it as a baseline. Now we consider the proper generalized degree centralization measures for all, in and out:
+
+```{r}
+centralize(str_all, theoretical.max = sum(str_all) * (length(str_all) - 1), normalized = TRUE)
+centralize(str_in, theoretical.max = sum(str_in) * (length(str_in) - 1), normalized = TRUE)
+centralize(str_out, theoretical.max = sum(str_out) * (length(str_out) - 1), normalized = TRUE)
+```
+We can see from these values that this network is more predominantly full of nodes with higher out-strength.
+
+### Closeness Centralization
+
+```{r}
+centr_clo(g, mode = "all")
+```
+
+and the more proper, reciprocal weighted version:
+
+```{r}
+centr_clo_weighted(g)
+```
+
+### Betweeness Centralization
+
+```{r}
+centr_betw(g)
+```
+
+### Eigenvalue Centralization
+
+```{r}
+centr_eigen(g)
+```
+
+and again, after adjusting for reciprocal weights:
+
+```{r}
+centr_eigen_weighted(g)
+```
+
+## Efficiency
+
+### Global Efficiency
+
+We're determining efficiency through the network, so I'd consider either using the reciprocal of the weights as the distance (therefore, higher weight => easier communication channel), or setting weights to `NA` so that it simply measures degrees of people between the nodes.
+
+```{r}
+# edge weights represent number of communications, so I'd assume we should minimize shortest paths based on reciprocal of the weight
+cat("Using the reciprocal of the weight's value as the weight:\n")
+cat(paste0(
+  "The global efficiency is: ",
+  global_efficiency(g, weights = 1 / E(g)$weight),
+  ", the average local efficiency is: ",
+  average_local_efficiency(g, weights = 1 / E(g)$weight, mode = "all"),
+  " and the mean_distance is: ",
+  mean_distance(g, weights = 1 / E(g)$weight),
+  ".\n"
+))
+```
+
+
+```{r}
+# overriding the weights entirely
+cat("Using the overriden weights = `NA`:\n")
+cat(paste0(
+  "The global efficiency is: ",
+  global_efficiency(g, weights = NA),
+  ", the average local efficiency is: ",
+  average_local_efficiency(g, weights = NA, mode = "all"),
+  " and the mean_distance is: ",
+  mean_distance(g, weights = NA),
+  ".\n"
+))
+```
+
+
+
+
 
 
 ```{r setup_a_beautiful_color_palette}
@@ -918,7 +1081,7 @@ category_colors <- c(
 
 ```
   
-Now that we have our environment prepared, let's start aggregating all our measure data into tribbles to turn into tables later
+
 
 ```{r render_special_points_table}
 special_points <- tribble(
@@ -992,7 +1155,7 @@ structural_measures |>
 
 ```
 
-```{r render_interconnectedness_measures_table}
+```{r render_interconnectedness_measures_table, eval=FALSE}
 interconnectedness_measures <- tribble(
   # Headers---------------------------------------------------------------------
   ~Measure, ~Value,
@@ -1105,8 +1268,7 @@ efficiency_measures |>
 ```
 
 
-
-```{r render_the_grand_master_measure_table}
+```{r render_the_grand_master_measure_table, eval=FALSE}
 # TODO calculate a tribble full of the various measurement values, adding a column for interpretation
 global_measures_table <- tribble(
   ~Category, ~Measure, ~Value, ~Interpretation, # TODO finish master table!
@@ -1178,5 +1340,47 @@ Next, please provide a few paragraphs regarding these measures and what they imp
 
 What you need to do next is to "knit" your document into an html using the "Knit" button near the top of the screen. This will give you an HTML that you can turn in.
 
+
+
+Trying to get Fiedler's number for caviar dataset:
+
+```{r setup_for_laplacian_matrix}
+# set up the laplacian matrix and calculate eigenvalues to pluck the Fiedler's number below
+
+# TODO figure this out, either remove the vertices
+
+# Laplacian <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
+# 
+# eigenvalues <- eigen(Laplacian, symmetric = TRUE, only.values = TRUE)$values
+# 
+# lambda_2 <- eigenvalues[length(eigenvalues) - 1]
+
+#cat("The conductance is bounded by", lambda_2 / 2, "and", sqrt(2 * lambda_2), ".")
+```
+
+The above code chunk yields:
+> Error in get_laplacian_sparse_impl(graph, "out", normalization, weights) :
+> At vendor/cigraph/src/properties/spectral.c:324 : Found non-isolated vertex with zero out-strength, cannot perform symmetric normalization of Laplacian with 'out' mode. Invalid value
+> 2. get_laplacian_sparse_impl(graph, "out", normalization, weights)
+> 1. laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
+
+Interesting error result. Let's explore what it's telling us... First, let's doublecheck if the graph `g` has any non-isolated vertices with an out-degree of zero like it says:
+
+```{r check_for_isolates}
+isolate_indices <- which(igraph::degree(g, mode = "out") == 0) # get vertex indices of any zero out
+isolates <- V(g)[isolate_indices] # pluck the vertices by index
+print(isolates)
+```
+
+
+```{r sum_isolates}
+cat(paste0(
+  "Confirming by summing the count of all vertices with a out-degree of zero, we see ",
+  sum(igraph::degree(g, mode="out") == 0),
+  " isolated vertices in the graph.\n"
+))
+```
+
+Well now, that's not good... TODO resume fixing here
 
 

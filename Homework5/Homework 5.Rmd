@@ -27,15 +27,39 @@ increase their rankings (cores?) etc...
 Using a collection of the methods from class, find the subgroups within
 this network that might indicate clusters of teams. :)
 
+```{r load_dataset}
+# TODO load dataset
+```
+
+
 1.) Plot things out.
+```{r}
+# TODO plot football graph
+```
+
 
 2.) Use multiple methods and create matrices that represent how much
 agreement or disagreement the methods have.
+```{r}
+# TODO football matrices
+```
+
 
 3.) Find the cores.
+```{r}
+# TODO find football k-cores
+```
+
 
 4.) Find the cliques
+```{r}
+# TODO find football cliques
+```
+
 
 5.) Explain the results.
+
+**Answer:**
+laksdjflkasdjfkds
 
 ## References

@@ -23,7 +23,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r user_configurable_settings}
 ```
 
-
 ## Background
 
 You are given an **undirected, weighted network** representing
@@ -41,15 +40,22 @@ incorrect or poorly justified ones.
 
 For every task:
 
-1.   State which measure(s) you used
+1.  State which measure(s) you used
 
-2.   Briefly explain *why* that measure fits the goal
+2.  Briefly explain *why* that measure fits the goal
 
-3.   Identify the character(s) with the highest values
+3.  Identify the character(s) with the highest values
 
-4.   Include a small table or list of the top results
+4.  Include a small table or list of the top results
 
-##  Task 1: Central Characters 
+# Prepping the dataset
+```{r load_dataset}
+# TODO load the GoT dataset
+
+```
+
+
+## Task 1: Central Characters
 
 **Goal:**\
 Identify the character(s) who are most *central* to the overall network
@@ -63,12 +69,22 @@ network.
 
 **Deliverables:**
 
--   The measure(s) you selected
+- The measure(s) you selected
 
--    The top 3 characters by that measure
+- The top 3 characters by that measure
 
--    A brief justification of your choice and what it indicates about
-    these characters.
+- A brief justification of your choice and what it indicates about these
+  characters.
+
+**Answer**:
+For determining which nodes are structurally important _across_ the network, from our centralization metrics, I chose to calculate XYZ
+
+Determining the actual value for this dataset:
+```{r}
+# TODO calculate
+
+```
+
 
 ## Task 2: Powerful Intermediaries
 
@@ -83,11 +99,22 @@ mediation*, not popularity.
 
 **Deliverables:**
 
--    The measure(s) you used to capture this information
+- The measure(s) you used to capture this information
 
--    The top 3 characters and what kind of connection they provide
+- The top 3 characters and what kind of connection they provide
 
--    A short explanation of how your measure captures this information
+- A short explanation of how your measure captures this information
+
+**Answer**:
+For determining which nodes are acting as ties between groups/clusters, I will determine any bridge points and measure XYZ
+
+Determining the actual values for this dataset:
+```{r}
+# TODO calculate
+
+```
+
+The top three characters, ranked by their ability and effectiveness at linking clusters together:
 
 ## Task 3: Prominence
 
@@ -101,12 +128,27 @@ carefully about how prestige differs from simple centrality.
 
 **Deliverables:**
 
--   The prestige-related measure(s) you selected
+- The prestige-related measure(s) you selected
 
--   The top 3 characters by prestige
+- The top 3 characters by prestige
 
--    A brief justification of your choice and what it means for these
-    character roles.
+- A brief justification of your choice and what it means for these
+  character roles.
+
+**Answer**:
+For determining which nodes/characters are the most prestigious/how strong the adjacent edges are, I chose XYZ
+
+Determining the actual value for this dataset:
+```{r}
+# TODO calculate
+
+```
+
+The top three characters by prestige are:
+```{r top_three_prestigious_characters}
+
+```
+
 
 ## Task 4: Social Embeddedness
 
@@ -121,11 +163,27 @@ even if they are not globally central.
 
 **Deliverables:**
 
--    The measure(s) you used
+- The measure(s) you used
 
--   The top 3 characters by this criterion
+- The top 3 characters by this criterion
 
--    A brief explanation of what “embeddedness” means in network terms\
+- A brief explanation of what “embeddedness” means in network terms
+
+**Answer**:
+For determining which nodes/characters are the most asdfsdf, I chose XYZ
+
+Determining the actual value for this dataset:
+```{r}
+# TODO calculate
+
+```
+
+The top three characters by prestige are:
+```{r top_three_prestigious_characters}
+
+```
+
+"Embededness" means alskdfjlasdkf
 
 ## Task 5: Strength of Influence
 
@@ -140,11 +198,27 @@ this differs from unweighted analyses.
 
 **Deliverables:**
 
--   The measure(s) you used
+- The measure(s) you used
 
--   The top 3 characters by strength-based influence and what it means
-    for these characters.
+- The top 3 characters by strength-based influence and what it means for
+  these characters.
 
--   A brief explanation of why weights matter for this task
+- A brief explanation of why weights matter for this task
+
+**Answer**:
+For determining which nodes/characters have the strongest relationships overall, I chose XYZ
+
+Determining the actual value for this dataset:
+```{r}
+# TODO calculate
+
+```
+
+The top relationships, by weight/strength, are:
+```{r top_relationships}
+
+```
+
+Weights matter in this scenario because alksdjflaksdjflasdjflksd
 
 ## References

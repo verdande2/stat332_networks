@@ -55,12 +55,28 @@ g <- igraph::graph_from_data_frame(d = links, vertices = nodes, directed = FALSE
 0.) Your first step, before doing any other work, will be to create a subgraph that is limited to only those nodes where the `page_type` is "tvshow". Then overwrite this network with an induced subgraph where the isolates are removed (you should have **3,282** nodes)
 
 ```{r create_subgraph}
-sg  <- g |>
-  activate("nodes") |>
-  filter(page_type == "tvshow") |>
-  filter(!node_is_isolated())
+# sg  <- g |>
+#   activate("nodes") |>
+#   filter(page_type == "tvshow") |>
+#   filter(!node_is_isolated())
 
-print_igraph_attr(sg) # to verify node count
+# V(g)$deg <- degree(g)
+# sg <- g %>%
+#   induced_subgraph(V(g)$page_type == "tvshow") %>%
+#   induced_subgraph(V(g)$deg != 0)
+
+library(tidygraph)
+sg <- g %>% 
+  as_tbl_graph() %>%
+  activate("nodes") %>%
+  filter(page_type == "tvshow") %>%
+  filter(deg > 0)
+
+
+cat(paste0(
+  "Number of nodes: ",
+  length(V(sg))
+))
 ```
 
 I wouldn't recommend trying to plot the network right away. Start by looking at the size of the data use in the environment tab. Please write the code to produce an answer to the following questions and then interpret the results when asked.
