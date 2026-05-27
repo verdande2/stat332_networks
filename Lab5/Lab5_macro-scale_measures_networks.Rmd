@@ -349,8 +349,7 @@ set.seed(1) # static seed for repeatability FOR NOW
 L <- layout_with_fr(g) # Fruchterman-Reingold layout
 
 ks <- sort(unique(V(g)$core)) # sorted vector of distinct k-core values
-ks <- ks[ks > 0]  # drop 0-core isolates (not necessary here, but if you want to use this code it might help)
-# the above line uses bool indexing and I get that, and I /think/ I understand a 0-core to basically be the same exact graph (all vertices would have 0 or more, right???), TODO am I missing something? Assuming Joe dropped for a good reason
+ks <- ks[ks > 0]  # drop 0-core isolates
 
 # okay, breaking this down, looks like we are mapping over our distinct k-core values (in order, per sort call above), expecting a list return type and performing an anonymous function that is long enough to where it probably should be a _named_ function. Let's poke at it and comment on what it's doing...
 plots <- lapply(ks, function(k){
@@ -492,26 +491,54 @@ print_igraph_attr(g)
 
 ```{r load_in_dataset}
 # project caviar engage
+summary(g)
+print_igraph_attr(g)
 
 ```
 
 Who are the core members?
 
 ```{r find_core_members}
-# TODO core members
+coreness(g)
 ```
 
 Are there membership cliques?
 
 ```{r membership_cliques}
-# TODO membership cliques
+cliques(g)
+```
+
+```{r}
+clique_num(g)
 ```
 
 What communities can you find using density methods and how could this be helpful at finding the key operations?
 
 ```{r communities}
-# TODO communities
+g_leiden <- cluster_leiden(g, weights=E(g)$weight)
+plot(g_leiden, g)
+membership(g_leiden)
+length(g_leiden)
+sizes(g_leiden)
+algorithm(g_leiden)
+
 ```
+
+
+```{r}
+g_louvain <- cluster_louvain(g, weights=E(g)$weight)
+plot(g_louvain, g)
+membership(g_louvain)
+length(g_louvain)
+sizes(g_louvain)
+algorithm(g_louvain)
+```
+
+```{r}
+g_cen <- cluster_edge_betweenness(g,
+                         weights = E(g)$distance_weight)
+```
+
 
 Next, please provide a few paragraphs regarding these measures and what they imply about the structure of this drug smuggling network.
 

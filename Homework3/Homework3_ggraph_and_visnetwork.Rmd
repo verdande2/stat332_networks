@@ -22,16 +22,47 @@ library(ggraph)
 library(visNetwork)
 library(tibble)
 library(purrr)
-library(ragg)
-library(extrafont)
-loadfonts(device = "win")
 ```
+
 
 ```{r user_configurable_settings}
 gml_filename <- "Homework_3_filtered_data.gml"
 
-SKIP_AHEAD <- TRUE # skips ahead and truncates off the demo code/markdown (uses a TeX comment to omit output)
+DUMP_FONT_INFO_TO_FILE <- TRUE # true to dump font import log to file
+FONT_INFO_LOG <- "extrafonts.log"
+
 ```
+
+
+```{r setup_fonts, include = FALSE}
+# FOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONTS
+
+library(ragg)
+knitr::opts_chunk$set(dev = "ragg_png")
+library(extrafont)
+library(extrafontdb)
+
+
+if (DUMP_FONT_INFO_TO_FILE){
+  font_log_filepath = FONT_INFO_LOG
+} else {
+  font_log_filepath = NULL
+}
+
+capture.output({
+  extrafont::font_import(prompt = FALSE)
+  extrafont::loadfonts(device = "win", quiet = FALSE)
+}, file = font_log_filepath, append = FALSE, type = c("output", "message"))
+
+
+available_font_list <- fonts() # a str vector of all available system fonts
+
+# fonttable() prints out a formatted table of all loaded fonts, locations to their ttf files, full name and other attributes
+
+print(paste0("Succesfully loaded ", length(fonts()), " fonts."))
+```
+
+
 
 
 ```{r extra_functions}
@@ -53,8 +84,6 @@ This homework is focused on plotting with `ggraph` and `visNetwork` but will als
 
 Please complete this homework assignment by the due data posted on canvas. Please submit your work in an html file with solutions and code presented completely.
 
-`r if(SKIP_AHEAD) {"Commenting out middle chunks to skip to the relevant bits!\\n\\n... snip ...\\n\\begin{comment}"}`
-
 First, make sure to install the `networkdata` package. This package isn't located in CRAN so it takes a little bit of work using remotes library to get. If you don't have remotes, install that first. Then, install network data using these instructions: <https://www.rdocumentation.org/packages/networkdata/versions/0.1.6>
 
 # 1.) Getting the Data
@@ -72,7 +101,7 @@ First, make sure to install the `networkdata` package. This package isn't locate
 ```
 
 ```{r help_wta_dataset}
-?wta
+# ?wta
 ```
 
 We are going to use the `wta` dataset for this. Specifically, we are going to use the data from **2007**. Extracting this data isn't difficult but it is a little weird. The `wta` dataset is a list of `igraph`s, so you would think all that's necessary to get the first item in the list is to use `wta[1]`. Try a summary of this:
@@ -114,46 +143,53 @@ g3 <- g2 |>
   filter(!node_is_isolated())
 ```
 
+Checking if we removed any unique/isolated countries with another length check:
+
+```{r}
+length(unique(V(g3)$country))
+```
+That checks out! Excellent.
+
 Saving your data at this point is a good idea. You can do this with `write_graph()` as follows.
 
 ```{r write_graph_to_gml_file}
 write_graph(g3, format = "gml", file = gml_filename)
 ```
 
-Now, it's time to do our work:
-
 `r if(SKIP_AHEAD) {"\\end{comment}"}`
-
----
-
-# 2.) Graph with `ggraph`
 
 ![](igraph plot.png)
 
 Your job is to produce the code/graph which reproduces or improves on this graph using the `ggraph` and `visNetwork` packages. Good luck!
 
-**Answer:**
+---
+
+# 2.) Graph with `ggraph`
 
 First off, let's take a look at this graph and note the important features:
-```
+
  - There are **4** legends at each of the 4 corners:
-  - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
-  - vertex size based on `age` (legend only showing min, max) in bottom left
-  - vertex shape based on `hand` (legend showing U, R, L) in top right
-  - edge color based on `surface` (legend showing Hard, Grass, Clay, Carpet)
+   - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
+   - vertex size based on `age` (legend only showing min, max) in bottom left
+   - vertex shape based on `hand` (legend showing U, R, L) in top right
+   - edge color based on `surface` (legend showing Hard, Grass, Clay, Carpet)
  - We can see one isolated component to the right, with **4** nodes, and a main more-connected component to the center
  - edge thickness does seem to vary, but it does not have a legend associated with it (assuming based on strength/degree?)
  - title top center: "Tennis Losses from 2007", color black, bolded
  - subtitle top center (below title): "Data represents players from USA, GBR, and AUS", color black, normal font size
  - caption bottom center: "Data from `networkdata` R package", wta dataset, color gray, small
  - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
-```
 
 Now, using each of those bullet points to make a code chunk beginning:
 
 ```{r prepare_the_graph_data}
-# first, read in the gml as a igraph obj
-g <- igraph::read_graph(gml_filename, format = "gml")
+# first, let's load up the needed data, wta[[40]]
+g <- wta[[40]] |> # load dataset from correct year, 2007
+  tidygraph::as_tbl_graph() |> # convert to tidygraph to filter below
+  activate("nodes") |> # activate nodes to filter them
+  filter(country %in% c("USA", "GBR", "AUS")) |> # only USA/GBR/AUS data
+  filter(!node_is_isolated()) # no isolates!
+g
 ```
 
 
@@ -161,20 +197,20 @@ g <- igraph::read_graph(gml_filename, format = "gml")
 # plot and layout settings
 
 # Shape mapping (3 shapes)
-node_types <- sort(unique(V(g)$hand)) # hand should be one of L, R, U
-shape_vals <- c(21, 22, 24)[seq_along(node_types)]
-shape_map <- setNames(shape_vals, node_types)
+handedness <- c("U", "R", "L") # should be one of L, R, U
+shape_codes <- c(16, 15, 22)
+shape_vals <- shape_codes[seq_along(handedness)]
+shape_map <- setNames(shape_vals, handedness)
 
-# TODO either suppress warnings from next call, or change layout to something else
-p <- ggraph::ggraph(g, layout = "lgl") +
+p <- ggraph::ggraph(g, layout = "fr") +
 
 # vertex settings
-# - vertex color based on `country`
-# - vertex size based on `age`
-# - vertex shape based on `hand`
-    geom_node_point(
+  # - vertex color based on `country`
+  # - vertex size based on `age`
+  # - vertex shape based on `hand`
+  geom_node_point(
     aes(
-      size = scales::rescale(age, to = c(5, 25)),
+      size = age,
       color = country,
       shape = hand
       ),
@@ -189,14 +225,14 @@ p <- ggraph::ggraph(g, layout = "lgl") +
   ) +
 
 # edge settings
-# - edge thickness does seem to vary, but it does not have a legend associated with it (assuming based on strength/degree?)
-# - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
-# - edge color based on `surface`
+  # - edge thickness does seem to vary, but it does not have a legend associated with it (assuming based on strength/degree?)
+  # - edge arrow style is ... kinda weird. The arrows are offset back down towards the source of the arrow. (maybe there is a arrow offset param to adjust?)
+  # - edge color based on `surface`
   geom_edge_arc(
     aes(
       color = surface,
       # linetype = type, # this line /also/ triggers the noted error below! Argh!
-      #width = weight
+      # width = weight
       ),
     alpha = 0.8,
     lineend = "round",
@@ -206,27 +242,32 @@ p <- ggraph::ggraph(g, layout = "lgl") +
   ) +
 
 # legends
-# - There are 4 legends at each of the 4 corners:
-#  - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
-#  - vertex size based on `age` (legend only showing min, max) in bottom left
-#  - vertex shape based on `hand` (legend showing U, R, L) in top right
-#  - edge color based on `surface` (legend showing Hard, Grass, Clay, Carpet)
-  scale_size_continuous(name = "Age", range = c(1, 8)) +
-  #scale_shape_manual(values = shape_map, guide = "none") +
-  #scale_edge_width(range = c(0.5, 1.5), guide = "none") +
-  # scale_edge_linetype(guide = "none") + # this line triggers the below error! see note at end of chunk! # TODO look into this
-guides() + # default guides
-  # guides(
-  #   size = guide_legend(nrow = 2, byrow = TRUE),
-  #   # fill = guide_legend(
-  #   #   nrow = 1, byrow = TRUE, title = "Vertex Color",
-  #   #   override.aes = list(fill = vertex_colors)
-  #   # ),
-  #   # edge_color = guide_legend(
-  #   #   ncol = 2, byrow = TRUE,
-  #   #   title = "Surface Type"
-  #   # )
-  # ) +
+  # - There are 4 legends at each of the 4 corners:
+  #  - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
+  #  - vertex size based on `age` (legend only showing min, max) in bottom left
+  #  - vertex shape based on `hand` (legend showing U, R, L) in top right
+  #  - edge color based on `surface` (legend showing Hard, Grass, Clay, Carpet)
+  
+  scale_size_continuous(name = "Age", limits = range(V(g)$age), breaks = range(V(g)$age)) +
+  # scale_shape_manual(values = shape_map, guide = "none") +
+  # scale_edge_width(range = c(0.5, 1.5), guide = "none") +
+  # scale_edge_linetype(guide = "none") + # this line triggers the linetype error!
+
+# guides
+  # guides() + 
+  guides(
+    country = guide_legend(),
+    hand = guide_legend(),
+    size = guide_legend(nrow = 2, byrow = TRUE),
+    fill = guide_legend(
+      nrow = 1, byrow = TRUE, title = "Vertex Color",
+      # override.aes = list(fill = color)
+    ),
+    edge_color = guide_legend(
+      ncol = 2, byrow = TRUE,
+      title = "Surface Type"
+    )
+  ) +
 
 # titles and text
 # - title top center: "Tennis Losses from 2007", color black, bolded
@@ -240,41 +281,80 @@ guides() + # default guides
   theme_graph()
 p
 
-# TODO fix god damn font issue, urgh
 ```
 
 ---
 
 # 3.) Graph with `visNetwork`
 
-```{r prepare_visnetwork_graph_data}
-data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+```{r prepare_the_graph_data_part_deux}
+  # command_team_edges <- E(g_actors)[.inc(V(g_actors)[Role == "Command Team"])]
 
-# we currently have an igraph object with all our data in it. Let's convert it to data.frames for visNetwork consumption
-nodes <- data$nodes
-edges <- data$edges
+# load up the needed data, wta[[40]]
+g <- wta[[40]] # |> # load dataset from correct year, 2007
+
+  # tidygraph::as_tbl_graph() |> # convert to tidygraph to filter below
+  # activate("nodes") |> # activate nodes to filter them
+  # filter(country %in% c("USA", "GBR", "AUS")) |> # only USA/GBR/AUS data
+  # filter(!node_is_isolated()) # no isolates!
+g
+```
+
+```{r prepare_for_visnetwork}
+data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+# TODO Fix this part!
+# visnetwork wants every node to have an id (integer) and every edge set to be a pairing of those ids (integers), so we need to adjust a bit here
+
+# data$nodes[data$edges$from]
+
+
+
+g_nodes <- g |>
+  tidygraph::as_tbl_graph() |>
+  activate("nodes") |>
+  mutate(id = name,
+         name = as.numeric(factor(data$nodes$id))
+  )
+
+g_edges <- g |>
+  tidygraph::as_tbl_graph() |>
+  activate("nodes") |>
+  mutate(from = as.numeric(factor(from))
+  )
+
+data$nodes$name <- rownames(data$nodes) # preserve original names
+# data$nodes$id <- 
+rownames(data$nodes) <- c() # blank out original rownames
+
+
+# now, adjust edge data
+# from, to get the same treatment
+# data$edges$from <- id_map[data$edges$from]
+# data$edges$to   <- id_map[data$edges$to]
+
+data
 ```
 
 ```{r plot_visnetwork_graph}
-visNetwork(nodes, edges, height = "800px", width = "100%") |>
-  visNodes(color = list(background = "lightblue",
-                        border = "darkblue",
-                        highlight = "yellow"),
-           shadow = list(enabled = TRUE, size = 10)
-           ) |>
-  visEdges(shadow = TRUE,
-           arrows = list(
-             to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
-             ),
-           color = list(
-             color = "lightblue", # make 'em pretty
-             highlight = "red")
-           ) |>
-  visLayout(randomSeed = 12) # TODO remove me before submit!
+# visNetwork(nodes, edges, height = "800px", width = "100%") |>
+#   visNodes(color = list(background = "lightblue",
+#                         border = "darkblue",
+#                         highlight = "yellow"),
+#            shadow = list(enabled = TRUE, size = 10)
+#            ) |>
+#   visEdges(shadow = TRUE,
+#            arrows = list(
+#              to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
+#              ),
+#            color = list(
+#              color = "lightblue", # make 'em pretty
+#              highlight = "red")
+#            ) |>
+#   visLayout(randomSeed = 12) # TODO remove me before submit!
 ```
 
 ```{r try_the_visigraph_plot}
-visNetwork::visIgraph(g, idToLabel = FALSE, physics = TRUE)
+# visNetwork::visIgraph(g, idToLabel = FALSE, physics = TRUE)
 
 ```
 
@@ -284,405 +364,50 @@ I'll have to replace the strings with their `id` programmatically, so let's writ
 
 ```{r final_helper_functions}
 # TODO copy/paste funcs here
-
-igraph_node_name_to_id <- function(g, name) {
-  which(V(g)$name == name)
-}
-
+# 
+# igraph_node_name_to_id <- function(g, name) {
+#   which(V(g)$name == name)
+# }
+# 
+# igraph_convert_names_to_ids <- function(g) {
+#   g
+# }
 
 
 ```
 
 
 ```{r fix_the_bad_juju}
-g <- igraph_convert_names_to_ids(g) # TODO fix this function
+# g <- igraph_convert_names_to_ids(g) # TODO fix this function
 
 
 # remember, we need to convert our igraph/ggraph into a node and edge list for use with visNetwork
-graph <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
-
-nodes <- graph$nodes
-edges <- graph$edges
+# graph <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
+# 
+# nodes <- graph$nodes
+# edges <- graph$edges
 ```
 
 Now that we've remapped the edges from string labels to id integers again, we should be able to construct the visNetwork object anew and re-plot, and we _should_ get our edges back!
 
 ```{r plot_visnetwork_graph_take_two}
 # let's try this again!
-visNetwork(nodes, edges, height = "800px", width = "100%") |>
-  visNodes(color = list(background = "lightblue",
-                        border = "darkblue",
-                        highlight = "yellow"),
-           shadow = list(enabled = TRUE, size = 10)
-           ) |>
-  visEdges(shadow = TRUE,
-           arrows = list(
-             to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
-             ),
-           color = list(
-             color = "lightblue", # make 'em pretty
-             highlight = "red")
-           ) |>
-  visLayout(randomSeed = 12) # TODO remove me before submit!
+# visNetwork(nodes, edges, height = "800px", width = "100%") |>
+#   visNodes(color = list(background = "lightblue",
+#                         border = "darkblue",
+#                         highlight = "yellow"),
+#            shadow = list(enabled = TRUE, size = 10)
+#            ) |>
+#   visEdges(shadow = TRUE,
+#            arrows = list(
+#              to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
+#              ),
+#            color = list(
+#              color = "lightblue", # make 'em pretty
+#              highlight = "red")
+#            ) |>
+#   visLayout(randomSeed = 12) # TODO remove me before submit!
 ```
 
-
-
-
-## Appendices
-
-### A1: Why no edges?!?! Where did they all go?!!
-
-Now, we have 
-```{r setup_environment_like_it_was_to_reproduce}
-# reproduce the original g and nodes/edges from the original graph above, just in case we modified it inadvertently above
-g <- igraph::read_graph(gml_filename, format = "gml")
-data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
-
-nodes <- data$nodes
-edges <- data$edges
-```
-
-```{r edge_check}
-glimpse(edges)
-```
-
-```{r nodes_check}
-glimpse(nodes)
-```
-
-Reading through `?visNetwork` and `?toVisNetworkData` learned me some new information: the parameters `nodes` and `edges` passed into `visNetwork()` require id (an int) in the `to` and `from` columns, and the edges that their dumb helper function `toVisNetworkData()` failed to do, despite throwing the flag to _not_ convert id to label... Let's confirm that suspicion, correct that and continue...
-
-```{r confirm_breaking_the_thing}
-d_with_flag <- visNetwork::toVisNetworkData(g, idToLabel = TRUE)
-d_without_flag <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
-
-glimpse(d_with_flag$nodes)
-glimpse(d_without_flag$nodes)
-glimpse(d_with_flag$edges)
-glimpse(d_with_flag$edges)
-```
-
-Comparing the `data.frame`s of nodes and edges from with and without the `idToLabel` flag set. So the `idToLabel` flag parameter in `toVisNetworkData()` doesn't do what I thought it does. If it's `TRUE`, it will add another column to the nodes `data.frame` called `label` containing the id... It doesn't seem to _convert_ anything past that, ie. it doesn't rename the from/to attributes of the edges to match the id.
-
-So in conclusion, the `idToLabel` parameter in `toVisNetworkData()` (if `TRUE`) simply copies the `id` (dbl) to a column named `label` (also dbl) as shown below in a toy example:
-
-```{r make_toy_graph}
-# let's make a small simple graph with igraph
-g <- igraph::make_full_graph(5, loops = FALSE, directed = FALSE)
-
-node_attr_names <- c("Jim", "Joe", "Bob", "Bill", "Susan")
-V(g)$name <- node_attr_names
-
-g
-plot(g) # ugly default plot for sanity check
-```
-
-```{r id_to_label_test}
-#g <- igraph::from_data_frame(g = node_attr_names, from =, to=)
-
-visNetwork_g_true <- visNetwork::toVisNetworkData(g, idToLabel = TRUE)
-visNetwork_g_false <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
-
-glimpse(visNetwork_g_true$nodes)
-glimpse(visNetwork_g_false$nodes)
-```
-
-Here we can see that setting that flag to `TRUE` simply copied the `id` col to a new col `label`, with identical datatype. That's ... minorly useful I guess?
-
----
-
-## A2 Adventures in function making to convert vertex names to index IDs
-
-This appendix focuses on tackling the problem of getting the nodes and edges from `igraph`/`ggraph` from strings (the tennis player names) to a numeric ID, so `visNetwork` can utilize the node and edge lists. I had thought this would be a straightforward task, but here I sit, hours after, but victorious. In the end, this adventure produced a single **3**-line function (that could even be one-liner'd if desired).
-
-```{r helper_funcs_first_thoughts}
-# # converts vertex `name` string to int `id` from graph `nodes`
-# name_to_id <- function(name, nodes = nodes) {
-#   id_df <- nodes |>
-#     rownames_to_column(var = "rowname") |>
-#     filter(rowname == name) |>
-#     select(id)
-#   id <- id_df[[1]] # extract id from df
-#   id # TODO some kind of error checking. If name is not found in nodes, this func shits the bed
-# }
-#
-#
-# get_node_id_from_name <- function(nodes, name) {
-#   print("get_node_id_from_name() call")
-#   print(nodes)
-#   print(name)
-#   id_df <- nodes |>
-#     filter(name == name) |>
-#     select(id)
-#   id_df[[1]]
-# }
-#
-# get_node_id_from_name_vec <- Vectorize(get_node_id_from_name)
-# 
-# get_node_name_from_id <- function(nodes, id) {
-#   print("get_node_name_from_id() call")
-#   print(nodes)
-#   print(id)
-#   name_df <- nodes |>
-#     filter(id == id) |>
-#     select(name)
-#   name_df[[1]]
-# }
-# 
-# get_node_name_from_id_vec <- Vectorize(get_node_name_from_id)
-#
-# # test:
-# get_node_id_from_name(nodes, "Lauren Albanese") # = 14
-# get_node_name_from_id(nodes, 14) # "Lauren Albanese"
-#
-# get_node_id_from_name(nodes, "Samantha Stosur") # = 23
-# get_node_name_from_id(nodes, 23) # "Samantha Stosur"
-#
-# get_node_id_from_name(nodes, "Alicia Molik") # = 3
-# get_node_name_from_id(nodes, 3) # "Alicia Molik"
-
-# these helper functions are fine and dandy, but because I wrote them to handle the nodes variable after converting the igraph obj to visNetwork, and in doing so, I lost much of the useful functionality of igraph. In the future, I'll keep the graph as an igraph and manipulate it then, and only then plot and do visNetwork and things... I also tried to Vectorize the functions, but that wasn't needed in the end, and produced some interesting output...
-
-# using the igraph obj g, let's rewrite our function a bit differently
-# Editor's Note: I wrote this same damn function TWICE?!?!?
-# get_node_id_from_name <- function(g, name) {
-#   which(V(g)$name == name)
-# }
-```
-
-```{r trying_to_map_or_apply_func_to_vertices_and_failing}
-# first, let's fix the from column:
-
-# I'm gonna learn the *apply() family, the purrr package and all the various map style functions god damnit.
-
-# it would make sense to start with vapply, as I'm wanting a numeric vector output (the id)
-# vapply(edges$from, name_to_id)
-# Error in vapply(edges$from, name_to_id) : argument "FUN.VALUE" is missing, with no default
-
-# vapply(edges$from, FUN = name_to_id)
-# Error in vapply(edges$from, FUN = name_to_id) :
-#   argument "FUN.VALUE" is missing, with no default
-
-# vapply(edges$from, FUN = name_to_id, FUN.VALUE = NULL)
-# Error in vapply(edges$from, FUN = name_to_id, FUN.VALUE = NULL) :
-#   'FUN.VALUE' must be a vector
-
-# vapply(edges$from, FUN = name_to_id, FUN.VALUE = c(0))
-# Error in rownames_to_column(nodes, var = "rowname") :
-# is.data.frame(df) is not TRUE
-
-# so it's complaining about the datatype of the data parameter I'm passing in.... Okay...
-# let's investigate its data type and class and obj structure
-#edges$from # dumps whole vector data
-#class(edges$from) # "character" vector
-#str(edges$from) # chr vector, 1:38
-
-# So we see that our edges object is a vector (length 38) of chrs of various lengths
-# class is character
-# str shows vector datatype, index range/length of vector and contents
-
-# maybe give sapply() a shot? using third parameter to pass nodes obj for get_node_id_from_name
-
-#test <- sapply(E(g)$_from, FUN = get_node_id_from_name, nodes = nodes) # TODO WTF kind of output is that!?!
-#str(test)
-
-
-# Editor's note: D'oh. I spent an hour testing different ways of converting name to id, and the final function I came up with in the end below is ... the exact same as this function I wrote an hour or two ago, when I was still trying to get apply/map/etc to work. Argh!
-# get_node_id_from_name <- function(name, g = g) {
-#   which(V(g)$name == name)
-# }
-#
-# sapply(E(g)$from, get_node_id_from_name, g = g) # returns list() because to and from attributes are not accessible like this with the $
-```
-
-I'm not the biggest fan of AI code generation, but perhaps I'll give it a shot and see if I can gleam anything useful. Let's throw a simple prompt at ChatGPT and see how terrible its output is...
-
-```{r can_chatgpt_help_me_understand}
-# apparently I'm struggling with igraph attributes more than I thought.
-
-# For educational purposes, I asked ChatGPT to come up with something. Let's see a few things: 1) is it correct and working in the first place? 2) is it written well enough? and most importantly 3) can I learn something from its method of solving the problem? Let's find out...
-
-# my prompt, verbatim:
-# I have an igraph that looks like this:
-# IGRAPH 81ca7e4 DNW- 29 38 -- WTA Season 2007 + attr: name (g/c), id (v/n), name (v/c), age (v/n), hand (v/c), country (v/c), surface (e/c), weight (e/n) + edges from 81ca7e4 (vertex names): [1] Julie Ditty ->Lindsay Davenport Vania King ->Meghann Shaughnessy Abigail Spears ->Ahsha Rolle [4] Abigail Spears ->Venus Williams Alexa Glatch ->Jill Craybas Alicia Molik ->Lilia Osterloh [7] Alicia Molik ->Melanie South Alicia Molik ->Serena Williams Alicia Molik ->Vania King [10] Alicia Molik ->Venus Williams Anastasia Rodionova->Alicia Molik Anastasia Rodionova->Serena Williams [13] Anastasia Rodionova->Venus Williams Anne Keothavong ->Ahsha Rolle Anne Keothavong ->Elena Baltacha [16] Ashley Harkleroad ->Meilen Tu Ashley Harkleroad ->Venus Williams Casey Dellacqua ->Nicole Pratt [19] Jamea Jackson ->Ashley Harkleroad Jamea Jackson ->Samantha Stosur Jill Craybas ->Lilia Osterloh [22] Jill Craybas ->Meilen Tu Jill Craybas ->Vania King Laura Granville ->Ashley Harkleroad + ... omitted several edges
-# Note how vertices have a id attribute. Now, the edges of the igraph (the to and from columns) are actually strings (the same name attributes of the vertices), but I need to convert the to and from columns to the vertex ids. Can you write a function in R that takes a igraph object, and a name string, and renames each edge's to and from to the corresponding id, instead of the name?
-
-# name_to_vertex_id <- function(g, name) {
-#   idx <- which(V(g)$name == name)
-#
-#   if (length(idx) == 0) {
-#     stop(paste("Vertex name not found:", name))
-#   }
-#
-#   V(g)$id[idx]
-# }
-#
-# convert_edge_names_to_ids <- function(g) {
-#   if (is.null(E(g)$from) || is.null(E(g)$to)) {
-#     stop("Edges must have 'from' and 'to' attributes containing vertex names")
-#   }
-#
-#   E(g)$from_id <- vapply(
-#     E(g)$from,
-#     function(x) name_to_vertex_id(g, x),
-#     numeric(1)
-#   )
-#
-#   E(g)$to_id <- vapply(
-#     E(g)$to,
-#     function(x) name_to_vertex_id(g, x),
-#     numeric(1)
-#   )
-#
-#   return(g)
-# }
-#
-# g <- convert_edge_names_to_ids(g) # surprise surprise, this line throws:
-# # Error in convert_edge_names_to_ids(g) :
-# #   Edges must have 'from' and 'to' attributes containing vertex names
-
-# all that relatively nicely formatted, proper /looking/ code, and it doesn't do jackshit. To be expected when AI slops tries to problem solve. It /looks/ right, but it's always a crap shoot if it actually functions...
-```
-
-Well, that detour provided very little benefit. First off, the ChatGPT code didn't actually function in the first place. It's cleanly formatted and clear to read, but that's rather a moot point if it doesn't actually get the job done... And as for learning anything from it? It does include some basic error checking (null checks, and not found check in the helper function), but nothing that I didn't already know unfortunately. Assuming its calling `vapply` correctly, I'm almost on the right track for the `*apply` family of functions.
-
-Now, let's shake off all that above crap, and try something from a slightly different approach:
-
-```{r different_approach}
-# a redo at the same function, takes in igraph g, string name, returns that vertex's internal id
-
-# node_name_to_id <- function(g, name) {
-#   result <- g.vs.find(name = name).index
-#
-#   result
-#   }
-#
-# # a quick test:
-# node_name_to_id(g, "Lindsay Davenport")
-# resulted in:
-# Error: unexpected symbol in:
-# "node_name_to_id <- function(g, name) {
-#   g.vs.find(name = name).index"
-
-# symbol... okay... I don't see any special symbols in there, save for possible the . accessor for index? Ah, I'm dumb. I see. After more digging in igraph documentation, I come to this modification, with the $:
-
-# node_name_to_id <- function(g, name) {
-#   result <- g.vs.find(name = name)
-#
-#   result$index
-# }
-# node_name_to_id(g, "Lindsay Davenport")
-# results in:
-# # Error in g.vs.find(name = name) : could not find function "g.vs.find"
-
-# it would appear that the .find() method of the VertexSequence obj exists in the Python igraph library, but not in the R package ... hmmm... apparently I wasn't careful enough when binging through igraph documentation
-
-# node_name_to_id <- function(g, name) {
-#   result <- V(g)$name == name # should return the vertex itself
-#
-#   result$index
-# }
-# node_name_to_id(g, "Lindsay Davenport")
-# outputs:
-# Error in result$index : $ operator is invalid for atomic vectors
-
-# fortunately, that gives me a lead as to where the issue is somewhat. I got many different datatypes flying around and being coerced and such
-
-# node_name_to_id <- function(g, name) {
-#   result <- V(g)[name == name] # should return the vertex itself? But it appears to barf out the full igraph.vs VertexSequence obj... WTF
-#
-#   result
-# }
-# test <- node_name_to_id(g, "Lindsay Davenport")
-# class(test)
-# str(test)
-# spits out:
-# [1] "igraph.vs"
-#  'igraph.vs' Named int [1:29] 1 2 3 4 5 6 7 8 9 10 ...
-#  - attr(*, "names")= chr [1:29] "Abigail Spears" "Ahsha Rolle" "Alexa Glatch" "Alicia Molik" ...
-#  - attr(*, "env")=<weakref>
-#  - attr(*, "graph")= chr "81ca7e4c-0627-11f1-bb26-e55ca1e4ce34"
-
-
-node_name_to_id <- function(g, name) {
-  result <- which(V(g)$name == name) # should return the vertex index itself?
-
-  result
-}
-test <- node_name_to_id(g, "Lindsay Davenport") # should be 17
-test # [1] 17
-class(test) # [1] "integer"
-str(test) #  int 17
-
-# well, now we're talking... That ended up simpler than I was anticipating... I feel a bit dumb, but also feel a bit more learned, so I'll take it.
-```
-
-
-```{r final_function_cleanup_part_one}
-# one more cleanup/formatting pass to make it pretty, functional and concise (just like that 3 line version of it, which is identical, a few hours ago up above, d'oh):
-igraph_node_name_to_id <- function(g, name) {
-  which(V(g)$name == name)
-}
-
-# one final test to ensure the function works as intended
-test <- node_name_to_id(g, "Samantha Stosur") # should be 24
-test # [1] 24
-class(test) # [1] "integer"
-str(test) #  int 24
-```
-
-That looks like it checks out to me! We have a working `node_name_to_id(g, name)`!
-
-Unfortunately, that's only part of the functionality we need. We also need to make a function `igraph_convert_names_to_ids(graph)` that will change the to/from edge attributes to integer IDs based on the index/ID of the vertices.
-
-```{r set_back_up_environment_for_testing}
-g <- igraph::read_graph(gml_filename, format = "gml")
-```
-
-```{r finish_that_last_crucial_function}
-igraph_convert_names_to_ids <- function(g) {
-  # node_name_to_id(g, "Samantha Stosur") => 24
-
-  v_attr <- vertex_attr(g)
-  lookup_table <- (v_attr$id) # id starts at zero, may need to start at 1? maybe?
-  names(lookup_table) <- v_attr$name
-
-  # now, lookup_table["name"] should return the id
-
-  # now, just need to do a map/apply over the vector of edge$from values, edge$to values, and then doublecheck they match the node ids
-
-  #set_edge_attr(graph = g, name = "from", value = lookup_table[E(g)$from]
-}
-
-# well, if I can't seem to figure out how to replace the strings with their integer ids, one method is to remove and readd the edges, but that doesn't seem great. Another idea is to export the node and edge information out, manipulate it, then make a new igraph object and pass it to visNetwork
-```
-
-
-```{r maybe_vector_func}
-node_name_to_id_vec <- Vectorize(node_name_to_id)
-
-# Example data frame with string "from" and "to" columns
-edge_list_ints <- data.frame(
-  from = node_name_to_id_vec(E(g)$from),
-  to = node_name_to_id_vec(E(g)$to)
-)
-
-g <- graph_from_data_frame(edge_list_ints, directed = TRUE)
-
-g
-igraph_convert_names_to_ids(g)
-```
-
-```{r convert_igraph_to_visnetwork}
-data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
-
-nodes <- data$nodes
-edges <- data$edges
-```
-
-
-```{r final_function_cleanup_part_2}
-```
 
 

@@ -11,7 +11,7 @@ output:
   pdf_document: default
 ---
 
-```{r setup}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(igraph) # Our standard graph object.
@@ -133,8 +133,7 @@ Well now, that is a fair number of edges! We'll certainly have to subset this gr
 
 > + attr: name (g/c), name (v/c), City (v/c), Position (v/c), Carrier (e/c), Departures (e/n), Seats (e/n), Passengers (e/n), Aircraft (e/n), Distance (e/n)
 
-From this very information-dense line, we learn that the graph `g`:
-- has the following attributes:
+From this very information-dense line, we learn that the graph `g` has the following attributes:
   - graph has attribute `name`, a `chr` type
   - vertices have attribute `name`, a `chr` type
   - vertices have attribute `City`, a `chr` type
@@ -146,37 +145,24 @@ From this very information-dense line, we learn that the graph `g`:
   - edges have attribute `Aircraft`, a `numeric` type
   - edges have attribute `Distance`, a `numeric` type
 
-
+Now, let's try looking at the unique values that we could perhaps use to filter our dataset down to something more reasonable... Let's see how many unique carriers are represented:
 
 
 ```{r}
-summary(unique(edge_attr(g)$Carrier))
-unique(edge_attr(g)$Carrier)[1:10]
+length(unique(edge_attr(g)$Carrier))
 ```
+$118$ carriers, eesh, okay. Maybe that's not even the best attribute to subset on. Let's look at the biggest airports instead, that may be a better starting point.
 
 ```{r}
-cat(gbRd::help_console("USairports"))
+length(unique(vertex_attr(g)$name))
 ```
 
+$755$ airport connections listed in this, eesh, well. Let's see if we can subset these reasonably. Maybe the top 25? 
 
-```{r help_on_dataset, results=asis}
-#gbRd::help_console("USairports")
-gbRd::Rd_help2txt("USairports", topic = None)
+```{r}
+deg <- strength(g, weights = V(g)$Departures) # calculate degrees for whole graph
 
-```
-
-```{r, results='asis'}
-# shit don't work....
-reprex::reprex({
-  ??USairports
-})
-
-```
-
-<sup>Created on 2026-02-16 with [reprex v2.1.1](https://reprex.tidyverse.org)</sup>
-
-```{r, results='markup'}
-cat(capture.output(help("USairports")), sep = "\n")
+head(sort(deg, decreasing = TRUE), n = 25) # pull top 25 sorted by connecting flights
 ```
 
 
@@ -186,10 +172,11 @@ First, let's get a rough idea of what we are working with. Our dataset is an imp
 
 Possible avenues of interest.
 Average occupancy percentage for flights from ALSDKJFALFDJS to LAKSDJFLAKSDJFSDLK, passengers/seat_count
+maybe subsetting to flights with capacity over xyz number and see the patterns of their routes
 
 Comparing average occupancy for flights that are longer distance vs shorter distance, or east/west cost, etc
 
-Most popular inbound location, outbound locations, min/max distance flight
+Most popular inbound location, outbound locations, min/max distance flight (deg/str stuff)
 
 
 
@@ -199,8 +186,8 @@ subset our graph into a few subgraphs and see if we can notice any interesting p
 
 
 ```{r}
-glimpse(edge_attr(USairports))
-glimpse(vertex_attr(USairports))
+# glimpse(edge_attr(USairports))
+# glimpse(vertex_attr(USairports))
 ```
 
 ```{r visnetwork}

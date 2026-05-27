@@ -196,10 +196,11 @@ $$
 ```{r}
 # TODO line by line debug this
 conductance_of_set <- function(g, S, weights = E(g)$weight) {
+  # if weights=null is passed, start weights at vector of 1s
   if (is.null(weights)) weights <- rep(1, ecount(g))
 
-  S <- as.integer(S)
-  S_flag <- rep(FALSE, vcount(g))
+  S <- as.integer(S) # integerize the set
+  S_flag <- rep(FALSE, vcount(g)) # set flags to false for all vertices
   S_flag[S] <- TRUE
 
   ep <- ends(g, E(g), names = FALSE)
@@ -251,7 +252,7 @@ Okay, so now that we have upper bounds, it turns out there is a special vector $
 Since we have this method to get a potential set to work with, we can implement these sweeps.
 
 ```{r}
-# TODO line by line this function and comment it out
+# TODO line by line this function and comment it all out
 fiedler_sweep_cut <- function(g) {
 
   # Make sure it's undirected and weighted sensibly
@@ -274,6 +275,7 @@ fiedler_sweep_cut <- function(g) {
   best_phi <- Inf
   best_S <- NULL
 
+  # seek out lowest conductance of set S on g
   for (t in 1:(length(ord) - 1)) {
     S <- ord[1:t]
     phi_S <- conductance_of_set(g, S)
@@ -825,9 +827,9 @@ graph_properties <- tribble(
   "Weighted", is_weighted(g),
   "Simple", is_simple(g),
   "Has Loops", any_loop(g),
-  "Is Multigraph", any_multiple(g), 
-  "Bipartite", is_bipartite(g), 
-  "Tree", is_tree(g), 
+  "Is Multigraph", any_multiple(g),
+  "Bipartite", is_bipartite(g),
+  "Tree", is_tree(g),
   "Forest", is_forest(g)
 )
 
@@ -845,12 +847,12 @@ graph_properties |>
   #   }
   # ) |> # TODO fix colors eventually
   fmt_number(columns = Value, rows = 1:2, decimals = 0, use_seps = TRUE) |> # special formatting for numeric values
-  fmt_tf(columns = Value, rows = 3:length(Value), true_val = "✓", false_val = "✗") |>  #  special formating for the bools
+  fmt_tf(columns = Value, rows = 3:length(Value), true_val = "✓", false_val = "✗", colors = c("#0072B2", "#E69F00")) |>  # special formating for the bools
   tab_options(table.font.size = 12)
 
 ```
 
-Looking at the largest component (ie, the graph itself, because it's connected) to verify:
+Well, it's all connected, weighed, and doesn't have any loops or multiply-connected edges, so that makes things simpler. 
 
 ```{r largest_component}
 # probably unneeded
@@ -1111,6 +1113,8 @@ special_points |>
 
 ```
 
+We have bridges and the graph is connected, so we'll expect it to flag as cohesive below.
+
 ```{r render_structural_measures_table}
 structural_measures <- tribble(
   # Headers---------------------------------------------------------------------
@@ -1176,7 +1180,7 @@ interconnectedness_measures <- tribble(
   # Assortativity
   "Naive Assortativity Degree", assortativity_degree(g),
   "Assortativity with Strengths", assortativity(g,
-                                                strengths = strength(g, mode = "all", weights = E(g)$weight),
+                                                strength(g, mode = "all", weights = E(g)$weight),
                                                 directed = FALSE)
   )
 interconnectedness_measures |>
@@ -1270,63 +1274,63 @@ efficiency_measures |>
 
 ```{r render_the_grand_master_measure_table, eval=FALSE}
 # TODO calculate a tribble full of the various measurement values, adding a column for interpretation
-global_measures_table <- tribble(
-  ~Category, ~Measure, ~Value, ~Interpretation, # TODO finish master table!
-
-  # --------------------- STRUCTURAL ---------------------
-  "Diameter", "Longest shortest path", "Structural", "Largest Component",
-
-  "Conductance", "Global bottleneck ratio", "Structural", "Largest Component",
-
-  "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural", "✓",
-
-  "Vertex Connectivity", "Minimum vertices to disconnect", "Structural", "✓",
-
-  "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural", "Largest Component",
-
-  # --------------------- INTERCONNECTEDNESS ---------------------
-  "Edge Density", "Edges ÷ possible edges", "Interconnectedness", "✓",
-
-  "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness", "✓",
-
-  "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness", "✓",
-
-  "Assortativity", "Mixing by attribute", "Interconnectedness", "✓",
-
-  # --------------------- CENTRALIZATION ---------------------
-  "Degree Centralization", "Inequality of degree distribution", "Centralization", "",
-
-  "Strength Centralization", "Inequality of weighted degree", "Centralization", "✓",
-
-  "Closeness Centralization", "Inequality in closeness", "Centralization", "Largest Component",
-
-  "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization", "Largest Component",
-
-  "Eigenvector Centralization", "Inequality in spectral influence", "Centralization", "✓",
-
-  # --------------------- EFFICIENCY ---------------------
-  "Global Efficiency", "Global ease of communication", "Efficiency", "✓",
-
-  "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency", "✓",
-
-  "Average Shortest Path Length", "Mean geodesic distance", "Efficiency", "Largest Component"
-)
-
-global_measures_table |>
-  gt() |>
-  tab_header(
-    title = "Caviar Full Drug Smuggling Graph - Various Measures",
-    subtitle = "Various measures and metrics for the Caviar Drug Smuggling network"
-  ) |>
-  data_color(
-    columns = everything(), # columns to tint
-    fn = function(cols) {
-      # we're stealing the exact colors from the previous table, so no change needed here
-      category <- global_measures_table$Category
-      category_colors[category]
-    }
-  ) |>
-  tab_options(table.font.size = 12)
+# global_measures_table <- tribble(
+#   ~Category, ~Measure, ~Value, ~Interpretation, # TODO finish master table!
+# 
+#   # --------------------- STRUCTURAL ---------------------
+#   "Diameter", "Longest shortest path", "Structural", "Largest Component",
+# 
+#   "Conductance", "Global bottleneck ratio", "Structural", "Largest Component",
+# 
+#   "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural", "✓",
+# 
+#   "Vertex Connectivity", "Minimum vertices to disconnect", "Structural", "✓",
+# 
+#   "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural", "Largest Component",
+# 
+#   # --------------------- INTERCONNECTEDNESS ---------------------
+#   "Edge Density", "Edges ÷ possible edges", "Interconnectedness", "✓",
+# 
+#   "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness", "✓",
+# 
+#   "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness", "✓",
+# 
+#   "Assortativity", "Mixing by attribute", "Interconnectedness", "✓",
+# 
+#   # --------------------- CENTRALIZATION ---------------------
+#   "Degree Centralization", "Inequality of degree distribution", "Centralization", "",
+# 
+#   "Strength Centralization", "Inequality of weighted degree", "Centralization", "✓",
+# 
+#   "Closeness Centralization", "Inequality in closeness", "Centralization", "Largest Component",
+# 
+#   "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization", "Largest Component",
+# 
+#   "Eigenvector Centralization", "Inequality in spectral influence", "Centralization", "✓",
+# 
+#   # --------------------- EFFICIENCY ---------------------
+#   "Global Efficiency", "Global ease of communication", "Efficiency", "✓",
+# 
+#   "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency", "✓",
+# 
+#   "Average Shortest Path Length", "Mean geodesic distance", "Efficiency", "Largest Component"
+# )
+# 
+# global_measures_table |>
+#   gt() |>
+#   tab_header(
+#     title = "Caviar Full Drug Smuggling Graph - Various Measures",
+#     subtitle = "Various measures and metrics for the Caviar Drug Smuggling network"
+#   ) |>
+#   data_color(
+#     columns = everything(), # columns to tint
+#     fn = function(cols) {
+#       # we're stealing the exact colors from the previous table, so no change needed here
+#       category <- global_measures_table$Category
+#       category_colors[category]
+#     }
+#   ) |>
+#   tab_options(table.font.size = 12)
 ```
 
 Next, please provide a few paragraphs regarding these measures and what they imply about the resilience, strengths, and weaknesses of this drug smuggling network.

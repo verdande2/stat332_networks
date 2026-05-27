@@ -2,7 +2,7 @@
 title: "STAT332 Statistical Analysis of Networks Sec 01 - Homework 6 - Prof. Joe Reid"
 author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
-due: "30-01-2026"
+due: "27-02-2026"
 link-citations: true
 natbib: true
 output:
@@ -21,25 +21,22 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r user_configurable_settings}
+got_rds_file <- "got.rds"
+
 ```
 
 ## Background
 
-You are given an **undirected, weighted network** representing
-interactions between characters in *Game of Thrones*. Nodes represent
-characters, and edge weights represent the **strength of interaction**
-between pairs of characters.
+You are given an **undirected, weighted network** representing interactions between characters in *Game of Thrones*. Nodes represent characters, and edge weights represent the **strength of interaction** between pairs of characters.
 
-You should treat this as a **social network** and analyze it using the
-concepts and tools from class.
+You should treat this as a **social network** and analyze it using the concepts and tools from class.
 
 **Important:**\
-For each task below, **you must decide which network measure(s) are
-appropriate**. There is no single correct answer—but there *are*
-incorrect or poorly justified ones.
+For each task below, **you must decide which network measure(s) are appropriate**. There is no single correct answer—but there *are* incorrect or poorly justified ones.
 
 For every task:
 
+<<<<<<< HEAD
 1.  State which measure(s) you used
 
 2.  Briefly explain *why* that measure fits the goal
@@ -47,6 +44,15 @@ For every task:
 3.  Identify the character(s) with the highest values
 
 4.  Include a small table or list of the top results
+=======
+1.) State which measure(s) you used
+
+2.) Briefly explain *why* that measure fits the goal
+
+3.) Identify the character(s) with the highest values
+
+4.) Include a small table or list of the top results
+>>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
 
 # Prepping the dataset
 ```{r load_dataset}
@@ -57,18 +63,13 @@ For every task:
 
 ## Task 1: Central Characters
 
-**Goal:**\
-Identify the character(s) who are most *central* to the overall network
-structure.
+### Goal
 
-**Guidance:**\
-“Central” here refers to characters who are structurally important
-across the network, not just locally popular. You should consider how
-information, influence, or interaction potential flows through the
-network.
+Identify the character(s) who are most *central* to the overall network structure.
 
-**Deliverables:**
+### Guidance
 
+<<<<<<< HEAD
 - The measure(s) you selected
 
 - The top 3 characters by that measure
@@ -84,21 +85,27 @@ Determining the actual value for this dataset:
 # TODO calculate
 
 ```
+=======
+"Central" here refers to characters who are structurally important across the network, not just locally popular. You should consider how information, influence, or interaction potential flows through the network.
+    
+### 1.) Chosen Measure and Justification
+
+### 2.) Table of Top Results
+
+### 3.) Analysis
+
+>>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
 
 
 ## Task 2: Powerful Intermediaries
 
-**Goal:**\
-Identify characters who act as **intermediaries** between otherwise
-weakly connected parts of the network.
+### Goal
 
-**Guidance:**\
-These characters may not have the strongest direct ties, but their
-position allows them to connect groups or clusters. Focus on *structural
-mediation*, not popularity.
+Identify characters who act as **intermediaries** between otherwise weakly connected parts of the network.
 
-**Deliverables:**
+### Guidance
 
+<<<<<<< HEAD
 - The measure(s) you used to capture this information
 
 - The top 3 characters and what kind of connection they provide
@@ -115,19 +122,29 @@ Determining the actual values for this dataset:
 ```
 
 The top three characters, ranked by their ability and effectiveness at linking clusters together:
+=======
+These characters may not have the strongest direct ties, but their position allows them to connect groups or clusters. Focus on *structural mediation*, not popularity.
+
+### 1.) Chosen Measure and Justification
+
+### 2.) Table of Top Results
+
+### 3.) Analysis
+
+
+>>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
 
 ## Task 3: Prominence
 
-**Goal:**\
+### Goal
+
 Identify the most **prestigious** characters in the network.
 
-**Guidance:**\
-Prestige is not just about how many connections a character has, but
-*who* they are connected to and how strong those ties are. Think
-carefully about how prestige differs from simple centrality.
+### Guidance
 
-**Deliverables:**
+Prestige is not just about how many connections a character has, but *who* they are connected to and how strong those ties are. Think carefully about how prestige differs from simple centrality.
 
+<<<<<<< HEAD
 - The prestige-related measure(s) you selected
 
 - The top 3 characters by prestige
@@ -148,21 +165,25 @@ The top three characters by prestige are:
 ```{r top_three_prestigious_characters}
 
 ```
+=======
+### 1.) Chosen Measure and Justification
+
+### 2.) Table of Top Results
+
+### 3.) Analysis
+
+>>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
 
 
 ## Task 4: Social Embeddedness
 
-**Goal:**\
-Identify characters who are most **embedded in tightly knit social
-environments**.
+### Goal
 
-**Guidance:**\
-These characters tend to be surrounded by others who are also connected
-to one another. They may be influential within a clique or local group,
-even if they are not globally central.
+Identify characters who are most **embedded in tightly knit social environments**.
 
-**Deliverables:**
+### Guidance
 
+<<<<<<< HEAD
 - The measure(s) you used
 
 - The top 3 characters by this criterion
@@ -184,20 +205,28 @@ The top three characters by prestige are:
 ```
 
 "Embededness" means alskdfjlasdkf
+=======
+These characters tend to be surrounded by others who are also connected to one another. They may be influential within a clique or local group, even if they are not globally central.
+
+### 1.) Chosen Measure and Justification
+
+### 2.) Table of Top Results
+
+### 3.) Analysis
+-    A brief explanation of what “embeddedness” means in network terms\
+>>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
+
+
 
 ## Task 5: Strength of Influence
 
-**Goal:**\
-Identify characters whose **relationships are strongest overall**, not
-merely numerous.
+### Goal
 
-**Guidance:**\
-This task explicitly requires you to use the **edge weights**. Focus on
-characters whose total interaction strength is high, and reflect on how
-this differs from unweighted analyses.
+Identify characters whose **relationships are strongest overall**, not merely numerous.
 
-**Deliverables:**
+### Guidance
 
+<<<<<<< HEAD
 - The measure(s) you used
 
 - The top 3 characters by strength-based influence and what it means for
@@ -220,5 +249,17 @@ The top relationships, by weight/strength, are:
 ```
 
 Weights matter in this scenario because alksdjflaksdjflasdjflksd
+=======
+This task explicitly requires you to use the **edge weights**. Focus on characters whose total interaction strength is high, and reflect on how this differs from unweighted analyses.
 
-## References
+### 1.) Chosen Measure and Justification
+
+### 2.) Table of Top Results
+
+### 3.) Analysis
+-   A brief explanation of why weights matter for this task
+>>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
+
+
+# TODO double check deliverables from homework 6 pdf from canvas
+
