@@ -26,6 +26,8 @@ library(ggrepel) # for stronger label repel
 library(visNetwork) # for network graphs
 library(ggplot2) # for ploots
 library(igraphdata)
+library(dplyr)
+library(patchwork)
 ```
 
 ```{r user_configurable_settings}
@@ -43,6 +45,37 @@ print_igraph_attr <- function(graph) {
 
   print("--- Edge Attributes ------")
   print(edge_attr(graph))
+}
+
+# copied from homework:
+#Note that we are specifying directed reachability for directed graphs
+reachability_cohesion <- function(g, mode = c("undirected", "weak", "strong")) {
+  mode <- match.arg(mode)
+  n <- vcount(g)
+  if (n <= 1) return(1)
+
+  if (mode == "undirected") {
+    g2 <- as_undirected(g, mode = "collapse",
+                        edge.attr.comb = list(weight = "sum"))
+    D <- distances(g2)
+    reachable <- sum(D != Inf) - n      # exclude self-pairs
+    total <- n * (n - 1)
+
+  } else if (mode == "weak") {
+    # treat as undirected for reachability
+    comps <- components(g, mode = "weak")$membership
+    comp_sizes <- table(comps)
+    reachable <- sum(comp_sizes * (comp_sizes - 1))
+    total <- n * (n - 1)
+
+  } else if (mode == "strong") {
+    D <- distances(g, mode = "out")
+    reachable <- sum(D != Inf) - n
+    total <- n * (n - 1)
+  }
+
+  cohesion <- reachable / total
+  return(cohesion)
 }
 ```
 
@@ -149,22 +182,232 @@ Now, let's try looking at the unique values that we could perhaps use to filter 
 
 
 ```{r}
-length(unique(edge_attr(g)$Carrier))
+length(unique(E(g)$Carrier))
 ```
-$118$ carriers, eesh, okay. Maybe that's not even the best attribute to subset on. Let's look at the biggest airports instead, that may be a better starting point.
+
+$118$ carriers, eesh, okay. Maybe let's tone that down later. But first, let's look at the biggest airports instead, that may be a better starting point.
 
 ```{r}
-length(unique(vertex_attr(g)$name))
+length(unique(V(g)$name))
 ```
 
-$755$ airport connections listed in this, eesh, well. Let's see if we can subset these reasonably. Maybe the top 25? 
+$755$ airport connections listed in this, eesh, well. Let's see if we can subset these reasonably. Maybe the top 10? By departures outbound?
 
 ```{r}
-deg <- strength(g, weights = V(g)$Departures) # calculate degrees for whole graph
+departure_strengths <- strength(g, weights = V(g)$Departures)
+V(g)$departure_strengths <- departure_strengths
 
-head(sort(deg, decreasing = TRUE), n = 25) # pull top 25 sorted by connecting flights
+top_10 <- head(sort(departure_strengths, decreasing = TRUE), n = 10) # pull top 10 sorted by connecting flights
+top_10
 ```
 
+
+
+
+```{r}
+# we have the top 10, now let's use those three digit airport codes to filter down the network
+keep_node_codes <- V(g)[V(g)$name %in% list(names(top_10))[[1]]] # pruning vertex indices per top 10 list
+
+g <- induced_subgraph(g, keep_node_codes)
+g
+```
+
+```{r}
+glimpse(E(g)$Carrier)
+
+```
+
+
+```{r}
+# investigating biggest carriers
+
+```
+
+
+```{r}
+# filter futher by Carrier
+carrier <- "Delta Air Lines Inc."
+
+# this line triggers, and I don't know why: TODO look into why this is broken
+# > Error in `FUN()`:
+# > ! Unknown/unambigous attribute combination specification.
+#sg <- simplify(sg, edge.attr.comb = list(weight = "sum", type = "concatenate")) # remove multiple edges
+
+# instead, opting for a bit of a hack thanks to Stack Overflow
+g <- igraph::as_data_frame(g) %>%
+  #filter(Carrier == carrier) %>%
+  group_by(Carrier) %>% 
+  mutate(Departures_total = sum(Departures), Passengers_total = sum(Passengers)) %>%
+  unique() %>% 
+  graph_from_data_frame()
+
+g
+
+```
+
+Now, let's calculate some things:
+```{r}
+reachability_cohesion(g)
+diameter(g)
+get_diameter(g)
+
+
+
+cat("There are",
+    length(bridges(g)),
+    "bridges in this graph, and there are",
+    length(articulation_points(g)),
+    "articulation points in this graph.")
+
+articulation_points(g)
+farthest_vertices(g)
+
+edge_density(g, loops = FALSE)
+
+cohesion(g)
+vertex_connectivity(g)
+reachability_cohesion(g)
+
+transitivity(g, type = "globalundirected", isolates = "NaN")
+assortativity_degree(g)
+
+
+
+
+```
+
+```{r}
+leiden_g <- cluster_leiden(as_undirected(g),
+                           objective_function = "modularity",
+                           resolution = 1,
+                           n_iterations = 6,
+                           vertex_weights = NULL)
+plot(leiden_g, g)
+```
+
+
+
+
+
+
+
+
+```{r calculate_the_k_core}
+k_core_g <- coreness(g, mode = "all")
+```
+
+`k_core_g` is not a graph object. It records the k-index when the nodes are removed from the graph.
+
+```{r setup_and_plot_k_core_subgraph}
+
+
+V(g)$core <- k_core_g # storing the already calculated k-core in the vertices' core attr
+
+set.seed(1) # static seed for repeatability FOR NOW
+L <- layout_with_fr(g) # Fruchterman-Reingold layout
+
+ks <- sort(unique(V(g)$core)) # sorted vector of distinct k-core values
+ks <- ks[ks > 0]  # drop 0-core isolates
+
+# okay, breaking this down, looks like we are mapping over our distinct k-core values (in order, per sort call above), expecting a list return type and performing an anonymous function that is long enough to where it probably should be a _named_ function. Let's poke at it and comment on what it's doing...
+plots <- lapply(ks, function(k){
+  keep <- V(g)$core >= k # for any k passed in, keep holds the bool vector of vertex indices with >=k core
+  sg <- induced_subgraph(g, vids = V(g)[keep]) # making a new subgraph consisting of just the vertices that have >= current k-core (and any connecting edges between them)
+
+  # subset the full-graph layout to this subgraph's vertices (keeps positions stable)
+  idx <- as.integer(V(g)[keep])        # vertex ids in original graph
+  Lk  <- L[idx, , drop = FALSE] # subsetting the fr layout with the "keep" vertex ids/indices, the entire "row", and passing drop=FALSE ensures we get a df back out
+
+  # passing along our subgraph to ggraph, manual layout with our Lk values from above loc
+  ggraph(sg, layout = "manual", x = Lk[,1], y = Lk[,2]) +
+    
+    # now, adding relatively transparent mid gray edges connecting the vertices
+    geom_edge_link(alpha = 0.25, colour = "grey60") +
+    
+    # adding the vertices, colored based on their k-core value, static size of 2.5
+    geom_node_point(aes(color = core), size = 2.5) +
+    
+    # adding text labels, pulled from name attr, static size of 3, with a vertical adjustment
+    geom_node_text(aes(label = name),
+                 size = 3,
+                 vjust = 1.5) +
+    
+    # setting the color scale, option D is viridis (the green/blue gradient one), excellent choice, the end param sets the end of the color hue range from [0,1] to [0, 0.95]
+    # calling scale_color_viridis_c(), noting the _c ending, confused me for a while now, and it just dawned on me after reading the ggplot2 docs that that _c doesn't mean color option c, it stands for continuous, as opposed to d for discrete, or apparently b for binned color maps... Today I learned a thing...
+    scale_color_viridis_c(option = "C", end = 0.95) +
+    
+    # add a plot title, indicating the current k value, as well as the number of vertices and edges in the subgraph
+    ggtitle(paste0(k, "-core (core ≥ ", k, "), n=", vcount(sg), ", m=", ecount(sg))) +
+    
+    # blank theme with just default font size set
+    theme_void(base_size = 11) +
+    
+    # nullify the legend, and set the plot title to be smaller font face and bolded
+    theme(legend.position = "none",
+          plot.title = element_text(size = 10, face = "bold"))
+  
+  # no explicit return, so that ggraph is the return obj
+})
+
+# from what I am guessing, this will distribute the plots among a 2-col grid layout, for as many plots exist in ... well, plots. I'm relating this to patchwork or kinda like faceting behavior... edit 27 minutes later, when I notice what package wrap_plots is from, and didn't notice when copying its library call to top of file.... Argh!
+wrap_plots(plots, ncol = 2)
+
+```
+
+My interpretation from this core result is that the top 10 airport hubs in the US are very tightly engrained together, which is an unsurprising result.
+
+
+```{r plot_the_graph_data}
+
+p <- ggraph::ggraph(g, layout = "fr") +
+  geom_edge_fan(
+    # aes(
+    #   strength = departure_strengths
+    #   ),
+    alpha = 0.8,
+    color = "#ff0000"
+  ) +
+  geom_node_point() +
+  geom_node_text(
+    aes(
+      label = name
+      ),
+    repel = TRUE,
+    size = 3
+  ) +
+  
+  
+
+
+  labs(
+    title = "Simple Plot"
+  ) +
+  theme_graph()
+p
+
+```
+
+
+```{r}
+ggraph(g, layout = "kk") + # same manual layout
+    
+  
+    geom_edge_fan(aes(edge_colour = Carrier)) +
+  
+    # this line differs. static vertex size and color... Hmmmm...
+    geom_node_point(color = "#2C7FB8"
+                 ) +
+    
+    # identical
+    geom_node_text(aes(label = name),
+                 vjust = 1.5) +
+    
+    # title the plot with the k-shell value, k-core value, and the vertex count
+    ggtitle("") +
+    
+    # blank theme with base font size 11
+    theme_void(base_size = 11)
+```
 
 
 First, let's get a rough idea of what we are working with. Our dataset is an imported `igraph` object, spanning some $755$ airports as vertices, and $23,473$ edges representing directed flights between them, with vertex data containing attributes for the airport's standard 3-character identifier, 
@@ -185,80 +428,73 @@ subset our graph into a few subgraphs and see if we can notice any interesting p
 
 
 
-```{r}
-# glimpse(edge_attr(USairports))
-# glimpse(vertex_attr(USairports))
-```
-
 ```{r visnetwork}
-# Build nodes
-nodes <- igraph::as_data_frame(g, what = "vertices") |>
-  tibble::rownames_to_column("id") |> # this is an important function call, looking ahead to visNetwork's obsession with int ids
-  mutate(
-    id    = as.character(id),
-    label = media,
-    value = audience.size,
-    group = type.label
-  )
-
-# Shape mapping
-node_types <- sort(unique(nodes$group))
-shape_vals <- c("dot", "square", "triangle")[seq_along(node_types)]
-shape_map <- setNames(shape_vals, node_types)
-nodes$shape <- shape_map[nodes$group]
-
-# Node colors (background)
-node_colors <- setNames(scales::hue_pal()(length(node_types)), node_types)
-nodes$color.background <- node_colors[nodes$group]
-nodes$color.border <- "#444444"
-
-nodes$title <- paste("Media Name: ", nodes$media, "<br>Media Type: ", nodes$type.label, "<br>Audience Size: ", nodes$audience.size)
-
-# Build edges
-edges <- igraph::as_data_frame(g, what = "edges") |>
-  mutate(
-    from   = as.character(from),
-    to     = as.character(to),
-    width  = scales::rescale(weight, to = c(0.5, 1.5)),
-    arrows = "to",
-    smooth = TRUE
-  )
-
-# Edge colors
-edge_types <- sort(unique(edges$type))
-edge_colors <- setNames(scales::hue_pal()(length(edge_types)), edge_types)
-edges$color <- edge_colors[edges$type]
-
-# Dash mapping (linetype analogue)
-edges$dashes <- edges$type == edge_types[2] # example: second type dashed
-
-edges$title <- paste("Reference Type: ", edges$type)
+# # Build nodes
+# nodes <- igraph::as_data_frame(g, what = "vertices") |>
+#   tibble::rownames_to_column("id") |> # this is an important function call, looking ahead to visNetwork's obsession with int ids
+#   mutate(
+#     id    = as.character(id),
+#     label = media,
+#     value = audience.size,
+#     group = type.label
+#   )
+# 
+# # Shape mapping
+# node_types <- sort(unique(nodes$group))
+# shape_vals <- c("dot", "square", "triangle")[seq_along(node_types)]
+# shape_map <- setNames(shape_vals, node_types)
+# nodes$shape <- shape_map[nodes$group]
+# 
+# # Node colors (background)
+# node_colors <- setNames(scales::hue_pal()(length(node_types)), node_types)
+# nodes$color.background <- node_colors[nodes$group]
+# nodes$color.border <- "#444444"
+# 
+# nodes$title <- paste("Media Name: ", nodes$media, "<br>Media Type: ", nodes$type.label, "<br>Audience Size: ", nodes$audience.size)
+# 
+# # Build edges
+# edges <- igraph::as_data_frame(g, what = "edges") |>
+#   mutate(
+#     from   = as.character(from),
+#     to     = as.character(to),
+#     width  = scales::rescale(weight, to = c(0.5, 1.5)),
+#     arrows = "to",
+#     smooth = TRUE
+#   )
+# 
+# # Edge colors
+# edge_types <- sort(unique(edges$type))
+# edge_colors <- setNames(scales::hue_pal()(length(edge_types)), edge_types)
+# edges$color <- edge_colors[edges$type]
+# 
+# # Dash mapping (linetype analogue)
+# edges$dashes <- edges$type == edge_types[2] # example: second type dashed
+# 
+# edges$title <- paste("Reference Type: ", edges$type)
 ```
 
-There are disadvantages to storing data this way (for example, what if the title attribute was naturally in the dataset to represent a political title?). But, once the data is in, it becomes very easy to produce a really good plot automatically.
-
 ```{r}
-vis <- visNetwork(nodes, edges,
-  main = "Media Networks Link to and Reference Each Other",
-  submain = "A network plot of networks.",
-  footer = "Data from: https://kateto.net/network-visualization.",
-  width = "100%"
-) |>
-  visNodes(scaling = list(min = 5, max = 30)) |>
-  visEdges(smooth = list(enabled = TRUE, type = "dynamic")) |>
-  visOptions(
-    highlightNearest = TRUE,
-    nodesIdSelection = TRUE,
-    collapse = TRUE
-  ) |>
-  visInteraction(
-    dragNodes = TRUE,
-    dragView  = TRUE,
-    zoomView  = TRUE
-  ) |>
-  visPhysics(stabilization = TRUE)
-
-vis
+# vis <- visNetwork(nodes, edges,
+#   main = "Media Networks Link to and Reference Each Other",
+#   submain = "A network plot of networks.",
+#   footer = "Data from: https://kateto.net/network-visualization.",
+#   width = "100%"
+# ) |>
+#   visNodes(scaling = list(min = 5, max = 30)) |>
+#   visEdges(smooth = list(enabled = TRUE, type = "dynamic")) |>
+#   visOptions(
+#     highlightNearest = TRUE,
+#     nodesIdSelection = TRUE,
+#     collapse = TRUE
+#   ) |>
+#   visInteraction(
+#     dragNodes = TRUE,
+#     dragView  = TRUE,
+#     zoomView  = TRUE
+#   ) |>
+#   visPhysics(stabilization = TRUE)
+# 
+# vis
 ```
 
 # Pretty Graphs
@@ -269,7 +505,48 @@ vis
 
 # Various Measures about subnetwork
 
-```{r}
-# TODO make measures table
+```{r render_measures_table}
+
+# structural_measures <- tribble(
+#   # Headers---------------------------------------------------------------------
+#   ~Measure, ~Value,
+#   
+#   # Diameter measures-----------------------------------------------------------
+#   
+#   "Diameter", diameter(g, weights = NA), # g is undirected, connected and has weights, but need to ignore weights for diameter to make sense
+#   "Diameter Path", get_diameter(g, weights = NA), # need to ignore weights for this to make sense
+#   "Farthest Vertices", farthest_vertices(g, weights = NA), # need to ignore weights for this to make sense
+#   "Diameter with Reciprocal Weights", diameter(g, weights = 1/E(g)$weight),
+#   "Diameter Path with Reciprocal Weights", get_diameter(g, weights = 1/E(g)$weight),
+#   "Farthest Vertices with Reciprocal Weights", farthest_vertices(g, weights = 1 / E(g)$weight), # does this measure even make any sense?
+#   
+#   # Conductance measures--------------------------------------------------------
+#   
+#   # Adhesion
+#   "Adhesion", adhesion(g),
+#   
+#   # Vertex Connectivity
+#   "Vertex Connectivity", vertex_connectivity(g),
+#   
+#   # Fiedler's value (second smallest eigenvalue)
+#   "Fiedler's Value (λ₂)", lambda_2
+# )
+# 
+# structural_measures |>
+#   gt() |>
+#   tab_header(
+#     title = "Graph Structural Measures",
+#     subtitle = "Structural-related metrics about the Caviar dataset"
+#   ) |>
+#   # data_color(
+#   #   columns = everything(),   # columns to tint
+#   #   fn = function(cols) {
+#   #     category <- global_measures_table$Category
+#   #     category_colors[category]
+#   #   }
+#   # ) |> # TODO fix colors eventually
+#   fmt_number(columns = Value, decimals = 6, use_seps = TRUE) |> # special formatting for numeric values
+#   tab_options(table.font.size = 12)
+
 ```
 

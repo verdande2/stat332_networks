@@ -13,6 +13,14 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(gridExtra)
+library(ggraph)
+
+library(sna)
+library(data.table)
+library(gt)
+library(igraph) 
 
 ```
 
@@ -21,20 +29,24 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
+## 4.) Your turn
+
+The dolphins dataset is stored as a .rds object (igraph in r) same as
+this dataset was. This is a network from observations of dolphins and is
+a pretty fun one to consider for this task. It is unweighted,
+undirected, and pretty straight forward for this exercise.
+
+Please walk back through this lab and see what it shows you about node
+and edge level measures for this community (or communities) of dolphins.
+Identify important dolphins using the measures we have defined. Is it
+always the same dolphin? What does this say about their roles within the
+pod? How many communities are there and how do members play brokerage
+roles in these communities?
+
+
 ## 1.) Setup
 
-Welcome to Lab . We are going to look at micro-scale measures and
-structures this week.\
-These are node and edge level properties that allow us to discover
-properties of micro-level elements of the network based on their
-position, relations, and structures. We're going to need a plot that
-looks okay here, so let's create something that looks nice.
-
 ```{r}
-library(ggplot2)
-library(gridExtra)
-
-
 plot_dist <- function(x,
                       title = NULL,
                       xlab = NULL,
@@ -95,8 +107,7 @@ plot_dist <- function(x,
 ### 2.a) Getting started.
 
 ```{r}
-library(igraph) 
-g <- readRDS("brain_shape_map.rds")
+g <- readRDS("dolphins.rds")
 ```
 
 As always, let's make sure we print out our vertex and edge attributes
@@ -105,13 +116,11 @@ As always, let's make sure we print out our vertex and edge attributes
 summary(g)
 ```
 
-So 45 nodes with 463 edges. Directed, but not weighted.
+So 62 nodes with 159 edges. undirected, and not weighted.
 
 And again, lets use a summary for finding out other properties.
 
-```{r, message = FALSE, warning=FALSE}
-library(data.table)
-library(gt)
+```{r}
 
 ID = c("Order", "Size", "Connected", "Directed", "Acyclic", "Weighted", "Simple", "Has Loops", "Is Multigraph", "Bipartite", "Tree", "Forest")
   
@@ -120,11 +129,7 @@ Value = c(gorder(g), ecount(g), is_connected(g), is_directed(g), is_acyclic(g), 
 table <- data.table(ID, Value)
 table %>% gt() %>% fmt_tf(columns = Value, tf_style = "yes-no")
 ```
-
-It's connected, so we don't need to worry about the larges component.
-
-![Visualization of the network for this
-analysis](Brain_shape_network.png)
+Connected and simple.
 
 I think that's enough for the setup, so let's move on to our metrics
 
@@ -155,7 +160,7 @@ strong_articulation_points <- function(g) {
   vids <- V(g)  # the vertex ideas from the graph g
   out <- vids[sapply(vids, function(v) {
     components(delete_vertices(g, v), mode = "strong")$no > base
-  })]
+  })] # this one line has so much going on, but I see what it's doing... succinct.
   out # Return the ones that increase the number of components of the original graph
 }
 
@@ -195,9 +200,8 @@ br_s
 
 ```
 
-So far, not very interesting. There are no articulation points or
-bridges int this graph. That sounds bad, but it makes the rest of this
-process a lot more interesting.
+There are 9 articulation points or
+bridges int this graph. 
 
 ## 3b.) Degree
 
@@ -264,6 +268,7 @@ plot_dist(deg_out_cent)
 ```{r}
 V(g)$deg_out_cent <- deg_out_cent
 ```
+
 
 ### Normalized Out-Degree Centrality
 
@@ -391,11 +396,6 @@ ebtw <- edge_betweenness(g, directed = TRUE)
 # Also, there is no "normalized" version of edge betweenness in igraph
 summary(ebtw)
 ```
-
-```{r}
-plot_dist(ebtw)
-```
-
 ```{r}
 E(g)$edge_betweenness <- ebtw
 ```
@@ -419,8 +419,6 @@ E(g)$nne <- nne_edge_centrality(g, deg_tot)
 
 ```
 
-If we want to store in degree nearest-neighbor edge centrality
-
 ```{r}
 E(g)$nne_in <- sapply(E(g), function(e) {
   v <- ends(g, e)
@@ -428,8 +426,6 @@ E(g)$nne_in <- sapply(E(g), function(e) {
 })
 
 ```
-
-And out degree nearest-neighbor edge centrality
 
 ```{r}
 E(g)$nne_out <- sapply(E(g), function(e) {
@@ -444,23 +440,11 @@ summary(E(g)$nne)
 ```
 
 ```{r}
-plot_dist(E(g)$nne)
-```
-
-```{r}
 summary(E(g)$nne_in)
 ```
 
 ```{r}
-plot_dist(E(g)$nne_in)
-```
-
-```{r}
 summary(E(g)$nne_out)
-```
-
-```{r}
-plot_dist(E(g)$nne_out)
 ```
 
 ### Local Clustering Coefficient
@@ -476,13 +460,6 @@ cc_local <- transitivity(as.undirected(g, mode = "collapse"),
 cc_local
 summary(cc_local)
 
-```
-
-```{r}
-plot_dist(cc_local)
-```
-
-```{r}
 V(g)$clust_local <- cc_local
 ```
 
@@ -492,13 +469,7 @@ V(g)$clust_local <- cc_local
 le_in <- local_efficiency(g, directed = TRUE, mode = "in")
 le_in
 summary(le_in)
-```
 
-```{r}
-plot_dist(le_in)
-```
-
-```{r}
 V(g)$local_eff_in <- le_in
 ```
 
@@ -506,13 +477,7 @@ V(g)$local_eff_in <- le_in
 le_out <- local_efficiency(g, directed = TRUE, mode = "out")
 le_out
 summary(le_out)
-```
 
-```{r}
-plot_dist(le_out)
-```
-
-```{r}
 V(g)$local_eff_out <- le_out
 ```
 
@@ -523,13 +488,6 @@ bc <- constraint(g)
 bc
 summary(bc)
 
-```
-
-```{r}
-plot_dist(bc)
-```
-
-```{r}
 V(g)$constraint <- bc
 ```
 
@@ -547,6 +505,8 @@ V(g)$community <- membership(comm)
 sizes(comm)
 
 ```
+# Next Section
+
 
 ### SNA
 
@@ -554,7 +514,6 @@ We finally have to leave the world of igraph. The library SNA (social
 network analysis) has the functions we are looking for
 
 ```{r}
-library(sna)
 ```
 
 Notice all the messages? We have overlapping functions. If you want to
@@ -602,11 +561,10 @@ VIP seems to act as both a representative and a gate keeper in cluster
 Now, remember that there were natural groups already identified in this
 network? Let's try to use those instead (they are stored in grp2)
 
-```{r}
+```{r, eval=FALSE}
+# TODO this cell kept breaking and I was unable to determine why
 brok2 <- brokerage(A, cl = grp2)
-```
 
-```{r}
 summary(brok2)
 ```
 
@@ -643,26 +601,72 @@ We've been saving all of these measures as node and edge properties...
 summary(g)
 ```
 
-## 4.) Your turn
-
-The dolphins dataset is stored as a .rds object (igraph in r) same as
-this dataset was. This is a network from observations of dolphins and is
-a pretty fun one to consider for this task. It is unweighted,
-undirected, and pretty straight forward for this exercise.
-
-Please walk back through this lab and see what it shows you about node
-and edge level measures for this community (or communities) of dolphins.
-Identify important dolphins using the measures we have defined. Is it
-always the same dolphin? What does this say about their roles within the
-pod? How many communities are there and how do members play brokerage
-roles in these communities?
-
 ```{r}
-# TODO copy/paste the above code, adapt to dolphins, dataset, win.
+leiden_g <- cluster_leiden(g,
+                           objective_function = "modularity",
+                           weights = NA,
+                           resolution = 1,
+                           n_iterations = 6,
+                           vertex_weights = NULL)
+plot(leiden_g, g)
 ```
 
-## 5.) Results
 
-What you need to do next is to "knit" your document into an html using
-the "Knit" button near the top of the screen. This will give you an HTML
-that you can turn in.
+```{r}
+p <- ggraph::ggraph(g, layout = "fr") +
+
+  geom_node_text(
+    aes(
+      label = id
+      ),
+    repel = TRUE,
+    size = 3
+  ) +
+
+# edge settings
+  geom_edge_fan(
+    aes(
+      color = "#ff00ff"
+      ),
+    alpha = 0.8,
+    lineend = "round",
+    arrow = arrow(length = unit(0, "mm"), type = "closed"),
+    end_cap = circle(0, "mm")
+  ) +
+  
+# vertex settings
+  geom_node_point(
+    aes(
+      size = 10 + btw_cent #,
+      # color = community
+      ),
+    alpha = 0.6
+  ) +
+
+# legends
+  
+  # scale_size_continuous(name = "Age", limits = range(V(g)$age), breaks = range(V(g)$age)) +
+
+# guides
+  guides(
+    country = guide_legend(),
+    hand = guide_legend(),
+    size = guide_legend(nrow = 2, byrow = TRUE),
+    fill = guide_legend(
+      nrow = 1, byrow = TRUE, title = "Vertex Color",
+      # override.aes = list(fill = color)
+    )
+  ) +
+
+# titles and text
+# - title top center: "Tennis Losses from 2007", color black, bolded
+# - subtitle top center (below title): "Data represents players from USA, GBR, and AUS", color black, normal font size
+# - caption bottom center: "Data from networkdata R package", wta dataset, color gray, small
+  labs(
+    title    = "Tennis Losses from 2007",
+    subtitle = "Data represents players from USA, GBR, and AUS"
+  ) +
+  theme_graph()
+p
+
+```

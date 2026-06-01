@@ -486,10 +486,9 @@ Why yes, yes I did copy/paste that from Lab 4 and didn't want to reformat that b
 ```{r load_in_the_gml_file}
 g <- igraph::read_graph(gml_file, format = "graphml")
 g
-print_igraph_attr(g)
 ```
 
-```{r load_in_dataset}
+```{r check_dataset}
 # project caviar engage
 summary(g)
 print_igraph_attr(g)
@@ -504,13 +503,19 @@ coreness(g)
 
 Are there membership cliques?
 
-```{r membership_cliques}
-cliques(g)
+```{r}
+cliques(g, min = clique_num(g))
 ```
+2 of length 9... and ...
 
 ```{r}
-clique_num(g)
+cliques(g, min = clique_num(g)-1)
+
 ```
+22 of one less than that. Alright!
+
+So, of max (clique) length 9, we have 2 cliques.
+
 
 What communities can you find using density methods and how could this be helpful at finding the key operations?
 

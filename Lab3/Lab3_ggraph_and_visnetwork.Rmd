@@ -286,51 +286,26 @@ print_igraph_attr(g_actors)
 ```{r identify_command_team_relations}
 command_team_edges <- E(g_actors)[.inc(V(g_actors)[Role == "Command Team"])]
 
-# TODO do something special to command_team_edges...
 
+# We'll accentuate the command team themselves with a colored node, as well coloring any contact with the team members
+# note: we're just setting flags here so ggraph can color during plotting
+V(g_actors)$command_team = FALSE
+V(g_actors)$command_team = V(g_actors)$Role == "Command Team" # probably better ways
+
+E(g_actors)$command_team = FALSE
+E(g_actors)[.inc(V(g_actors)[Role == "Command Team"])]$command_team = TRUE
 
 # note: command team members: id 1 Muklas, 4 Samudra, 6 Idris (should be 62 edges)
-command_team_edges
 ```
 
-```{r setup_the_ploot, eval=FALSE}
-
-# Shape mapping (3 shapes)
-node_types <- sort(unique(V(g)$type.label))
-shape_vals <- c(21, 22, 24)[seq_along(node_types)]
-shape_map <- setNames(shape_vals, node_types)
+```{r setup_the_ploot}
+command_colors <- c("#ff0000", "#000000")
 
 # create graph using ggraph
 p <- ggraph(g_actors, layout = "lgl") +
-
-  # custom shapes
-  # custom colors
-  geom_node_point(
-    aes(
-      size = 5,#audience.size,
-      fill = type.label,
-      shape = type.label,
-      color = "blue"
-      ),
-    alpha = 0.6
-  ) +
-
-  geom_node_text(
-    aes(
-      label = Actor
-      ),
-    repel = TRUE,
-    size = 3
-  ) +
-
-  # custom edge widths
-  # custom edge colors? maybe skip in favor of highlighting Command Team
-  # use custom color AND type on edges to denote Command Team members
   geom_edge_arc(
     aes(
-      color = "black", #ifelse(Role == "Command Team", "red", "black"), # denote command team
-      # linetype = type, # this line /also/ triggers the noted error below! Argh!
-      width = weight
+      color = command_team
       ),
     alpha = 0.4,
     lineend = "round",
@@ -338,46 +313,64 @@ p <- ggraph(g_actors, layout = "lgl") +
     end_cap = circle(2, "mm"),
     strength = 0.3
   ) +
+  
+  geom_node_point(
+    aes(
+      size = 5,
+      color = command_team
+      ),
+    alpha = 0.6
+  ) +
 
-  scale_size_continuous(name = "Audience Size", range = c(1, 8)) +
-  scale_shape_manual(values = shape_map, guide = "none") +
-  scale_edge_width(range = c(0.5, 1.5), guide = "none") +
+  geom_node_text(
+    aes(
+      label = name
+      ),
+    repel = TRUE,
+    size = 3
+  ) +
+
+  
+  scale_color_manual(values = command_colors)
+  #scale_size_continuous(name = "Audience Size", range = c(1, 8)) +
+  #scale_shape_manual(values = shape_map, guide = "none") +
+  #scale_edge_width(range = c(0.5, 1.5), guide = "none") +
   # scale_edge_linetype(guide = "none") + # this line triggers the below error! see note at end of chunk!
 
   # legend
-  guides(
-    size = guide_legend(nrow = 2, byrow = TRUE),
-    fill = guide_legend(
-      nrow = 1, byrow = TRUE, title = "Vertex Color/Shape",
-      override.aes = list(shape = shape_vals)
-    ),
-    edge_color = guide_legend(
-      ncol = 2, byrow = TRUE,
-      title = "Reference Type"
-    )
-  ) +
+  # guides(
+  #   size = guide_legend(nrow = 2, byrow = TRUE),
+  #   fill = guide_legend(
+  #     nrow = 1, byrow = TRUE, title = "Vertex Color/Shape",
+  #     override.aes = list(shape = shape_vals)
+  #   ),
+  #   edge_color = guide_legend(
+  #     ncol = 2, byrow = TRUE,
+  #     title = "Reference Type"
+  #   )
+  # ) +
 
   # title
   # subtitle
   # captions
   # footnotes
   labs(
-    title    = "Media Networks Link to and Reference Each Other",
-    subtitle = "A network plot of networks.",
-    caption  = "Data from: https://kateto.net/network-visualization."
+    title    = "Terrorist Cell",
+    # subtitle = "A network plot of networks.",
+    # caption  = "Data from: https://kateto.net/network-visualization."
   )
 
 
 
 
+p
 
 
-
-p + theme(
-  plot.title = element_text(face = "bold", size = 14),
-  legend.box.background = element_rect(color = "black", size = 0.5),
-  legend.box.margin = margin(1, 1, 1, 1),
-)
+# p + theme(
+#   plot.title = element_text(face = "bold", size = 14),
+#   legend.box.background = element_rect(color = "black", size = 0.5),
+#   legend.box.margin = margin(1, 1, 1, 1),
+# )
 ```
 
 ## 4.) `visNetwork`

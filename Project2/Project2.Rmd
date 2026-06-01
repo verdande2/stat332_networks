@@ -14,127 +14,349 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(tidyverse)
+
+library(igraph) 
+library(igraphdata)
+
+library(data.table)
+library(gt)
+
+library(patchwork)
+library(ggraph)
 ```
 
 ```{r load_dataset}
-# 1. Download OpenStreetMap street data for a specific area
-library(osmdata)
-library(dodgr)
+# gml_file <- "as-22july06.gml"
+# gml_file <- "lesmis.gml"
+rds_file <- "got.rds"
 
-# Get street data formatted as an sf object for your city
-street_network <- dodgr_streetnet(bbox = "Klamath Falls, Oregon", expand = 0.2)
+# g <- igraph::read_graph(gml_file, format = "gml")
+g <- readr::read_rds(rds_file)
+```
 
-# 2. Convert the map into a directed graph optimized for walking
-graph <- weight_streetnet(street_network, wt_profile = "foot")
+```{r stolen_functions_from_joe_that_prove_useful}
 
-# 3. Calculate distance matrices or model walking reachability
-vertices <- dodgr_vertices(graph)
-# Now you can route thousands of origin-to-destination walks or calculate isochrones
+#Note that we are specifying directed reachability for directed graphs
+reachability_cohesion <- function(g, mode = c("undirected", "weak", "strong")) {
+  mode <- match.arg(mode)
+  n <- vcount(g)
+  if (n <= 1) return(1)
 
+  if (mode == "undirected") {
+    g2 <- as_undirected(g, mode = "collapse",
+                        edge.attr.comb = list(weight = "sum"))
+    D <- distances(g2)
+    reachable <- sum(D != Inf) - n      # exclude self-pairs
+    total <- n * (n - 1)
+
+  } else if (mode == "weak") {
+    # treat as undirected for reachability
+    comps <- components(g, mode = "weak")$membership
+    comp_sizes <- table(comps)
+    reachable <- sum(comp_sizes * (comp_sizes - 1))
+    total <- n * (n - 1)
+
+  } else if (mode == "strong") {
+    D <- distances(g, mode = "out")
+    reachable <- sum(D != Inf) - n
+    total <- n * (n - 1)
+  }
+
+  cohesion <- reachable / total
+  return(cohesion)
+}
+
+global_weighted_transitivity <- function(g, mode = c("undirected", "directed")) {
+  mode <- match.arg(mode)
+
+  if (mode == "undirected") {
+    # This does nothing if the graph is already undirected but collapses a directed graph
+    g2 <- as_undirected(g, mode = "collapse",
+                        edge.attr.comb = list(weight = "sum"))
+    local <- transitivity(g2, type = "weighted")
+  } else {
+    # Directed -> use directed weights but still based on Barrat formulation
+    local <- transitivity(g, type = "weighted")
+  }
+
+  # Remove NA values (degree < 2)
+  local <- local[!is.na(local)]
+
+  # Average global weighted clustering
+  mean(local)
+}
+
+```
+
+
+
+
+```{r}
+g
+```
+
+
+```{r plot_the_graph_data}
+
+plottt <- function(g){
+  set.seed(1)
+  p <- ggraph::ggraph(g, layout = "fr") +
+    geom_edge_fan(
+      aes(
+        color = V(g)$Carrier
+        ),
+      alpha = 0.8,
+      strength = E(g)$weight
+    ) +
+    # geom_node_point(aes(size = coreness(g))) +
+    geom_node_text(
+      aes(
+        label = name
+      ),
+      repel = TRUE,
+      size = 3
+    ) +
+  
+  # legends
+  
+  # guides
+    # guides(
+    # ) +
+  
+    labs(
+      title = "Simple Plot"
+    ) +
+    theme_graph()
+  p
+}
 
 ```
 ```{r}
-library(osmdata)
-library(dodgr)
-library(sf)
-library(dplyr)
-library(ggplot2)
+ID = c("Order", "Size", "Connected", "Directed", "Acyclic", "Weighted", "Simple", "Has Loops", "Is Multigraph", "Bipartite", "Tree", "Forest")
+  
+Value = c(gorder(g), ecount(g), is_connected(g), is_directed(g), is_acyclic(g), is_weighted(g), is_simple(g), any_loop(g), any_multiple(g), is_bipartite(g), is_tree(g), is_forest(g))
+  
+table <- data.table(ID, Value)
+table %>% gt() %>% fmt_tf(columns = Value, tf_style = "yes-no")
+```
 
-# ── 1. Get & weight the street network ────────────────────────────────────────
-street_network <- dodgr_streetnet(bbox = "Klamath Falls, Oregon", expand = 0.2)
-graph <- weight_streetnet(street_network, wt_profile = "foot")
-vertices <- dodgr_vertices(graph)
+```{r}
+diameter(g)
+```
 
+```{r}
+get_diameter(g)
+```
+```{r}
+diameter(g, weights = 1 / E(g)$weight)
+```
 
-# ══════════════════════════════════════════════════════════════════════════════
-# OPTION A: ggplot2 (fast, static, great for publication / export)
-# ══════════════════════════════════════════════════════════════════════════════
-# dodgr edges carry from/to vertex IDs — join coords back in
-edges_plot <- graph %>%
-  left_join(vertices %>% select(id, x, y) %>% rename(from_id = id, x_from = x, y_from = y),
-            by = c("from" = "from_id")) %>%
-  left_join(vertices %>% select(id, x, y) %>% rename(to_id = id, x_to = x, y_to = y),
-            by = c("to" = "to_id"))
-
-ggplot(edges_plot) +
-  geom_segment(
-    aes(x = x_from, y = y_from, xend = x_to, yend = y_to,
-        colour = d_weighted),          # colour by weighted distance
-    linewidth = 0.25, alpha = 0.6
-  ) +
-  scale_colour_viridis_c(option = "magma", name = "Weighted dist (m)") +
-  coord_equal() +
-  theme_void(base_family = "sans") +
-  labs(title = "Klamath Falls — walkable street network",
-       subtitle = "Edge colour = dodgr foot-profile weighted distance") +
-  theme(
-    plot.title    = element_text(size = 14, face = "bold", margin = margin(b = 4)),
-    plot.subtitle = element_text(size = 9,  colour = "grey50"),
-    legend.position = "bottom",
-    legend.key.width = unit(2, "cm")
-  )
-
-ggsave("klamath_street_network.png", width = 10, height = 8, dpi = 200)
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# OPTION B: visNetwork (interactive — opens in RStudio Viewer / browser)
-# ══════════════════════════════════════════════════════════════════════════════
-library(visNetwork)
-
-# visNetwork wants nodes = data.frame(id, label, x, y)
-#             edges = data.frame(from, to, [optional aesthetics])
-
-# --- nodes ---
-# Use integer IDs that visNetwork can handle; keep a lookup to dodgr vertex IDs
-node_lookup <- vertices %>%
-  mutate(vis_id = row_number()) %>%           # integer key visNetwork needs
-  select(vis_id, id, x, y)
-
-vis_nodes <- node_lookup %>%
-  transmute(
-    id    = vis_id,
-    label = "",                               # labels clutter street nets
-    x     = x * 1e5,                         # visNetwork uses pixel-ish coords;
-    y     = -y * 1e5,                        # negate y so north is up
-    title = paste0("lon: ", round(x / 1e5, 5),
-                   "<br>lat: ", round(-y / 1e5, 5))
-  )
-
-# --- edges ---
-# Map dodgr from/to (character vertex IDs) → vis integer IDs
-id_map <- setNames(node_lookup$vis_id, node_lookup$id)
-
-# Subsample if the graph is very large (> ~50 k edges gets sluggish in browser)
-graph_sub <- if (nrow(graph) > 50000) slice_sample(graph, n = 50000) else graph
-
-vis_edges <- graph_sub %>%
-  transmute(
-    from  = id_map[from],
-    to    = id_map[to],
-    value = d_weighted,                       # edge thickness ∝ weighted dist
-    title = paste0("dist: ", round(d, 1), " m  |  weighted: ", round(d_weighted, 1), " m")
-  ) %>%
-  filter(!is.na(from), !is.na(to))
-
-visNetwork(vis_nodes, vis_edges,
-           main  = "Klamath Falls — walkable street network",
-           width = "100%", height = "800px") %>%
-  visEdges(
-    color  = list(color = "#4a90d9", highlight = "#e74c3c"),
-    smooth = FALSE,          # straight lines = much faster rendering
-    width  = 0.5
-  ) %>%
-  visNodes(size = 2, color = list(background = "#2c3e50", border = "#2c3e50")) %>%
-  visPhysics(enabled = FALSE) %>%           # CRITICAL — disable physics on a geo network
-  visOptions(highlightNearest = list(enabled = TRUE, degree = 1, hover = TRUE)) %>%
-  visInteraction(navigationButtons = TRUE, zoomView = TRUE) %>%
-  visSave(file = "klamath_street_network.html", selfcontained = TRUE)
-
-message("Saved → klamath_street_network.html")
+```{r}
+get_diameter(g, weights = 1 / E(g)$weight)
 ```
 
 
-```{r user_configurable_settings}
+```{r}
+cat("There are",
+    length(bridges(g)),
+    "bridges in this graph, and there are",
+    length(articulation_points(g)),
+    "articulation points in this graph.")
 
 ```
+
+```{r}
+bridges(g)
+bridges_all <- bridges(g)
+
+bridges_all
+```
+
+
+```{r}
+E(g)$from
+
+
+# E(g)$is_bridge <- E(g)[which(E(g)$from %in% bridges(g) | which((E(g)$to %in% bridges(g)))
+```
+
+```{r}
+articulation_points(g)
+```
+
+```{r}
+farthest_vertices(g)
+```
+
+```{r}
+edge_density(g, loops = FALSE)
+```
+
+```{r}
+cohesion(g)
+```
+
+```{r}
+vertex_connectivity(g)
+```
+
+```{r}
+
+```
+
+```{r}
+reachability_cohesion(g)
+```
+```{r}
+transitivity(g, type = "globalundirected", isolates = "NaN") # TODO ASK wht is isolates="NaN" here and not just NA?
+
+```
+
+```{r}
+
+```
+
+```{r}
+global_weighted_transitivity(g, mode = "undirected")
+```
+
+```{r}
+assortativity_degree(g)
+```
+
+```{r}
+
+plot(neighborhood)
+```
+```{r}
+neighborhood <- imake_neighborhood_graph(
+  g,
+  order = 4,
+  nodes = V(g),
+  mode = "all",
+  mindist = 0
+)
+plot(neighborhood)
+```
+```{r}
+neighborhood <- igraph::make_ego_graph(
+  g,
+  order = 4,
+  nodes = V(g),
+  mode = "all",
+  mindist = 0
+)
+plot(neighborhood)
+```
+
+
+
+
+
+
+
+
+```{r calculate_the_k_core}
+k_core_g <- coreness(g, mode = "all")
+```
+
+`k_core_g` is not a graph object. It records the k-index when the nodes are removed from the graph.
+
+```{r setup_and_plot_k_core_subgraph}
+
+
+V(g)$core <- k_core_g # storing the already calculated k-core in the vertices' core attr
+
+set.seed(1) # static seed for repeatability FOR NOW
+L <- layout_with_fr(g) # Fruchterman-Reingold layout
+
+ks <- sort(unique(V(g)$core)) # sorted vector of distinct k-core values
+ks <- ks[ks > 0]  # drop 0-core isolates
+
+# okay, breaking this down, looks like we are mapping over our distinct k-core values (in order, per sort call above), expecting a list return type and performing an anonymous function that is long enough to where it probably should be a _named_ function. Let's poke at it and comment on what it's doing...
+plots <- lapply(ks, function(k){
+  keep <- V(g)$core >= k # for any k passed in, keep holds the bool vector of vertex indices with >=k core
+  sg <- induced_subgraph(g, vids = V(g)[keep]) # making a new subgraph consisting of just the vertices that have >= current k-core (and any connecting edges between them)
+
+  # subset the full-graph layout to this subgraph's vertices (keeps positions stable)
+  idx <- as.integer(V(g)[keep])        # vertex ids in original graph
+  Lk  <- L[idx, , drop = FALSE] # subsetting the fr layout with the "keep" vertex ids/indices, the entire "row", and passing drop=FALSE ensures we get a df back out
+
+  # passing along our subgraph to ggraph, manual layout with our Lk values from above loc
+  ggraph(sg, layout = "manual", x = Lk[,1], y = Lk[,2]) +
+    
+    # now, adding relatively transparent mid gray edges connecting the vertices
+    geom_edge_link(alpha = 0.25, colour = "grey60") +
+    
+    # adding the vertices, colored based on their k-core value, static size of 2.5
+    geom_node_point(aes(color = core), size = 2.5) +
+    
+    # adding text labels, pulled from name attr, static size of 3, with a vertical adjustment
+    geom_node_text(aes(label = label),
+                 size = 3,
+                 vjust = 1.5) +
+    
+    # setting the color scale, option D is viridis (the green/blue gradient one), excellent choice, the end param sets the end of the color hue range from [0,1] to [0, 0.95]
+    # calling scale_color_viridis_c(), noting the _c ending, confused me for a while now, and it just dawned on me after reading the ggplot2 docs that that _c doesn't mean color option c, it stands for continuous, as opposed to d for discrete, or apparently b for binned color maps... Today I learned a thing...
+    scale_color_viridis_c(option = "C", end = 0.95) +
+    
+    # add a plot title, indicating the current k value, as well as the number of vertices and edges in the subgraph
+    ggtitle(paste0(k, "-core (core ≥ ", k, "), n=", vcount(sg), ", m=", ecount(sg))) +
+    
+    # blank theme with just default font size set
+    theme_void(base_size = 11) +
+    
+    # nullify the legend, and set the plot title to be smaller font face and bolded
+    theme(legend.position = "none",
+          plot.title = element_text(size = 10, face = "bold"))
+  
+  # no explicit return, so that ggraph is the return obj
+})
+
+# from what I am guessing, this will distribute the plots among a 2-col grid layout, for as many plots exist in ... well, plots. I'm relating this to patchwork or kinda like faceting behavior... edit 27 minutes later, when I notice what package wrap_plots is from, and didn't notice when copying its library call to top of file.... Argh!
+wrap_plots(plots, ncol = 2)
+
+```
+
+
+```{r}
+# alright, looks like we're applying a similar function as above over our kept k-cores, ks, expecting a list back and assigning to shell_plots
+shell_plots <- lapply(ks, function(k){
+  # identical as above, calculating k-cores and making a subgraph of them and their edges
+  keep <- V(g)$core == k
+  sg <- induced_subgraph(g, vids = V(g)[keep])
+
+  # again, getting the indices and doing some magic before indexing the layout and storing the coords
+  idx <- as.integer(V(g)[keep])
+  Lk  <- L[idx, , drop = FALSE]
+
+  ggraph(sg, layout = "manual", x = Lk[,1], y = Lk[,2]) + # same manual layout
+    
+    # this line differs. static vertex size and color... Hmmmm...
+    geom_node_point(size = 2.5, color = "#2C7FB8") +
+    
+    # identical
+    geom_node_text(aes(label = name),
+                 size = 3,
+                 vjust = 1.5) +
+    
+    # the key difference is a missing call to any ggraph function that adds edges/links, so only the vertices will display. 
+    
+    # title the plot with the k-shell value, k-core value, and the vertex count
+    ggtitle(paste0(k, "-shell (core == ", k, "), n=", vcount(sg))) +
+    
+    # blank theme with base font size 11
+    theme_void(base_size = 11)
+})
+
+# wraps the plots, however many there may be, in a 2-col grid style layout
+wrap_plots(shell_plots, ncol = 2)
+```
+
+
+
+```{r}
+plot(g)
+```
+

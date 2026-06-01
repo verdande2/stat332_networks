@@ -939,6 +939,8 @@ Now, let's calculate the fiedler's value for the graph:
 g_undirected <- igraph::as_undirected(g)
 
 L <- laplacian_matrix(g_undirected, weights = E(g)$weight, normalization = "symmetric")
+# L <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric") # I'm not sure why this doesn't work as is
+
 ev <- eigen(L, symmetric = TRUE, only.values = TRUE)$values
 lambda_2 <- ev[length(ev) - 1]
 lambda_2
@@ -995,7 +997,7 @@ which is largely useless, but looking at it as a baseline. Now we consider the p
 
 ```{r}
 centralize(str_all, theoretical.max = sum(str_all) * (length(str_all) - 1), normalized = TRUE)
-centralize(str_in, theoretical.max = sum(str_in) * (length(str_in) - 1), normalized = TRUE)
+centralize(str_in,  theoretical.max = sum(str_in)  * (length(str_in)  - 1), normalized = TRUE)
 centralize(str_out, theoretical.max = sum(str_out) * (length(str_out) - 1), normalized = TRUE)
 ```
 We can see from these values that this network is more predominantly full of nodes with higher out-strength.
@@ -1083,6 +1085,11 @@ category_colors <- c(
 
 ```
   
+```{r}
+path_to_string <- function(path) {
+  paste0(names(path$vertices), collapse = " -> ")
+}
+```
 
 
 ```{r render_special_points_table}
@@ -1210,7 +1217,7 @@ centralization_measures <- tribble(
   
   # Degree Centralization
   "Degree Centralization", centr_degree(g, mode = "all")$centralization,
-  "Strength Centralization (?)", centralize(strengths, theoretical.max = sum(strengths) * (length(strengths) - 1), normalized = TRUE),
+  "Strength Centralization", centralize(strengths, theoretical.max = sum(strengths) * (length(strengths) - 1), normalized = TRUE),
   
   # Closeness Centralization
   "Closeness Centralization", centr_clo(g, mode = "all")$centralization,
@@ -1272,66 +1279,6 @@ efficiency_measures |>
 ```
 
 
-```{r render_the_grand_master_measure_table, eval=FALSE}
-# TODO calculate a tribble full of the various measurement values, adding a column for interpretation
-# global_measures_table <- tribble(
-#   ~Category, ~Measure, ~Value, ~Interpretation, # TODO finish master table!
-# 
-#   # --------------------- STRUCTURAL ---------------------
-#   "Diameter", "Longest shortest path", "Structural", "Largest Component",
-# 
-#   "Conductance", "Global bottleneck ratio", "Structural", "Largest Component",
-# 
-#   "Adhesion (Edge Connectivity)", "Minimum edges to disconnect graph", "Structural", "✓",
-# 
-#   "Vertex Connectivity", "Minimum vertices to disconnect", "Structural", "✓",
-# 
-#   "Algebraic Connectivity (λ₂)", "Spectral connectivity (Fiedler value)", "Structural", "Largest Component",
-# 
-#   # --------------------- INTERCONNECTEDNESS ---------------------
-#   "Edge Density", "Edges ÷ possible edges", "Interconnectedness", "✓",
-# 
-#   "Network Cohesion (Reachability Ratio)", "Fraction of reachable ordered pairs", "Interconnectedness", "✓",
-# 
-#   "Global Clustering Coefficient", "Triangle closure ratio", "Interconnectedness", "✓",
-# 
-#   "Assortativity", "Mixing by attribute", "Interconnectedness", "✓",
-# 
-#   # --------------------- CENTRALIZATION ---------------------
-#   "Degree Centralization", "Inequality of degree distribution", "Centralization", "",
-# 
-#   "Strength Centralization", "Inequality of weighted degree", "Centralization", "✓",
-# 
-#   "Closeness Centralization", "Inequality in closeness", "Centralization", "Largest Component",
-# 
-#   "Betweenness Centralization", "Inequality in shortest path mediation", "Centralization", "Largest Component",
-# 
-#   "Eigenvector Centralization", "Inequality in spectral influence", "Centralization", "✓",
-# 
-#   # --------------------- EFFICIENCY ---------------------
-#   "Global Efficiency", "Global ease of communication", "Efficiency", "✓",
-# 
-#   "Average Local Efficiency", "Neighborhood-level efficiency", "Efficiency", "✓",
-# 
-#   "Average Shortest Path Length", "Mean geodesic distance", "Efficiency", "Largest Component"
-# )
-# 
-# global_measures_table |>
-#   gt() |>
-#   tab_header(
-#     title = "Caviar Full Drug Smuggling Graph - Various Measures",
-#     subtitle = "Various measures and metrics for the Caviar Drug Smuggling network"
-#   ) |>
-#   data_color(
-#     columns = everything(), # columns to tint
-#     fn = function(cols) {
-#       # we're stealing the exact colors from the previous table, so no change needed here
-#       category <- global_measures_table$Category
-#       category_colors[category]
-#     }
-#   ) |>
-#   tab_options(table.font.size = 12)
-```
 
 Next, please provide a few paragraphs regarding these measures and what they imply about the resilience, strengths, and weaknesses of this drug smuggling network.
 

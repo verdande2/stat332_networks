@@ -36,7 +36,6 @@ For each task below, **you must decide which network measure(s) are appropriate*
 
 For every task:
 
-<<<<<<< HEAD
 1.  State which measure(s) you used
 
 2.  Briefly explain *why* that measure fits the goal
@@ -44,15 +43,6 @@ For every task:
 3.  Identify the character(s) with the highest values
 
 4.  Include a small table or list of the top results
-=======
-1.) State which measure(s) you used
-
-2.) Briefly explain *why* that measure fits the goal
-
-3.) Identify the character(s) with the highest values
-
-4.) Include a small table or list of the top results
->>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
 
 # Prepping the dataset
 ```{r load_dataset}
@@ -69,7 +59,6 @@ Identify the character(s) who are most *central* to the overall network structur
 
 ### Guidance
 
-<<<<<<< HEAD
 - The measure(s) you selected
 
 - The top 3 characters by that measure
@@ -78,7 +67,7 @@ Identify the character(s) who are most *central* to the overall network structur
   characters.
 
 **Answer**:
-For determining which nodes are structurally important _across_ the network, from our centralization metrics, I chose to calculate XYZ
+For determining which nodes are structurally important _across_ the network, from our centralization metrics, I chose to calculate degree centrality for each node, with in degree centrality indicating more of a popular "central" and out degree centrality indicating more of a authority kind of centrality.
 
 Determining the actual value for this dataset:
 ```{r}
@@ -94,8 +83,6 @@ Determining the actual value for this dataset:
 
 ### 3.) Analysis
 
->>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
-
 
 ## Task 2: Powerful Intermediaries
 
@@ -105,7 +92,6 @@ Identify characters who act as **intermediaries** between otherwise weakly conne
 
 ### Guidance
 
-<<<<<<< HEAD
 - The measure(s) you used to capture this information
 
 - The top 3 characters and what kind of connection they provide
@@ -132,7 +118,6 @@ These characters may not have the strongest direct ties, but their position allo
 ### 3.) Analysis
 
 
->>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
 
 ## Task 3: Prominence
 
@@ -144,7 +129,6 @@ Identify the most **prestigious** characters in the network.
 
 Prestige is not just about how many connections a character has, but *who* they are connected to and how strong those ties are. Think carefully about how prestige differs from simple centrality.
 
-<<<<<<< HEAD
 - The prestige-related measure(s) you selected
 
 - The top 3 characters by prestige
@@ -172,8 +156,6 @@ The top three characters by prestige are:
 
 ### 3.) Analysis
 
->>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
-
 
 ## Task 4: Social Embeddedness
 
@@ -183,7 +165,7 @@ Identify characters who are most **embedded in tightly knit social environments*
 
 ### Guidance
 
-<<<<<<< HEAD
+
 - The measure(s) you used
 
 - The top 3 characters by this criterion
@@ -214,7 +196,6 @@ These characters tend to be surrounded by others who are also connected to one a
 
 ### 3.) Analysis
 -    A brief explanation of what “embeddedness” means in network terms\
->>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
 
 
 
@@ -226,7 +207,6 @@ Identify characters whose **relationships are strongest overall**, not merely nu
 
 ### Guidance
 
-<<<<<<< HEAD
 - The measure(s) you used
 
 - The top 3 characters by strength-based influence and what it means for
@@ -258,7 +238,6 @@ This task explicitly requires you to use the **edge weights**. Focus on characte
 
 ### 3.) Analysis
 -   A brief explanation of why weights matter for this task
->>>>>>> 632af2592caf0a6bdb5ad6d0df58e564eb02e68b
 
 
 # TODO double check deliverables from homework 6 pdf from canvas
