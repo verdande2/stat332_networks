@@ -24,32 +24,15 @@ library(gt)
 
 library(patchwork)
 library(ggraph)
+
+source("../graph.R")
 ```
 
 
 ```{r user_configurable_settings}
 gml_file <- "Caviar.graphml"
 
-SKIP_AHEAD <- FALSE # to skip outputting the introductory sections, TRUE for omit, FALSE for display all
 ```
-
-```{r extra_functions}
-print_igraph_attr <- function(graph) {
-  print("--- Graph Attributes ------")
-  print(graph_attr(graph))
-
-  print("--- Vertex Attributes ------")
-  print(vertex_attr(graph))
-
-  print("--- Edge Attributes ------")
-  print(edge_attr(graph))
-}
-```
-
-`r if(SKIP_AHEAD) {"Commenting out middle part to skip to the relevant bits!\\n\\n... snip ...\\n\\begin{comment}"}`
-
-`r if(SKIP_AHEAD) {"\\end{comment}"}`
-
 
 ## 1.) Setup
 
@@ -334,102 +317,11 @@ coreness(graph, mode = c("all", "out", "in"))
 ```
 
 ```{r calculate_the_k_core}
-k_core_g <- coreness(g, mode = "all")
-```
-
-`k_core_g` is not a graph object. It records the k-index when the nodes are removed from the graph.
-
-```{r setup_and_plot_k_core_subgraph}
-#library(patchwork) # all imports moved to top of file
-#library(ggraph) # all imports moved to top of file
-
-V(g)$core <- k_core_g # storing the already calculated k-core in the vertices' core attr
-
-set.seed(1) # static seed for repeatability FOR NOW
-L <- layout_with_fr(g) # Fruchterman-Reingold layout
-
-ks <- sort(unique(V(g)$core)) # sorted vector of distinct k-core values
-ks <- ks[ks > 0]  # drop 0-core isolates
-
-# okay, breaking this down, looks like we are mapping over our distinct k-core values (in order, per sort call above), expecting a list return type and performing an anonymous function that is long enough to where it probably should be a _named_ function. Let's poke at it and comment on what it's doing...
-plots <- lapply(ks, function(k){
-  keep <- V(g)$core >= k # for any k passed in, keep holds the bool vector of vertex indices with >=k core
-  sg <- induced_subgraph(g, vids = V(g)[keep]) # making a new subgraph consisting of just the vertices that have >= current k-core (and any connecting edges between them)
-
-  # subset the full-graph layout to this subgraph's vertices (keeps positions stable)
-  idx <- as.integer(V(g)[keep])        # vertex ids in original graph
-  Lk  <- L[idx, , drop = FALSE] # subsetting the fr layout with the "keep" vertex ids/indices, the entire "row", and passing drop=FALSE ensures we get a df back out
-
-  # passing along our subgraph to ggraph, manual layout with our Lk values from above loc
-  ggraph(sg, layout = "manual", x = Lk[,1], y = Lk[,2]) +
-    
-    # now, adding relatively transparent mid gray edges connecting the vertices
-    geom_edge_link(alpha = 0.25, colour = "grey60") +
-    
-    # adding the vertices, colored based on their k-core value, static size of 2.5
-    geom_node_point(aes(color = core), size = 2.5) +
-    
-    # adding text labels, pulled from name attr, static size of 3, with a vertical adjustment
-    geom_node_text(aes(label = name),
-                 size = 3,
-                 vjust = 1.5) +
-    
-    # setting the color scale, option D is viridis (the green/blue gradient one), excellent choice, the end param sets the end of the color hue range from [0,1] to [0, 0.95]
-    # calling scale_color_viridis_c(), noting the _c ending, confused me for a while now, and it just dawned on me after reading the ggplot2 docs that that _c doesn't mean color option c, it stands for continuous, as opposed to d for discrete, or apparently b for binned color maps... Today I learned a thing...
-    scale_color_viridis_c(option = "C", end = 0.95) +
-    
-    # add a plot title, indicating the current k value, as well as the number of vertices and edges in the subgraph
-    ggtitle(paste0(k, "-core (core ≥ ", k, "), n=", vcount(sg), ", m=", ecount(sg))) +
-    
-    # blank theme with just default font size set
-    theme_void(base_size = 11) +
-    
-    # nullify the legend, and set the plot title to be smaller font face and bolded
-    theme(legend.position = "none",
-          plot.title = element_text(size = 10, face = "bold"))
-  
-  # no explicit return, so that ggraph is the return obj
-})
-
-# from what I am guessing, this will distribute the plots among a 2-col grid layout, for as many plots exist in ... well, plots. I'm relating this to patchwork or kinda like faceting behavior... edit 27 minutes later, when I notice what package wrap_plots is from, and didn't notice when copying its library call to top of file.... Argh!
-wrap_plots(plots, ncol = 2)
-
+show_k_core_plots(g) # function definition moved to graph.R
 ```
 
 ```{r do_the_same_for_k_shell_plots}
-
-# alright, looks like we're applying a similar function as above over our kept k-cores, ks, expecting a list back and assigning to shell_plots
-shell_plots <- lapply(ks, function(k){
-  # identical as above, calculating k-cores and making a subgraph of them and their edges
-  keep <- V(g)$core == k
-  sg <- induced_subgraph(g, vids = V(g)[keep])
-
-  # again, getting the indices and doing some magic before indexing the layout and storing the coords
-  idx <- as.integer(V(g)[keep])
-  Lk  <- L[idx, , drop = FALSE]
-
-  ggraph(sg, layout = "manual", x = Lk[,1], y = Lk[,2]) + # same manual layout
-    
-    # this line differs. static vertex size and color... Hmmmm...
-    geom_node_point(size = 2.5, color = "#2C7FB8") +
-    
-    # identical
-    geom_node_text(aes(label = name),
-                 size = 3,
-                 vjust = 1.5) +
-    
-    # the key difference is a missing call to any ggraph function that adds edges/links, so only the vertices will display. 
-    
-    # title the plot with the k-shell value, k-core value, and the vertex count
-    ggtitle(paste0(k, "-shell (core == ", k, "), n=", vcount(sg))) +
-    
-    # blank theme with base font size 11
-    theme_void(base_size = 11)
-})
-
-# wraps the plots, however many there may be, in a 2-col grid style layout
-wrap_plots(shell_plots, ncol = 2)
-
+show_k_core_shell_plots(g) # function definition moved to graph.R
 ```
 
 ## Cliques
@@ -465,23 +357,25 @@ _Project Caviar_ was a unique investigation that targeted a network of hashish a
 The principal data source was comprised of information submitted as evidence during the trials of **22** participants in the Caviar network. It included **4,279** paragraphs of information (over **1,000** pages) revealing electronically intercepted telephone conversations between network participants. These transcripts were used to create the overall matrix of the drug-trafficking operation’s communication system throughout the course of the investigation. Individuals falling in the surveillance net were not all participants in the trafficking operation. An initial extraction of all names appearing in the surveillance data led to the identification of **318** individuals. From this pool, **208** individuals were not implicated in the trafficking operations. Most were simply named during the many transcripts of conversations, but never detected. Others who were detected had no clear participatory role within the network (e.g., family members or legitimate entrepreneurs). The final network was thus composed of **110** participants. 
 
 ### Network
-# TODO FORMAT THIS BETTER
+
 **11**x **1**-mode matrices person by person, representing the **11** phases of the investigation. **_Ties_** are _directed_ **and** _valued_. Number of nodes:
-1) **15**x**15**
-2) **24**x**24**
-3) **33**x**33**
-4) **33**x**33**
-5) **32**x**32**
-6) **27**x**27**
-7) **34**x**34**
-8) **42**x**42**
-9) **34**x**34**
-10) **42**x**42**
-11) **41**x**41**
+1) **15**x**15**\
+2) **24**x**24**\
+3) **33**x**33**\
+4) **33**x**33**\
+5) **32**x**32**\
+6) **27**x**27**\
+7) **34**x**34**\
+8) **42**x**42**\
+9) **34**x**34**\
+10) **42**x**42**\
+11) **41**x**41**\
 
 **1**-mode matrix **110** x **110** person by person of the complete network. **_Ties_** are communication exchanges between criminals. **_Values_** represent level of communication activity. Data comes from police wiretapping.
 
-Why yes, yes I did copy/paste that from Lab 4 and didn't want to reformat that blob of text. You worked with this same `graphml` object last week. I'd like you to use a variety of the above algorithms to try to discover meso-scale structural patterns within this dataset.
+Why yes, yes I did copy/paste that from Lab 4 and didn't want to reformat that blob of text. You worked with this same `graphml` object last week. 
+
+**I'd like you to use a variety of the above algorithms to try to discover meso-scale structural patterns within this dataset.**
 
 ```{r load_in_the_gml_file}
 g <- igraph::read_graph(gml_file, format = "graphml")
@@ -495,29 +389,29 @@ print_igraph_attr(g)
 
 ```
 
-Who are the core members?
+**Who are the core members?**
 
 ```{r find_core_members}
 coreness(g)
 ```
 
-Are there membership cliques?
+**Are there membership cliques?**
 
 ```{r}
 cliques(g, min = clique_num(g))
 ```
-2 of length 9... and ...
+
+2 of length 9... and...
 
 ```{r}
 cliques(g, min = clique_num(g)-1)
-
 ```
+
 22 of one less than that. Alright!
 
 So, of max (clique) length 9, we have 2 cliques.
 
-
-What communities can you find using density methods and how could this be helpful at finding the key operations?
+**What communities can you find using density methods and how could this be helpful at finding the key operations?**
 
 ```{r communities}
 g_leiden <- cluster_leiden(g, weights=E(g)$weight)
@@ -545,7 +439,7 @@ g_cen <- cluster_edge_betweenness(g,
 ```
 
 
-Next, please provide a few paragraphs regarding these measures and what they imply about the structure of this drug smuggling network.
+**Next, please provide a few paragraphs regarding these measures and what they imply about the structure of this drug smuggling network.**
 
 **Answer:**
 # TODO ME

@@ -15,14 +15,29 @@ editor_options:
     wrap: 72
 ---
 
-```{r setup, include = FALSE}
+```{r setup}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(tidyverse)
+library(igraph) # Our standard graph object.
+library(readr) # Reading in the data
+library(gbRd)
+library(gt)
+library(ggraph) # Plotting
+library(tidygraph) # Managing our graph object
+library(RColorBrewer) # Getting Colors
+library(scales) # scaling factors
+library(grid) # for unit()
+library(ggrepel) # for stronger label repel
+library(visNetwork) # for network graphs
+library(ggplot2) # for ploots
+library(igraphdata)
+
+source("../graph.R")
 ```
 
 ```{r user_configurable_settings}
 got_rds_file <- "got.rds"
-
 ```
 
 ## Background
@@ -44,12 +59,12 @@ For every task:
 
 4.  Include a small table or list of the top results
 
+---
+
 # Prepping the dataset
 ```{r load_dataset}
-# TODO load the GoT dataset
-
+g <- readr::read_rds(got_rds_file)
 ```
-
 
 ## Task 1: Central Characters
 
@@ -67,39 +82,62 @@ Identify the character(s) who are most *central* to the overall network structur
   characters.
 
 **Answer**:
-For determining which nodes are structurally important _across_ the network, from our centralization metrics, I chose to calculate degree centrality for each node, with in degree centrality indicating more of a popular "central" and out degree centrality indicating more of a authority kind of centrality.
+For determining which nodes are structurally important _across_ the network, from our centralization metrics, I chose to calculate degree centrality for each node, with in degree centrality indicating more of a popular "central" and out degree centrality indicating more of an authority kind of central character.
 
-Determining the actual value for this dataset:
-```{r}
-# TODO calculate
+The top three characters, ranked by their central-ness (degree) to the overall network structure:
 
+```{r calculate_all_the_degrees}
+V(g)$deg_total = degree(g, v = V(g), mode = "all", loops = FALSE, normalized = TRUE)
+V(g)$deg_in = degree(g, v = V(g), mode = "in", loops = FALSE, normalized = TRUE)
+V(g)$deg_out = degree(g, v = V(g), mode = "out", loops = FALSE, normalized = TRUE)
 ```
-=======
-"Central" here refers to characters who are structurally important across the network, not just locally popular. You should consider how information, influence, or interaction potential flows through the network.
-    
-### 1.) Chosen Measure and Justification
 
-### 2.) Table of Top Results
 
-### 3.) Analysis
+```{r total_degree_top_three}
+deg_total_order <- order(V(g)$deg_total, decreasing = TRUE)
+deg_total_sorted_vertices <- V(g)[deg_total_order]
+deg_total_sorted_vertices[1:3]
+```
 
+```{r in_degree_top_three}
+deg_in_order <- order(V(g)$deg_in, decreasing = TRUE)
+deg_in_sorted_vertices <- V(g)[deg_in_order]
+deg_in_sorted_vertices[1:3]
+```
+
+```{r out_degree_top_three}
+deg_out_order <- order(V(g)$deg_out, decreasing = TRUE)
+deg_out_sorted_vertices <- V(g)[deg_out_order]
+deg_out_sorted_vertices[1:3]
+```
+
+**Answer:**\
+The top three characters by degree centrality (mode = "all") are Tyrion Lannister, Jon Snow and Sansa Stark. As a watcher of the show, this makes complete sense.
+
+---
 
 ## Task 2: Powerful Intermediaries
 
-### Goal
+**Goal:**\
+Identify characters who act as **intermediaries** between otherwise
+weakly connected parts of the network.
 
-Identify characters who act as **intermediaries** between otherwise weakly connected parts of the network.
+**Guidance:**\
+These characters may not have the strongest direct ties, but their
+position allows them to connect groups or clusters. Focus on *structural
+mediation*, not popularity.
 
-### Guidance
+**Deliverables:**
 
-- The measure(s) you used to capture this information
+-    The measure(s) you used to capture this information
 
-- The top 3 characters and what kind of connection they provide
+-    The top 3 characters and what kind of connection they provide
 
-- A short explanation of how your measure captures this information
+-    A short explanation of how your measure captures this information
 
 **Answer**:
-For determining which nodes are acting as ties between groups/clusters, I will determine any bridge points and measure XYZ
+
+# TODO For determining which nodes are acting as ties between groups/clusters, I will determine any bridge points and measure XYZ
 
 Determining the actual values for this dataset:
 ```{r}
@@ -107,37 +145,31 @@ Determining the actual values for this dataset:
 
 ```
 
-The top three characters, ranked by their ability and effectiveness at linking clusters together:
-=======
-These characters may not have the strongest direct ties, but their position allows them to connect groups or clusters. Focus on *structural mediation*, not popularity.
+# TODO The top three characters, ranked by their ability and effectiveness at linking clusters together:
 
-### 1.) Chosen Measure and Justification
-
-### 2.) Table of Top Results
-
-### 3.) Analysis
-
-
+---
 
 ## Task 3: Prominence
 
-### Goal
-
+**Goal:**\
 Identify the most **prestigious** characters in the network.
 
-### Guidance
+**Guidance:**\
+Prestige is not just about how many connections a character has, but
+*who* they are connected to and how strong those ties are. Think
+carefully about how prestige differs from simple centrality.
 
-Prestige is not just about how many connections a character has, but *who* they are connected to and how strong those ties are. Think carefully about how prestige differs from simple centrality.
+**Deliverables:**
+  
+-   The prestige-related measure(s) you selected
 
-- The prestige-related measure(s) you selected
+-   The top 3 characters by prestige
 
-- The top 3 characters by prestige
-
-- A brief justification of your choice and what it means for these
-  character roles.
+-   A brief justification of your choice and what it means for these character roles.
 
 **Answer**:
-For determining which nodes/characters are the most prestigious/how strong the adjacent edges are, I chose XYZ
+
+# TODO For determining which nodes/characters are the most prestigious/how strong the adjacent edges are, I chose XYZ
 
 Determining the actual value for this dataset:
 ```{r}
@@ -145,77 +177,63 @@ Determining the actual value for this dataset:
 
 ```
 
-The top three characters by prestige are:
+# TODO The top three characters by prestige are:
 ```{r top_three_prestigious_characters}
 
 ```
-=======
-### 1.) Chosen Measure and Justification
 
-### 2.) Table of Top Results
-
-### 3.) Analysis
-
+---
 
 ## Task 4: Social Embeddedness
 
-### Goal
-
+**Goal:**\
 Identify characters who are most **embedded in tightly knit social environments**.
 
-### Guidance
+**Guidance:**\
+These characters tend to be surrounded by others who are also connected to one another. They may be influential within a clique or local group, even if they are not globally central.
 
+**Deliverables:**
+  
+-   The measure(s) you used
 
-- The measure(s) you used
+-   The top 3 characters by this criterion
 
-- The top 3 characters by this criterion
-
-- A brief explanation of what “embeddedness” means in network terms
+-   A brief explanation of what “embeddedness” means in network terms\
 
 **Answer**:
-For determining which nodes/characters are the most asdfsdf, I chose XYZ
+# TODO For determining which nodes/characters are the most asdfsdf, I chose XYZ
 
-Determining the actual value for this dataset:
+# TODO The top three characters ranked by social embededness are:
+
 ```{r}
 # TODO calculate
 
 ```
 
-The top three characters by prestige are:
-```{r top_three_prestigious_characters}
+# TODO "Embededness" means alskdfjlasdkf
 
-```
-
-"Embededness" means alskdfjlasdkf
-=======
-These characters tend to be surrounded by others who are also connected to one another. They may be influential within a clique or local group, even if they are not globally central.
-
-### 1.) Chosen Measure and Justification
-
-### 2.) Table of Top Results
-
-### 3.) Analysis
--    A brief explanation of what “embeddedness” means in network terms\
-
-
+---
 
 ## Task 5: Strength of Influence
 
-### Goal
-
+**Goal:**\
 Identify characters whose **relationships are strongest overall**, not merely numerous.
 
-### Guidance
+**Guidance:**\
+This task explicitly requires you to use the **edge weights**. Focus on characters whose total interaction strength is high, and reflect on how this differs from unweighted analyses.
 
-- The measure(s) you used
+**Deliverables:**
 
-- The top 3 characters by strength-based influence and what it means for
-  these characters.
+-   The measure(s) you used
 
-- A brief explanation of why weights matter for this task
+-   The top 3 characters by strength-based influence and what it means
+for these characters.
+
+-   A brief explanation of why weights matter for this task
 
 **Answer**:
-For determining which nodes/characters have the strongest relationships overall, I chose XYZ
+
+# TODO For determining which nodes/characters have the strongest relationships overall, I chose XYZ
 
 Determining the actual value for this dataset:
 ```{r}
@@ -225,20 +243,7 @@ Determining the actual value for this dataset:
 
 The top relationships, by weight/strength, are:
 ```{r top_relationships}
-
+# TODO top relationships
 ```
 
-Weights matter in this scenario because alksdjflaksdjflasdjflksd
-=======
-This task explicitly requires you to use the **edge weights**. Focus on characters whose total interaction strength is high, and reflect on how this differs from unweighted analyses.
-
-### 1.) Chosen Measure and Justification
-
-### 2.) Table of Top Results
-
-### 3.) Analysis
--   A brief explanation of why weights matter for this task
-
-
-# TODO double check deliverables from homework 6 pdf from canvas
-
+# TODO Weights matter in this scenario because alksdjflaksdjflasdjflksd

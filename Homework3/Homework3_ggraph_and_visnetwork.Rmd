@@ -10,11 +10,10 @@ output:
   pdf_document: default
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(cache = FALSE)
+```{r setup}
 knitr::opts_chunk$set(echo = TRUE)
 
-library(igraph) # TODO look into quietly = TRUE, warn.conflicts = FALSE, verbose = FALSE params in library()
+library(igraph)
 library(networkdata)
 library(ggplot2)
 library(tidygraph)
@@ -22,25 +21,13 @@ library(ggraph)
 library(visNetwork)
 library(tibble)
 library(purrr)
+
+source("../graph.R")
 ```
 
 
 ```{r user_configurable_settings}
 gml_filename <- "Homework_3_filtered_data.gml"
-
-```
-
-```{r extra_functions}
-print_igraph_attr <- function(g) {
-  print("--- Graph Attributes ------")
-  print(graph_attr(g))
-
-  print("--- Vertex Attributes ------")
-  print(vertex_attr(g))
-
-  print("--- Edge Attributes ------")
-  print(edge_attr(g))
-}
 ```
 
 This homework is focused on plotting with `ggraph` and `visNetwork` but will also be used to explore the `tidygraph` framework. `tidygraph` is a library which provides a subclass of `igraph` and enables much smoother manipulation of graph objects using the `tidyverse` methodologies.
@@ -161,6 +148,8 @@ g
 ```{r plot_the_graph_data, fig.height = 9, fig.width = 16}
 # plot and layout settings
 
+# TODO finish ggraph legends, edges, nodes, etc
+
 # Shape mapping (3 shapes)
 handedness <- c("U", "R", "L")
 shape_codes <- c(16, 15, 22)
@@ -206,6 +195,7 @@ p <- ggraph::ggraph(g, layout = "fr") +
     strength = 0.3
   ) +
 
+  # TODO fix scales and legends
 # legends
   # - There are 4 legends at each of the 4 corners:
   #  - vertex color based on `country` in bottom right, shown as fill of squares for icons in red, yellow, blue for USA, AUS, GBR respectively
@@ -267,7 +257,7 @@ g
 
 ```{r prepare_for_visnetwork}
 data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
-# TODO Fix this part!
+# TODO Fix edgelist so visNetwork can read the dataset!
 # visnetwork wants every node to have an id (integer) and every edge set to be a pairing of those ids (integers), so we need to adjust a bit here
 
 # data$nodes[data$edges$from]
@@ -281,13 +271,13 @@ data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
 #          name = as.numeric(factor(V(g)$id))
 #   )
 
-g_edges <- g |>
-  tidygraph::as_tbl_graph() |>
-  activate("edges") |>
-  mutate(
-    from = as.numeric(factor(E(g)$from)),
-    to = as.numeric(factor(E(g)$to))
-    )
+# g_edges <- g |>
+#   tidygraph::as_tbl_graph() |>
+#   activate("edges") |>
+#   mutate(
+#     from = as.numeric(factor(E(g)$from)),
+#     to = as.numeric(factor(E(g)$to))
+#     )
 
 #data$nodes$name <- rownames(data$nodes) # preserve original names
 # data$nodes$id <- 
@@ -299,8 +289,8 @@ g_edges <- g |>
 # data$edges$from <- id_map[data$edges$from]
 # data$edges$to   <- id_map[data$edges$to]
 
-glimpse(g_nodes)
-glimpse(g_edges)
+# glimpse(g_nodes)
+# glimpse(g_edges)
 ```
 
 ```{r plot_visnetwork_graph}

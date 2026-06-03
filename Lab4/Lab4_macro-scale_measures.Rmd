@@ -19,30 +19,15 @@ library(gt)
 library(tibble)
 library(dplyr)
 library(Dict)
+library(data.table)
+
+source("../graph.R")
 ```
 
 
 ```{r user_configurable_settings}
 gml_file <- "Caviar.graphml"
-
-SKIP_AHEAD <- FALSE # to skip outputting the introductory sections, TRUE for omit, FALSE for display all
 ```
-
-```{r extra_functions}
-print_igraph_attr <- function(graph) {
-  print("--- Graph Attributes ------")
-  print(graph_attr(graph))
-
-  print("--- Vertex Attributes ------")
-  print(vertex_attr(graph))
-
-  print("--- Edge Attributes ------")
-  print(edge_attr(graph))
-}
-```
-
-`r if(SKIP_AHEAD) {"Commenting out parts 1 and 2 to skip to the relevant bits!\\n\\n... snip ...\\n\\begin{comment}"}`
-
 
 ## 1.) Setup
 
@@ -53,8 +38,6 @@ For our dataset this week, we're going to use the Game of Thrones network from t
 ![A bad visualization of the Game of Thrones Network](Game of Thrones Network.png)
 
 ---
-
-
 
 ## 2.) Lab Walkthrough
 
@@ -80,10 +63,7 @@ summary(g)
 
 The first thing that we should do when considering any graph is go get the total list of binaries. The summary of this graph shows us that it has **107** nodes and **352** edges, but we can do a bit better than the summary for finding out other properties.
 
-```{r, message = FALSE, warning = FALSE}
-library(data.table)
-library(gt)
-
+```{r}
 ID <- c("Order", "Size", "Connected", "Directed", "Acyclic", "Weighted", "Simple", "Has Loops", "Is Multigraph", "Bipartite", "Tree", "Forest")
 
 Value <- c(gorder(g), ecount(g), is_connected(g), is_directed(g), is_acyclic(g), is_weighted(g), is_simple(g), any_loop(g), any_multiple(g), is_bipartite(g), is_tree(g), is_forest(g))
@@ -194,33 +174,7 @@ $$
 
 
 ```{r}
-# TODO line by line debug this
-conductance_of_set <- function(g, S, weights = E(g)$weight) {
-  # if weights=null is passed, start weights at vector of 1s
-  if (is.null(weights)) weights <- rep(1, ecount(g))
-
-  S <- as.integer(S) # integerize the set
-  S_flag <- rep(FALSE, vcount(g)) # set flags to false for all vertices
-  S_flag[S] <- TRUE
-
-  ep <- ends(g, E(g), names = FALSE)
-  crossing <- xor(S_flag[ep[, 1]], S_flag[ep[, 2]])
-  cut_w <- sum(weights[crossing], na.rm = TRUE)
-
-  # weighted degrees
-  if (!is.null(E(g)$weight)) {
-    deg_w <- strength(g, vids = V(g), mode = "all", weights = E(g)$weight)
-  } else {
-    deg_w <- degree(g)
-  }
-
-  vol_S  <- sum(deg_w[S])
-  vol_cS <- sum(deg_w[!S_flag])
-
-  denom <- min(vol_S, vol_cS)
-  if (denom == 0) return(0)
-  cut_w / denom
-}
+# function definition moved to graph.R
 ```
 
 But, this generally requires that we perform this calculation on all possible cutsets which partition a graph and then find the minimum of this set of values. The increase to the numbers of cutsets available increases at a rate faster than polynomial which makes this problem **_NP_**. Generally, this calculation is restricted to "balanced" sets in order to ease the process (and reduce the number of required calculations), but even finding "balanced" sets in a weighted graph is a difficult problem.
@@ -252,50 +206,7 @@ Okay, so now that we have upper bounds, it turns out there is a special vector $
 Since we have this method to get a potential set to work with, we can implement these sweeps.
 
 ```{r}
-# TODO line by line this function and comment it all out
-fiedler_sweep_cut <- function(g) {
-
-  # Make sure it's undirected and weighted sensibly
-  if (is_directed(g)) {
-    g <- as_undirected(g, mode = "collapse", edge.attr.comb = list(weight = "sum"))
-  }
-
-  # Compute symmetric normalized Laplacian
-  L <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric")
-
-  # Eigen-decomposition: eigenvalues in *descending order*
-  ev <- eigen(L, symmetric = TRUE)
-
-  # Fiedler vector = eigenvector for second-smallest eigenvalue
-  fiedler_vec <- ev$vectors[, ncol(ev$vectors) - 1]
-
-  # Sweep: sort vertices by Fiedler values
-  ord <- order(fiedler_vec)
-
-  best_phi <- Inf
-  best_S <- NULL
-
-  # seek out lowest conductance of set S on g
-  for (t in 1:(length(ord) - 1)) {
-    S <- ord[1:t]
-    phi_S <- conductance_of_set(g, S)
-    if (phi_S < best_phi) {
-      best_phi <- phi_S
-      best_S <- S
-    }
-  }
-
-  list(
-    phi = best_phi,
-    S = best_S,
-    fiedler_vector = fiedler_vec
-  )
-}
-
-```
-
-```{r}
-res <- fiedler_sweep_cut(g)
+res <- fiedler_sweep_cut(g) # function definition moved to graph.R
 cat("Best φ from spectral sweep:", res$phi, "\n")
 
 ```
@@ -308,51 +219,10 @@ An alternative to this method is the Andersen-Chung-Lang (ACL) Local Graph Parti
 
 Since `page_rank()` is well defined in `igraph`, we can actually implement this very easily, but because this is geared towards local calculations, it is very likely to find a much higher value than the true global value. It's more of a sanity check than a real calculation of conductance.
 
-```{r}
-# TODO line by line this func
-page_rank_sweep_cut <- function(g, alpha = 0.15) {
-
-  if (is.directed(g)) {
-    g <- as.undirected(g, mode = "collapse", edge.attr.comb = list(weight = "sum"))
-  }
-
-  # Weighted PageRank
-  pr <- page_rank(g, algo = "prpack", damping = 1 - alpha,
-                  weights = E(g)$weight)$vector
-
-  # Normalize by weighted degree (this matters!)
-  deg <- strength(g, vids = V(g), mode = "all", weights = E(g)$weight)
-  score <- pr / deg
-
-  ord <- order(score, decreasing = TRUE)  # highest score first
-
-  best_phi <- Inf
-  best_S <- NULL
-
-  for (t in 1:(length(ord) - 1)) {
-    S <- ord[1:t]
-    phi <- conductance_of_set(g, S)
-    if (phi < best_phi) {
-      best_phi <- phi
-      best_S <- S
-    }
-  }
-
-  list(
-    phi = best_phi,
-    vertex_ids = best_S,
-    vertex_names = V(g)$name[best_S],
-    page_rank = pr,
-    score = score
-  )
-}
-
-```
-
 Employing this algorithm:
 
 ```{r}
-conductance_2 <- page_rank_sweep_cut(g)
+conductance_2 <- page_rank_sweep_cut(g) # function definition moved to graph.R
 ```
 
 And our results are:
@@ -424,40 +294,7 @@ Where $\lambda(u,v)$ is the number of pairwise local edges between $u$ and $v$ f
 In social networks, we defined cohesion to be the "reachability ratio." I.e. the proportion of nodes where a path exists between them. This ratio depends on whether or not the graph is directed or not:
 
 ```{r}
-# TODO line by line this
-#Note that we are specifying directed reachability for directed graphs
-reachability_cohesion <- function(g, mode = c("undirected", "weak", "strong")) {
-  mode <- match.arg(mode)
-  n <- vcount(g)
-  if (n <= 1) return(1)
-
-  if (mode == "undirected") {
-    g2 <- as_undirected(g, mode = "collapse",
-                        edge.attr.comb = list(weight = "sum"))
-    D <- distances(g2)
-    reachable <- sum(D != Inf) - n      # exclude self-pairs
-    total <- n * (n - 1)
-
-  } else if (mode == "weak") {
-    # treat as undirected for reachability
-    comps <- components(g, mode = "weak")$membership
-    comp_sizes <- table(comps)
-    reachable <- sum(comp_sizes * (comp_sizes - 1))
-    total <- n * (n - 1)
-
-  } else if (mode == "strong") {
-    D <- distances(g, mode = "out")
-    reachable <- sum(D != Inf) - n
-    total <- n * (n - 1)
-  }
-
-  cohesion <- reachable / total
-  return(cohesion)
-}
-```
-
-```{r}
-reachability_cohesion(g)
+reachability_cohesion(g) # function definition moved to graph.R
 ```
 
 It's still **1** in our case because the graph is connected, but this is the measure we discussed in class: The Reachability Ratio.
@@ -473,30 +310,7 @@ transitivity(g, type = "globalundirected", isolates = "NaN")
 Now we have a choice. There are multiple "correct" ways of getting a global measure for a weighted graph, but the most common is to use the arithmetic mean of local transitiveness. This isn't all that hard, but requires that we write another function.
 
 ```{r}
-# TODO line by line
-global_weighted_transitivity <- function(g, mode = c("undirected", "directed")) {
-  mode <- match.arg(mode)
-
-  if (mode == "undirected") {
-    # This does nothing if the graph is already undirected but collapses a directed graph
-    g2 <- as_undirected(g, mode = "collapse",
-                        edge.attr.comb = list(weight = "sum"))
-    local <- transitivity(g2, type = "weighted")
-  } else {
-    # Directed -> use directed weights but still based on Barrat formulation
-    local <- transitivity(g, type = "weighted")
-  }
-
-  # Remove NA values (degree < 2)
-  local <- local[!is.na(local)]
-
-  # Average global weighted clustering
-  mean(local)
-}
-```
-
-```{r}
-global_weighted_transitivity(g, mode = "undirected")
+global_weighted_transitivity(g, mode = "undirected") # function definition moved to graph.R
 ```
 
 I'm going to pause here because these two measures actually tell us two different things. The unweighted transitivity is based on the proportion of triangles that exist when compared to the total that _could_ exist. The weighted version actually tells us the strength of the embedding for the node based on intensity. The average of this being much higher tells us that there are some clusters with very strong ties. I.e. it answers the question of how strongly do triads reinforce each other? It is common to look at a distribution of these weighted triads to understand whether this comes from a lot of moderately strong connections or from a few **VERY** strong connections.
@@ -552,29 +366,7 @@ d_{ij} = 1/w_{ij}
 $$
 
 ```{r}
-# TODO line by line and comment
-centr_clo_weighted <- function(g) {
-  # convert tie strength → distance
-  d <- 1 / E(g)$weight
-
-  # weighted closeness
-  C <- closeness(g, weights = d)
-
-  # remove Inf or NA (isolates)
-  C <- C[is.finite(C)]
-
-  C_max <- max(C)
-  num <- sum(C_max - C)
-  #Set a theoretical maximum based on the total distance represented in the network
-  denom <- (length(C) - 1) * C_max
-
-  if (denom == 0) return(0)
-  num / denom
-}
-```
-
-```{r}
-centr_clo_weighted(g)
+centr_clo_weighted(g) # function definition moved to graph.R
 ```
 
 #### Betweenness Centralization
@@ -586,22 +378,7 @@ centr_betw(g)$centralization
 Betweenness demonstrates choke points and imbalance of brokerage power on shortest paths. This means that the weights matter, and once again, costs needs to be measured based on the strength of association (or reciprocal weights) yet again. I'm not just making this up either. <https://toreopsahl.com/tnet/weighted-networks/node-centrality/>
 
 ```{r}
-# TODO line by line
-centr_betw_weighted <- function(g) {
-  # Convert strength → distance
-  d <- 1 / E(g)$weight # reciprocalize!
-
-  # weighted betweenness
-  b <- betweenness(g, directed = FALSE, weights = d)
-
-  b_max <- max(b)
-  num <- sum(b_max - b)
-  denom <- (length(b) - 1) * b_max
-
-  if (denom == 0) return(0)
-  num / denom
-}
-
+centr_betw_weighted(g)
 ```
 
 #### Eigenvector Centralization
@@ -613,31 +390,7 @@ centr_eigen(g)$centralization
 Yay, this means... nothing because once again, our weight measures are actually implicitly defining a multigraph where the degree measure is misleading! We need to create our same functionality again:
 
 ```{r}
-# TODO line by line comment
-centr_eigen_weighted <- function(g) {
-  # weighted EC scores
-  ec <- eigen_centrality(g, weights = E(g)$weight)$vector
-
-  # remove missing values (rare but can occur)
-  ec <- ec[is.finite(ec)]
-
-  ec_max <- max(ec)
-
-  # Freeman numerator
-  num <- sum(ec_max - ec)
-
-  # theoretical maximum for normalized star
-  # (one node gets ec_max, all others get 0)
-  denom <- (length(ec) - 1) * ec_max
-
-  if (denom == 0) return(0)
-
-  num / denom
-}
-```
-
-```{r}
-centr_eigen_weighted(g)
+centr_eigen_weighted(g) # function definition moved to graph.R
 ```
 
 Perfect, this is actually a meaningful measure for eigenvector centrality. Do you remember what this meant?
@@ -765,8 +518,6 @@ global_measures_table |>
 I have to admit, that is a nicely made table. Well done!
 
 ---
-`r if(SKIP_AHEAD) {"\\end{comment}"}`
-
 
 
 ## 4.) Your turn:
@@ -780,17 +531,17 @@ The principal data source was comprised of information submitted as evidence dur
 ### Network
 
 **11**x **1**-mode matrices person by person, representing the **11** phases of the investigation. **_Ties_** are _directed_ **and** _valued_. Number of nodes:
-1) **15**x**15**
-2) **24**x**24**
-3) **33**x**33**
-4) **33**x**33**
-5) **32**x**32**
-6) **27**x**27**
-7) **34**x**34**
-8) **42**x**42**
-9) **34**x**34**
-10) **42**x**42**
-11) **41**x**41**
+1) **15**x**15**\
+2) **24**x**24**\
+3) **33**x**33**\
+4) **33**x**33**\
+5) **32**x**32**\
+6) **27**x**27**\
+7) **34**x**34**\
+8) **42**x**42**\
+9) **34**x**34**\
+10) **42**x**42**\
+11) **41**x**41**\
 
 **1**-mode matrix **110** x **110** person by person of the complete network. **_Ties_** are communication exchanges between criminals. **_Values_** represent level of communication activity. Data comes from police wiretapping.
 
@@ -808,6 +559,7 @@ Excellent. Now, let's do a dump on the `igraph` object just to make sure things 
 g
 print_igraph_attr(g)
 ```
+
 > IGRAPH db08044 DNW- 110 205 -- CAVIAR_FULL
 > + attr: name (g/c), name (v/c), id (v/c), weight (e/n)
 
@@ -816,52 +568,12 @@ I see that the `igraph` is named `CAVIAR_FULL`, which checks out. I see that the
 Now, that we have our dataset imported and in `igraph` object form, we can begin to consider the various tools in our cram-packed "measures and metrics of graphs" toolbox we've added from the first few sections of this lab. Eventually, I'd like to produce a nicely formatted table like the above `gt` styled one, but first, let's consider exactly _which_ measures are valid, meaningful or even possible for our particular graph. Mirroring the structure above, let's start by looking at this graph's various graph's structural measures:
 
 ```{r display_graph_properties}
-
-graph_properties <- tribble(
-  ~Property, ~Value,
-  "Order", gorder(g),
-  "Size", ecount(g), # size defined as # of edges in graph
-  "Connnected", is_connected(g),
-  "Directed", is_directed(g),
-  "Acyclic", is_acyclic(g),
-  "Weighted", is_weighted(g),
-  "Simple", is_simple(g),
-  "Has Loops", any_loop(g),
-  "Is Multigraph", any_multiple(g),
-  "Bipartite", is_bipartite(g),
-  "Tree", is_tree(g),
-  "Forest", is_forest(g)
-)
-
-graph_properties |>
-  gt() |>
-  tab_header(
-    title = "Graph Stats & Properties",
-    subtitle = "Stats and metrics about the Caviar dataset"
-  ) |>
-  # data_color(
-  #   columns = everything(),   # columns to tint
-  #   fn = function(cols) {
-  #     category <- global_measures_table$Category
-  #     category_colors[category]
-  #   }
-  # ) |> # TODO fix colors eventually
-  fmt_number(columns = Value, rows = 1:2, decimals = 0, use_seps = TRUE) |> # special formatting for numeric values
-  fmt_tf(columns = Value, rows = 3:length(Value), true_val = "✓", false_val = "✗", colors = c("#0072B2", "#E69F00")) |>  # special formating for the bools
-  tab_options(table.font.size = 12)
-
+print_formatted_graph_summary_table(g)
 ```
 
-Well, it's all connected, weighed, and doesn't have any loops or multiply-connected edges, so that makes things simpler. 
+Well, it's all connected, weighed, and doesn't have any loops or multiply-connected edges, so that makes things simpler to interpret. 
 
-```{r largest_component}
-# probably unneeded
-largest_component_of_g <- largest_component(g)
-largest_component_of_g
-
-```
-
-```{r precompute_degrees_and_strengths}
+```{r precompute_basic_measures}
 # precompute and store all weights/strengths as vertex attributes
 deg_all <- igraph::degree(g, mode = "all")
 deg_in  <- igraph::degree(g, mode = "in")
@@ -879,6 +591,9 @@ V(g)$deg_out <- deg_out
 V(g)$str_all <- str_all
 V(g)$str_in  <- str_in
 V(g)$str_out <- str_out
+
+# tacking on the reciprocal weights if we need them later
+E(g)$recip_weight = 1 / E(g)$weight 
 
 ```
 
@@ -902,8 +617,10 @@ get_diameter(g, weights = NA) # overriding weights because we just want max diam
 farthest_vertices(g, weights = NA) # overriding weights because we just want max diameter w/o weight influence
 ```
 
+Laplacian doesn't work for directed graphs! Do I even need a section for this?
+```{r}
 # TODO laplacian section here!
-
+```
 
 That gives us our Cheeger Bounds for the Fiedler's value for the datset, now let's compare to the spectral sweep and the PageRank sweep above:
 
@@ -933,17 +650,13 @@ Now, let's calculate the fiedler's value for the graph:
 
 ```{r find_fiedlers_value}
 
-# had to make the graph undirected to calculate the laplacian below, else get:
+# had to make the graph undirected to calculate the laplacian below (does that even make sense, treating this graph as a undirected, just to get lambda_2?), else get:
 # > Error in get_laplacian_sparse_impl(graph, "out", normalization, weights) :
 # > At vendor/cigraph/src/properties/spectral.c:324 : Found non-isolated vertex with zero out-strength, cannot perform symmetric normalization of Laplacian with 'out' mode. Invalid value
+
 g_undirected <- igraph::as_undirected(g)
 
-L <- laplacian_matrix(g_undirected, weights = E(g)$weight, normalization = "symmetric")
-# L <- laplacian_matrix(g, weights = E(g)$weight, normalization = "symmetric") # I'm not sure why this doesn't work as is
-
-ev <- eigen(L, symmetric = TRUE, only.values = TRUE)$values
-lambda_2 <- ev[length(ev) - 1]
-lambda_2
+lambda_2 <- find_fiedlers_number(g_undirected)
 ```
 
 ## Interconnectedness
@@ -1039,7 +752,7 @@ centr_eigen_weighted(g)
 We're determining efficiency through the network, so I'd consider either using the reciprocal of the weights as the distance (therefore, higher weight => easier communication channel), or setting weights to `NA` so that it simply measures degrees of people between the nodes.
 
 ```{r}
-# edge weights represent number of communications, so I'd assume we should minimize shortest paths based on reciprocal of the weight
+# edge weights represent number of communications, so I'd reckon we should minimize shortest paths based on reciprocal of the weight
 cat("Using the reciprocal of the weight's value as the weight:\n")
 cat(paste0(
   "The global efficiency is: ",
@@ -1086,6 +799,7 @@ category_colors <- c(
 ```
   
 ```{r}
+# takes a path from igraph and converts it into a string like "node1 -> node2 -> node3"
 path_to_string <- function(path) {
   paste0(names(path$vertices), collapse = " -> ")
 }
@@ -1134,7 +848,7 @@ structural_measures <- tribble(
   "Farthest Vertices", farthest_vertices(g, weights = NA), # need to ignore weights for this to make sense
   "Diameter with Reciprocal Weights", diameter(g, weights = 1/E(g)$weight),
   "Diameter Path with Reciprocal Weights", get_diameter(g, weights = 1/E(g)$weight),
-  "Farthest Vertices with Reciprocal Weights", farthest_vertices(g, weights = 1 / E(g)$weight), # does this measure even make any sense?
+  "Farthest Vertices with Reciprocal Weights", farthest_vertices(g, weights = 1 / E(g)$weight), # TODO does this measure even make any sense?
   
   # Conductance measures--------------------------------------------------------
   
@@ -1278,11 +992,10 @@ efficiency_measures |>
 
 ```
 
-
-
 Next, please provide a few paragraphs regarding these measures and what they imply about the resilience, strengths, and weaknesses of this drug smuggling network.
 
 **Answer:**
+
 ```{r}
 # TODO answer me!
 ```
@@ -1292,6 +1005,9 @@ Next, please provide a few paragraphs regarding these measures and what they imp
 What you need to do next is to "knit" your document into an html using the "Knit" button near the top of the screen. This will give you an HTML that you can turn in.
 
 
+# TODO REMAINING TEXT SHOULD BE DELETABLE
+
+---
 
 Trying to get Fiedler's number for caviar dataset:
 

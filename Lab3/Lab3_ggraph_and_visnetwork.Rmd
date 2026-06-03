@@ -27,6 +27,8 @@ library(grid) # for unit()
 library(ggrepel) # for stronger label repel
 library(visNetwork) # for network graphs
 library(ggplot2) # for ploots
+
+source("../graph.R")
 ```
 
 ```{r user_configurable_settings}
@@ -36,24 +38,7 @@ media_network_filename <- "Media Network.rds"
 # for later part:
 actor_roles_filename <- "Actor Roles.csv"
 table_2_filename <- "2006 Koschade Table 2.csv"
-
-SKIP_AHEAD <- TRUE # bool flag to comment out part 1 and 2, set to FALSE to output parts 1 and 2
 ```
-
-```{r extra_functions}
-print_igraph_attr <- function(graph) {
-  print("--- Graph Attributes ------")
-  print(graph_attr(graph))
-
-  print("--- Vertex Attributes ------")
-  print(vertex_attr(graph))
-
-  print("--- Edge Attributes ------")
-  print(edge_attr(graph))
-}
-```
-
-`r if(SKIP_AHEAD) {"Commenting out first introductory sections to skip to the relevant bits!\\n\\n... snip ...\\n\\begin{comment}"}`
 
 ## 1.) Setup
 
@@ -238,7 +223,7 @@ p
 #  10.         └─scales:::as_discrete_pal.default(elem)
 #  11.           └─cli::cli_abort("Cannot convert {.arg x} to a discrete palette.")
 #  12.             └─rlang::abort(...)
-# this stack trace is ... less than useful... All I know about this error is that trying to map to edge linetype leads to some function getting a param `x` passed that is not a discrete palette already. I'd imagine it's probably a /continuous/ palette, but unsure where the conversion needs to happen # TODO
+# this stack trace is ... less than useful... All I know about this error is that trying to map to edge linetype leads to some function getting a param `x` passed that is not a discrete palette already. I'd imagine it's probably a /continuous/ palette, but unsure where the conversion needs to happen # TODO ASK JOE debug linetype issues
 ```
 
 If you're paying attention, you might notice that I stored the graph as the variable `p` and then called it by just using `p` at the end of the code cell. I did this for a reason. In `ggplot2`, we can theme our graphs. <https://ggplot2.tidyverse.org/reference/theme.html>
@@ -251,9 +236,7 @@ p + theme(
 )
 ```
 
-`r if(SKIP_AHEAD) {"\\end{comment}"}`
-
-**Note**: Before I forget, I had to modify a couple of the chunks above, commenting out a few parameters related to edge line type. I'll have to look into what is the source of that issue.
+**Editor's Note**: Before I forget, I had to modify a couple of the chunks above, commenting out a few parameters related to edge line type. I'll have to look into what is the source of that issue.
 
 ## 3.) Your turn:
 
@@ -283,9 +266,9 @@ g_actors <- set_vertex_attr(g_actors, name = "Role", value = actor_roles$Role) #
 g_actors
 print_igraph_attr(g_actors)
 ```
-```{r identify_command_team_relations}
-command_team_edges <- E(g_actors)[.inc(V(g_actors)[Role == "Command Team"])]
 
+```{r identify_command_team_relations}
+command_team_edges <- E(g_actors)[.inc(V(g_actors)[Role == "Command Team"])] # see https://igraph.org/r/html/1.2.3/igraph-es-indexing.html
 
 # We'll accentuate the command team themselves with a colored node, as well coloring any contact with the team members
 # note: we're just setting flags here so ggraph can color during plotting
@@ -331,13 +314,15 @@ p <- ggraph(g_actors, layout = "lgl") +
     size = 4
   ) +
 
+  # TODO fix scales
   scale_edge_color_manual(values = command_colors) + 
   scale_color_manual(values = command_colors) + 
   scale_size_continuous() +
   #scale_shape_manual(values = shape_map, guide = "none") +
   #scale_edge_width(range = c(0.5, 1.5), guide = "none") +
-  #scale_edge_linetype(guide = "none") + # this line triggers the below error! see note at end of chunk!
+  #scale_edge_linetype(guide = "none") + # this line triggers the obnoxious error!
 
+  # TODO fix legends
   # legend
   guides(
     size = guide_legend(
@@ -361,7 +346,7 @@ p <- ggraph(g_actors, layout = "lgl") +
 
   labs(
     title    = "Terrorist Cell",
-    # subtitle = "A network plot of networks.",
+    subtitle = "A network plot of a terrorist cell.",
   )
 p
 ```

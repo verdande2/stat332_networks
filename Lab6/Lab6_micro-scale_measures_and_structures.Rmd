@@ -13,6 +13,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 library(ggplot2)
 library(gridExtra)
 library(ggraph)
@@ -22,14 +23,16 @@ library(data.table)
 library(gt)
 library(igraph) 
 
+source("../graph.R")
 ```
-
 
 ```{r user_configurable_settings}
-
+rds_path <- "dolphins.rds"
 ```
 
-## 4.) Your turn
+# Your turn
+
+---
 
 The dolphins dataset is stored as a .rds object (igraph in r) same as
 this dataset was. This is a network from observations of dolphins and is
@@ -43,99 +46,35 @@ always the same dolphin? What does this say about their roles within the
 pod? How many communities are there and how do members play brokerage
 roles in these communities?
 
+## Setup
 
-## 1.) Setup
+```{r load_the_dataset}
+g <- readRDS(rds_path)
 
-```{r}
-plot_dist <- function(x,
-                      title = NULL,
-                      xlab = NULL,
-                      fill_color = "#4C72B0",
-                      density_color = "#DD8452",
-                      bins = 30) {
-
-  x <- x[is.finite(x)]
-  df <- data.frame(value = x)
-
-  p_hist <- ggplot(df, aes(x = value)) +
-    geom_histogram(
-      aes(y = after_stat(density)),
-      bins = bins,
-      fill = fill_color,
-      color = "white",
-      alpha = 0.85
-    ) +
-    geom_density(
-      color = density_color,
-      linewidth = 1.1,
-      adjust = 1.1
-    ) +
-    labs(
-      title = title,
-      x = xlab,
-      y = "Density"
-    ) +
-    theme_minimal(base_size = 13) +
-    theme(
-      plot.title = element_text(face = "bold"),
-      panel.grid.minor = element_blank()
-    )
-
-  p_box <- ggplot(df, aes(x = value, y = "")) +
-    geom_boxplot(
-      fill = fill_color,
-      alpha = 0.55,
-      outlier.color = density_color,
-      outlier.size = 2
-    ) +
-    theme_minimal(base_size = 13) +
-    theme(
-      axis.title.y = element_blank(),
-      axis.text.y  = element_blank(),
-      axis.ticks.y = element_blank(),
-      panel.grid   = element_blank()
-    ) +
-    labs(x = xlab)
-
-  gridExtra::grid.arrange(p_hist, p_box, heights = c(3, 1))
-}
-
-```
-
-## 2.) Lab Walkthrough
-
-### 2.a) Getting started.
-
-```{r}
-g <- readRDS("dolphins.rds")
-```
-
-As always, let's make sure we print out our vertex and edge attributes
-
-```{r}
 summary(g)
 ```
 
-So 62 nodes with 159 edges. undirected, and not weighted.
-
-And again, lets use a summary for finding out other properties.
+So 62 nodes with 159 edges, undirected, and not weighted. Again, lets use a table summary for finding out some other basic properties:
 
 ```{r}
+# ID = c("Order", "Size", "Connected", "Directed", "Acyclic", "Weighted", "Simple", "Has Loops", "Is Multigraph", "Bipartite", "Tree", "Forest")
+# 
+# Value = c(gorder(g), ecount(g), is_connected(g), is_directed(g), is_acyclic(g), is_weighted(g), is_simple(g), any_loop(g), any_multiple(g), is_bipartite(g), is_tree(g), is_forest(g))
+# 
+# table <- data.table(ID, Value)
+# table %>% gt() %>% fmt_tf(columns = Value, tf_style = "yes-no")
 
-ID = c("Order", "Size", "Connected", "Directed", "Acyclic", "Weighted", "Simple", "Has Loops", "Is Multigraph", "Bipartite", "Tree", "Forest")
-  
-Value = c(gorder(g), ecount(g), is_connected(g), is_directed(g), is_acyclic(g), is_weighted(g), is_simple(g), any_loop(g), any_multiple(g), is_bipartite(g), is_tree(g), is_forest(g))
-  
-table <- data.table(ID, Value)
-table %>% gt() %>% fmt_tf(columns = Value, tf_style = "yes-no")
+print_big_fancy_summary_table(g) 
 ```
-Connected and simple.
+Ugly table, but the graph is connected and simple, as mentioned above! Excellent.
 
-I think that's enough for the setup, so let's move on to our metrics
+I think that's enough for the setup, so let's move on to our metrics:
 
-# 3.) Micro-scale properties ---
+# Micro-scale Measures
 
-## 3a.) Articulation points and bridges ----
+---
+
+## Articulation Points and Bridges
 
 ### Weak Articulation
 
@@ -145,79 +84,43 @@ are built into igraph.
 ```{r}
 weak_ap <- articulation_points(g)
 weak_ap
+
 ```
 
 ### Strong Articulation
 
-These are a little bit harder to find. (It's actually a currenlty open
-request in igraph's github). It's actually very easy to calculate via
-brute force, but a little bit slow.
-
 ```{r}
-# Our graph is already strongly connected, so some of this is extra
-strong_articulation_points <- function(g) {
-  base <- components(g, mode = "strong")$no  # This is the number of nodes in the strongly connected component. 
-  vids <- V(g)  # the vertex ideas from the graph g
-  out <- vids[sapply(vids, function(v) {
-    components(delete_vertices(g, v), mode = "strong")$no > base
-  })] # this one line has so much going on, but I see what it's doing... succinct.
-  out # Return the ones that increase the number of components of the original graph
-}
-
-sap <- strong_articulation_points(g)
-sap
+strong_ap <- strong_articulation_points(g) # function definition moved to graph.R
+strong_ap
 
 ```
-
-So, there are actually no articulation points on this graph.
 
 ### Bridges
 
-Interestingly, igraph also calculates bridges as unidrected by default.
-i.e., any bridges detected automatically by igraph are weak bridges.
-
 ```{r}
 bridges_g <- bridges(g)
+
 E(g)[bridges_g]
 ```
 
-So, to detect strong bridges, we have to do the same method as we did
-for strong articulation points.
-
 ```{r}
-
-strong_bridges <- function(g) {
-  base <- components(g, mode = "strong")$no
-  eids <- E(g)  #Get the edge ids of g
-  keep <- sapply(eids, function(e) {
-    components(delete_edges(g, e), mode = "strong")$no > base # Figure out which edges fracture the graph when removed.
-  })
-  eids[keep]
-}
-
-br_s <- strong_bridges(g)
-br_s
+strong_bridges <- strong_bridges(g) # function definition moved to graph.R
+strong_bridges
 
 ```
 
-There are 9 articulation points or
-bridges int this graph. 
-
-## 3b.) Degree
+## Degree Measures
 
 ### In-Degree
 
 ```{r}
 deg_in  <- degree(g, mode = "in")
 deg_in
+
 summary(deg_in)
-```
 
-```{r}
 plot_dist(deg_in)
-```
 
-```{r}
 V(g)$deg_in <- deg_in
 ```
 
@@ -226,49 +129,39 @@ V(g)$deg_in <- deg_in
 ```{r}
 deg_out <- degree(g, mode = "out")
 deg_out
+
 summary(deg_out)
-```
 
-```{r}
 plot_dist(deg_out)
-```
 
-```{r}
 V(g)$deg_out <- deg_out
 ```
 
-## 3c.) Centrality
+## Centrality Measures
 
 ### Normalized In-Degree Centrality
 
 ```{r}
 deg_in_cent <- degree(g, v = V(g), mode = "in", loops = TRUE, normalized = TRUE)
 deg_in_cent
+
 summary(deg_in_cent)
-```
 
-```{r}
 plot_dist(deg_in_cent)
-```
 
-```{r}
 V(g)$deg_in_cent <- deg_in_cent
 ```
 
 ```{r}
 deg_out_cent <- degree(g, v = V(g), mode = "out", loops = TRUE, normalized = TRUE)
 deg_out_cent
+
 summary(deg_out_cent)
-```
 
-```{r}
 plot_dist(deg_out_cent)
-```
 
-```{r}
 V(g)$deg_out_cent <- deg_out_cent
 ```
-
 
 ### Normalized Out-Degree Centrality
 
@@ -277,14 +170,11 @@ V(g)$deg_out_cent <- deg_out_cent
 ```{r}
 in_core <- coreness(g, mode = "in")
 in_core
+
 summary(in_core)
-```
 
-```{r}
 plot_dist(in_core)
-```
 
-```{r}
 V(g)$in_core <- in_core
 ```
 
@@ -292,13 +182,9 @@ V(g)$in_core <- in_core
 out_core <- coreness(g, mode = "out")
 out_core
 summary(out_core)
-```
 
-```{r}
 plot_dist(out_core)
-```
 
-```{r}
 V(g)$out_core <- out_core
 ```
 
@@ -307,15 +193,11 @@ V(g)$out_core <- out_core
 ```{r}
 btw_cent <- betweenness(g, directed = TRUE, normalized = TRUE)
 btw_cent
+
 summary(btw_cent)
 
-```
-
-```{r}
 plot_dist(btw_cent)
-```
 
-```{r}
 V(g)$btw_cent <- btw_cent
 ```
 
@@ -324,14 +206,11 @@ V(g)$btw_cent <- btw_cent
 ```{r}
 clo_in  <- closeness(g, mode = "in",  normalized = TRUE)
 clo_in
+
 summary(clo_in)
-```
 
-```{r}
 plot_dist(clo_in)
-```
 
-```{r}
 V(g)$clo_in <- clo_in
 ```
 
@@ -340,51 +219,40 @@ V(g)$clo_in <- clo_in
 ```{r}
 clo_out  <- closeness(g, mode = "out",  normalized = TRUE)
 clo_out
+
 summary(clo_out)
-```
 
-```{r}
 plot_dist(clo_out)
-```
 
-```{r}
 V(g)$clo_out <- clo_out
 ```
 
 ### Eigenvector - Not for directed graphs
+N/A
 
 ### Page Rank
 
 ```{r}
-
 pr <- page_rank(g, directed = TRUE)$vector
 pr
+
 summary(pr)
-```
 
-```{r}
 plot_dist(pr)
-```
 
-```{r}
 V(g)$pagerank <- pr
 ```
 
 ### Bonacich Centrality
 
 ```{r}
-
 bon <- power_centrality(g, exponent = 0.1, rescale = TRUE)
 bon
+
 summary(bon)
 
-```
-
-```{r}
 plot_dist(bon)
-```
 
-```{r}
 V(g)$bonacich <- bon
 ```
 
@@ -392,11 +260,10 @@ V(g)$bonacich <- bon
 
 ```{r}
 ebtw <- edge_betweenness(g, directed = TRUE)
-#not printing this one out.  There are 400+ edges here.
+# not printing this one out.  There are 400+ edges here.
 # Also, there is no "normalized" version of edge betweenness in igraph
 summary(ebtw)
-```
-```{r}
+
 E(g)$edge_betweenness <- ebtw
 ```
 
@@ -408,16 +275,12 @@ deg_out <- degree(g, mode = "out")
 deg_tot <- deg_in + deg_out
 
 
-nne_edge_centrality <- function(g, deg_tot) {
-  sapply(E(g), function(e) {
-    v <- ends(g, e)
-    (deg_tot[v[1]] - 1) + (deg_tot[v[2]] - 1)
-  })
-}
+E(g)$nne <- nne_edge_centrality(g, deg_tot) # function definition moved to graph.R
 
-E(g)$nne <- nne_edge_centrality(g, deg_tot)
-
+summary(E(g)$nne)
 ```
+
+### Nearest Neighbor Edge In Centrality
 
 ```{r}
 E(g)$nne_in <- sapply(E(g), function(e) {
@@ -425,7 +288,10 @@ E(g)$nne_in <- sapply(E(g), function(e) {
   (deg_in[v[1]] - 1) + (deg_in[v[2]] - 1)
 })
 
+summary(E(g)$nne_in)
 ```
+
+### Nearest Neighbor Edge Out Centrality
 
 ```{r}
 E(g)$nne_out <- sapply(E(g), function(e) {
@@ -433,32 +299,18 @@ E(g)$nne_out <- sapply(E(g), function(e) {
   (deg_out[v[1]] - 1) + (deg_out[v[2]] - 1)
 })
 
-```
-
-```{r}
-summary(E(g)$nne)
-```
-
-```{r}
-summary(E(g)$nne_in)
-```
-
-```{r}
 summary(E(g)$nne_out)
 ```
 
 ### Local Clustering Coefficient
 
-Recall, this is dependent on triangles, and directed graphs have a lot
-of potential definitions for triangles. Instead, let's look at the
-measure as if this graph were undirected (this is common).
-
 ```{r}
-
-cc_local <- transitivity(as.undirected(g, mode = "collapse"),
-                         type = "local", isolates = "zero")
+cc_local <- transitivity(as.undirected(g, mode = "collapse"), type = "local", isolates = "zero")
 cc_local
+
 summary(cc_local)
+
+plot_dist(cc_local)
 
 V(g)$clust_local <- cc_local
 ```
@@ -468,7 +320,10 @@ V(g)$clust_local <- cc_local
 ```{r}
 le_in <- local_efficiency(g, directed = TRUE, mode = "in")
 le_in
+
 summary(le_in)
+
+plot_dist(le_in)
 
 V(g)$local_eff_in <- le_in
 ```
@@ -476,7 +331,10 @@ V(g)$local_eff_in <- le_in
 ```{r}
 le_out <- local_efficiency(g, directed = TRUE, mode = "out")
 le_out
+
 summary(le_out)
+
+plot(le_out)
 
 V(g)$local_eff_out <- le_out
 ```
@@ -486,14 +344,17 @@ V(g)$local_eff_out <- le_out
 ```{r}
 bc <- constraint(g)
 bc
+
 summary(bc)
+
+plot(bc)
 
 V(g)$constraint <- bc
 ```
 
-## 3d.) Roles ----
+## Roles ---
 
-### Communities (necessary to evaluate roles)
+### Communities
 
 This is a directed graph, so I'm going to use infomap. Technically, you
 can use other methods that support directed graphs as well, but
@@ -505,21 +366,15 @@ V(g)$community <- membership(comm)
 sizes(comm)
 
 ```
+
 # Next Section
 
+---
 
-### SNA
+## SNA
 
 We finally have to leave the world of igraph. The library SNA (social
 network analysis) has the functions we are looking for
-
-```{r}
-```
-
-Notice all the messages? We have overlapping functions. If you want to
-use any of these, make sure to precede it by igraph::function() or
-sna::function() SNA tends to work with adjacency matrix defined graphs,
-so we have to do a little bit more work:
 
 ```{r}
 A <- as.matrix(as_adjacency_matrix(g, sparse = FALSE))
@@ -528,7 +383,7 @@ grp <- V(g)$community
 grp2 <- V(g)$shape
 ```
 
-### Brokerage
+## Brokerage
 
 ```{r}
 brok <- brokerage(A, cl = grp)
@@ -562,13 +417,13 @@ Now, remember that there were natural groups already identified in this
 network? Let's try to use those instead (they are stored in grp2)
 
 ```{r, eval=FALSE}
-# TODO this cell kept breaking and I was unable to determine why
+# TODO ASK JOE this cell kept breaking and I was unable to determine why
 brok2 <- brokerage(A, cl = grp2)
 
 summary(brok2)
 ```
 
-### Prestige
+## Prestige
 
 Obviously in-degree is a measure of prestige. The other methods are page
 rank, authority scores, and hub scores.
@@ -593,13 +448,19 @@ V(g)$authority <- auth$authority
 V(g)$hub <- auth$hub
 ```
 
-## One last thing.
+# TODO COPY LEIDEN GRAPH TO ABOVE AND CUT OFF RIGHT HERE AND DELETE REMAINDER BEFORE TURN IN
+
+# One last thing.
+
+---
 
 We've been saving all of these measures as node and edge properties...
 
 ```{r}
 summary(g)
 ```
+
+TODO Perhaps run it through leiden and note community measure stuff?
 
 ```{r}
 leiden_g <- cluster_leiden(g,
@@ -670,3 +531,12 @@ p <- ggraph::ggraph(g, layout = "fr") +
 p
 
 ```
+
+
+Identify important dolphins using the measures we have defined. Is it
+always the same dolphin? What does this say about their roles within the
+pod? How many communities are there and how do members play brokerage
+roles in these communities?
+
+**Answer**: 
+

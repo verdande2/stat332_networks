@@ -11,12 +11,14 @@ output:
   pdf_document: default
 ---
 
-```{r setup, include = FALSE}
+```{r setup}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(tidyverse)
 library(igraph) # Our standard graph object.
 library(readr) # Reading in the data
 library(gbRd)
+library(gt)
 library(ggraph) # Plotting
 library(tidygraph) # Managing our graph object
 library(RColorBrewer) # Getting Colors
@@ -26,6 +28,8 @@ library(ggrepel) # for stronger label repel
 library(visNetwork) # for network graphs
 library(ggplot2) # for ploots
 library(igraphdata)
+
+source("../graph.R")
 ```
 
 ```{r user_configurable_settings}
@@ -35,22 +39,7 @@ football_txt_file_path <- "football/football.txt"
 
 ```
 
-```{r helper_functions}
-print_igraph_attr <- function(graph) {
-  print("--- Graph Attributes ------")
-  print(graph_attr(graph))
-
-  print("--- Vertex Attributes ------")
-  print(vertex_attr(graph))
-
-  print("--- Edge Attributes ------")
-  print(edge_attr(graph))
-}
-```
-
-
-I've given you a gml file for this homework. This one happens to be
-college football teams.
+I've given you a gml file for this homework. This one happens to be college football teams.
 
 Now, I really know little to nothing about college football, but I'm pretty sure there are "communities" of teams that should be able to be identified. There are also teams that everyone wants to play in order to increase their rankings (cores?) etc...
 
@@ -64,107 +53,40 @@ g <- igraph::read_graph(football_gml_file_path, format = "gml")
 
 ```{r}
 g
+print_formatted_graph_summary_table(g)
 ```
 
 
 # 1.) Plot things out.
 
 ```{r}
-set.seed(1)
-  p <- ggraph::ggraph(g, layout = "fr") +
-    geom_node_text(
-      aes(label = label),
-      repel = TRUE,
-      size = 3
-    ) +
-    geom_edge_fan(
-      aes(),
-      alpha = 0.8
-    ) +
-  
-    labs(
-      title = "Simple Plot"
-    ) +
-    theme_graph()
-  p
+# TODO make better plot with visNetwork
+plot(g)
 ```
 
 
 # 2.) Use multiple methods and create matrices that represent how much agreement or disagreement the methods have.
 
 ```{r}
-# TODO what methods exactly?
-
-
-V(g)$deg <- degree(g, mode="all", loops = FALSE, normalized=FALSE)
-
+# TODO ASK JOE what matrix methods exactly? Agree/disagree with what? Leiden vs Louvain vs others?
 ```
-
 
 # 3.) Find the cores.
 
 ```{r calculate_the_k_cores_and_plot}
-k_core_g <- coreness(g, mode = "all")
-
-V(g)$core <- k_core_g # storing the already calculated k-core in the vertices' core attr
-
-set.seed(1) # static seed for repeatability FOR NOW
-L <- layout_with_fr(g) # Fruchterman-Reingold layout
-
-ks <- sort(unique(V(g)$core)) # sorted vector of distinct k-core values
-ks <- ks[ks > 0]  # drop 0-core isolates
-
-# okay, breaking this down, looks like we are mapping over our distinct k-core values (in order, per sort call above), expecting a list return type and performing an anonymous function that is long enough to where it probably should be a _named_ function. Let's poke at it and comment on what it's doing...
-plots <- lapply(ks, function(k){
-  keep <- V(g)$core >= k # for any k passed in, keep holds the bool vector of vertex indices with >=k core
-  sg <- induced_subgraph(g, vids = V(g)[keep]) # making a new subgraph consisting of just the vertices that have >= current k-core (and any connecting edges between them)
-
-  # subset the full-graph layout to this subgraph's vertices (keeps positions stable)
-  idx <- as.integer(V(g)[keep])        # vertex ids in original graph
-  Lk  <- L[idx, , drop = FALSE] # subsetting the fr layout with the "keep" vertex ids/indices, the entire "row", and passing drop=FALSE ensures we get a df back out
-
-  # passing along our subgraph to ggraph, manual layout with our Lk values from above loc
-  ggraph(sg, layout = "manual", x = Lk[,1], y = Lk[,2]) +
-    
-    # now, adding relatively transparent mid gray edges connecting the vertices
-    geom_edge_link(alpha = 0.25, colour = "grey60") +
-    
-    # adding the vertices, colored based on their k-core value, static size of 2.5
-    geom_node_point(aes(color = core), size = 2.5) +
-    
-    # adding text labels, pulled from name attr, static size of 3, with a vertical adjustment
-    geom_node_text(aes(label = label),
-                 size = 3,
-                 vjust = 1.5) +
-    
-    # setting the color scale, option D is viridis (the green/blue gradient one), excellent choice, the end param sets the end of the color hue range from [0,1] to [0, 0.95]
-    # calling scale_color_viridis_c(), noting the _c ending, confused me for a while now, and it just dawned on me after reading the ggplot2 docs that that _c doesn't mean color option c, it stands for continuous, as opposed to d for discrete, or apparently b for binned color maps... Today I learned a thing...
-    scale_color_viridis_c(option = "C", end = 0.95) +
-    
-    # add a plot title, indicating the current k value, as well as the number of vertices and edges in the subgraph
-    ggtitle(paste0(k, "-core (core ≥ ", k, "), n=", vcount(sg), ", m=", ecount(sg))) +
-    
-    # blank theme with just default font size set
-    theme_void(base_size = 11) +
-    
-    # nullify the legend, and set the plot title to be smaller font face and bolded
-    theme(legend.position = "none",
-          plot.title = element_text(size = 10, face = "bold"))
-  
-  # no explicit return, so that ggraph is the return obj
-})
-
-# this will distribute the plots among a 2-col grid layout, for as many plots exist in ... well, plots. I'm relating this to patchwork or kinda like faceting behavior... edit 27 minutes later, when I notice what package wrap_plots is from, and didn't notice when copying its library call to top of file.... Argh!
-wrap_plots(plots, ncol = 2)
-
+show_k_core_plots(g) # from graph.R
 ```
 
+```{r calculate_the_k_core_shells_and_plot}
+show_k_core_shell_plots(g) # from graph.R
+```
 
 # 4.) Find the cliques.
 
 ```{r}
 clique_num(g)
 ```
+
 ```{r}
 cliques(g, min = clique_num(g))
 
@@ -178,6 +100,7 @@ There appear to be two cliques in the data, both of size 9. I would have thought
 
 # 5.) Explain the results.
 
+**Answer:**
 ```{r}
-
+# TODO explanation
 ```
