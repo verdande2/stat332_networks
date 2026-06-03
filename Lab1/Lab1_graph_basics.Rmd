@@ -4,10 +4,10 @@ author: "Andrew Sparkes"
 date: "`r Sys.Date()`"
 due: "???"
 output:
+  pdf_document: default
   html_document:
     self_contained: true
     df_print: paged
-  pdf_document: default
 ---
 
 ## 1.)  Setup

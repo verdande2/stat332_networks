@@ -27,7 +27,7 @@ library(scales)
 gangs_filename <- "London Gang Network.rds"
 PNG <- TRUE
 
-SKIP_TO_PART_3 <- TRUE # bool flag to comment out the ~600 lines of part 1 and 2, set to FALSE to output parts 1 and 2
+SKIP_TO_PART_3 <- FALSE # bool flag to comment out the ~600 lines of part 1 and 2, set to FALSE to output parts 1 and 2
 ```
 
 Copying over the table function we used recently, might prove to be useful:

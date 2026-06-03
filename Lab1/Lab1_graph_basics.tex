@@ -1,0 +1,810 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{longtable}
+\usepackage{colortbl}
+\usepackage{array}
+\usepackage{anyfontsize}
+\usepackage{multirow}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={STAT332 Statistical Analysis of Networks Sec 01 - Lab 1 - Prof.~Joe Reid},
+  pdfauthor={Andrew Sparkes},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{STAT332 Statistical Analysis of Networks Sec 01 - Lab 1 -
+Prof.~Joe Reid}
+\author{Andrew Sparkes}
+\date{2026-06-01}
+
+\begin{document}
+\maketitle
+
+\subsection{1.) Setup}\label{setup}
+
+Welcome to Network Analysis in R. R is a statistical programming
+language with a vast history of user developed packages that we are able
+to use in order to analyze data. In our case, we will be concerned with
+loading a few packages that are critical to our work in network analysis
+and then using these packages to analyze networks.
+
+Our integrated developer environment is called R Studio (though, you are
+allowed to use Positron if you would rather). I'll demonstrate in class
+how to create an R environment for your work in this class. The steps
+are rather easy:
+
+1.) Under File select New Project
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Image showing the new project dialog}]{New_Project_1.png}}
+\caption{Image showing the new project dialog}
+\end{figure}
+
+2.) Select New Directory or Existing Directory (I would suggest creating
+a new directory)
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Image showing dialog for project type}]{New_Project_2.png}}
+\caption{Image showing dialog for project type}
+\end{figure}
+
+3.) Select ``New Project''
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Image showing the ``Create New Project'' Dialog}]{New_Project_3.png}}
+\caption{Image showing the ``Create New Project'' Dialog}
+\end{figure}
+
+4.) Enter the name of your new directory (You can browse to make it a
+subdirectory).
+
+Make sure that you select ``Use renv with this project) which will
+create a new R environment for your project. You will want to load up
+this environment every time you work on your network data analysis.
+Creating a git repo for your work is optional.
+
+When you open up the folder you starte the new project in, you will see
+something like this:\\
+\strut \\
+\pandocbounded{\includegraphics[keepaspectratio,alt={Image showing the folder containing my R project}]{New_Project_4.png}}
+
+Obviously, I have a lot more folders than you are likely to need, but
+some of these are auto-created. When you load R-Studio using the
+highlighted link, it will open your project which contains all of the
+libraries that you will download and use for your work in network
+analysis (these are located in the renv file). We will be installing
+packages through the package manager:
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Image showing the package manager in R Studio}]{Package_Manager.png}}
+\caption{Image showing the package manager in R Studio}
+\end{figure}
+
+The install button on the package manager will give us a dialog box to
+type in where we will get our packages for this course.
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Package Manager Dialog}]{Package_Manager_2.png}}
+\caption{Package Manager Dialog}
+\end{figure}
+
+Your first task will be to download some of the libraries we are going
+to be using. You can start with this list:
+
+\begin{itemize}
+\item
+  igraph
+\item
+  igraphdata
+\end{itemize}
+
+Once you have these installed, we will get started.
+
+\subsection{2.) Working with packages and Graph
+Data}\label{working-with-packages-and-graph-data}
+
+The first thing I'd like you to do is to to create a new .Rmd file. This
+is called a markdown file. You can place it wherever you would like
+within the folder; however, you need to create this file using
+File-\textgreater{} New File -\textgreater{} R Markdown once you have
+opened R Studio by the link created for your project. You should get
+something that looks like this:
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio,alt={Layout of the visual editor within R Studio}]{Rmd_layout.png}}
+\caption{Layout of the visual editor within R Studio}
+\end{figure}
+
+Notice that I have clicked the ``Visual'' tab so that I can write in a
+format that's similar to a typical document editor. The title: and
+output: sections are part of something called the YAML. This will give
+us the output type for the file which is currently html. In future labs
+and homework you will need to know how to create these files, so save
+this for your documentation.
+
+\subsubsection{2.a) Getting started.}\label{a-getting-started.}
+
+Using ctrl-alt-i you can create a section where you are going to embed R
+code. We're going to start by loading in the igraphdata library and
+exploring it a little bit.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(igraphdata)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{data}\NormalTok{(}\AttributeTok{package =} \StringTok{"igraphdata"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+By running the library(igraphdata) command, it will load the igraphdata
+package into memory (RAM). The code-chunk of data(package =
+``igraphdata'') opens a viewer that shows the data sets that are within
+this package. These are all graph-object data (igraph object) that we
+are able to use. Let's start with the most historical (and simplest)
+dataset, the Bridges of Koenigsberg data.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{data}\NormalTok{(}\StringTok{"Koenigsberg"}\NormalTok{)}
+\NormalTok{g }\OtherTok{\textless{}{-}}\NormalTok{ Koenigsberg}
+\FunctionTok{rm}\NormalTok{(Koenigsberg)}
+\end{Highlighting}
+\end{Shaded}
+
+After running this code cell, you will have done three things. First,
+you will have attached the Koenigsberg data. Second, you will create a
+copy of this data and called it g (because I'm too lazy to keep typing
+Koenigsberg every time). And finally, you will have removed the dataset
+Koenigsberg from your active memory. You can now see that the Data
+window in R Studio now includes the Koenigsberg data called g.
+Technically, this object is of type ``list'' however, the class of this
+object is ``igraph''. You can verify this:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{typeof}\NormalTok{(g))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "list"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{class}\NormalTok{(g))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "igraph"
+\end{verbatim}
+
+So, it looks like it's time to learn ``igraph''. We need to load the
+library:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(igraph)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Attaching package: 'igraph'
+\end{verbatim}
+
+\begin{verbatim}
+## The following objects are masked from 'package:stats':
+## 
+##     decompose, spectrum
+\end{verbatim}
+
+\begin{verbatim}
+## The following object is masked from 'package:base':
+## 
+##     union
+\end{verbatim}
+
+Now, let's look at this ``g'' object.\\
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{g}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## This graph was created by an old(er) igraph version.
+## i Call `igraph::upgrade_graph()` on it to use with the current igraph version.
+## For now we convert it on the fly...
+\end{verbatim}
+
+\begin{verbatim}
+## IGRAPH 227bd5e UN-- 4 7 -- The seven bidges of Koenigsberg
+## + attr: name (g/c), name (v/c), Euler_letter (v/c), Euler_letter (e/c),
+## | name (e/c)
+## + edges from 227bd5e (vertex names):
+## [1] Altstadt-Loebenicht--Kneiphof          
+## [2] Altstadt-Loebenicht--Kneiphof          
+## [3] Altstadt-Loebenicht--Lomse             
+## [4] Kneiphof           --Lomse             
+## [5] Vorstadt-Haberberg --Lomse             
+## [6] Kneiphof           --Vorstadt-Haberberg
+## [7] Kneiphof           --Vorstadt-Haberberg
+\end{verbatim}
+
+It's actually a good thing we started with a simple graph here, because
+just typing the name of the graph object will produce both a summary of
+the graph AND a list of all of the edges. If we just want the summary,
+we use the ``summary'' function.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## IGRAPH 227bd5e UN-- 4 7 -- The seven bidges of Koenigsberg
+## + attr: name (g/c), name (v/c), Euler_letter (v/c), Euler_letter (e/c),
+## | name (e/c)
+\end{verbatim}
+
+Before we try to figure out what this output means, let's just get a
+quick plot of the data.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{Lab1_graph_basics_files/figure-latex/unnamed-chunk-8-1.pdf}}
+
+This graph data already exists, so we didn't have to create it
+ourselves, but we could have (and will need to) in the future. For now,
+we will continue exploring this data and then move on to data creation
+in part 3. At this time, we should probably parse out that summary
+function. Let's remind ourselves of the output:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## IGRAPH 227bd5e UN-- 4 7 -- The seven bidges of Koenigsberg
+## + attr: name (g/c), name (v/c), Euler_letter (v/c), Euler_letter (e/c),
+## | name (e/c)
+\end{verbatim}
+
+Ignoring the numbers directly after IGRAPH, You can see that the ouput
+is: UN-- 4 7 -- The seven bridges of Koenigsberg. The first four
+characters indicate the poperties of the graph. U means unidrected and D
+means directed. N tells us that a vertex attribute called ``name''
+exists (so that there are names for the verticies and numbers shouldn't
+be used for the labels). W would indicate that the graph is weighted.
+And B as the fourth character would indicate a vertex attributed called
+``type'' (B is historic and represents a bipartite graph). Dashes
+indicate the absence of these parameters. The number 4 indicates that
+this graph has 4 vertices and the number 7 indicates the number of
+edges. The next two dashes are just to separate the title of the graph
+from the encoded information. The next thing that we can see is a list
+of the node and edge attributes of the graph. Anything with a ``v''
+indicates that it's an attribute of the vertex and anything with an
+``e'' indicates it's an edge attribute. Let's explore these attributes.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{V}\NormalTok{(g)}\SpecialCharTok{$}\NormalTok{name}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Altstadt-Loebenicht" "Kneiphof"            "Vorstadt-Haberberg" 
+## [4] "Lomse"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{V}\NormalTok{(g)}\SpecialCharTok{$}\NormalTok{Euler\_letter}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "B" "A" "C" "D"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{E}\NormalTok{(g)}\SpecialCharTok{$}\NormalTok{Euler\_letter}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "a" "b" "f" "e" "g" "c" "d"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{E}\NormalTok{(g)}\SpecialCharTok{$}\NormalTok{name}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Kraemer Bruecke" "Schmiedebruecke" "Holzbruecke"     "Honigbruecke"   
+## [5] "Hohe Bruecke"    "Gruene Bruecke"  "Koettelbruecke"
+\end{verbatim}
+
+We're going to ignore the Euler letters as they aren't particularly
+important to this class (but I would strongly recommend looking up the
+history of this problem if you are interested!). V(g)\$name gives us the
+names of the communities at each end of the bridges. These represent our
+vertex names for this graph. The E(g)\$name gives us the names of the
+bridges (``Die Bruecke'' means ``The Bridge'' in German, in case you
+were wondering.) There are no other edge properties to worry about here,
+so we are good to go.
+
+So, from our notes, we can tell that this is an undirected graph. Create
+the adjacency matrix for this by hand before we look at how to produce
+it with code. For the record, adjacency matrix storage of graph objects
+is very memory inefficient, so I really wouldn't do this with a large
+graph.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{as\_adjacency\_matrix}\NormalTok{(g, }\AttributeTok{sparse =} \ConstantTok{FALSE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                     Altstadt-Loebenicht Kneiphof Vorstadt-Haberberg Lomse
+## Altstadt-Loebenicht                   0        2                  0     1
+## Kneiphof                              2        0                  2     1
+## Vorstadt-Haberberg                    0        2                  0     1
+## Lomse                                 1        1                  1     0
+\end{verbatim}
+
+Notice that the diagonal is 0? What does this mean? Some of the nodes
+have multiple paths between them making this a multigraph. If we want to
+get the degree's of the nodes for this graph, we can do it using the
+``degree'' function.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{degree}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Altstadt-Loebenicht            Kneiphof  Vorstadt-Haberberg               Lomse 
+##                   3                   5                   3                   3
+\end{verbatim}
+
+If you want to extract the edge list, you can do that with the E()
+function.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{E}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## + 7/7 edges from 227bd5e (vertex names):
+## [1] Altstadt-Loebenicht--Kneiphof          
+## [2] Altstadt-Loebenicht--Kneiphof          
+## [3] Altstadt-Loebenicht--Lomse             
+## [4] Kneiphof           --Lomse             
+## [5] Vorstadt-Haberberg --Lomse             
+## [6] Kneiphof           --Vorstadt-Haberberg
+## [7] Kneiphof           --Vorstadt-Haberberg
+\end{verbatim}
+
+\subsubsection{2b.) Statistics}\label{b.-statistics}
+
+\paragraph{Size}\label{size}
+
+Remember that the size of a graph is simply the number of vertices. This
+can be obtained from the summary function, but to isolate this number,
+we can use a function: gorder(). For what it's worth, another name for
+the size of a graph is the ``order'' of the graph; hence graph-order.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{gorder}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 4
+\end{verbatim}
+
+\paragraph{Components}\label{components}
+
+In order to count the number of components on a graph, we can do this
+with a function called: count\_components()
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{count\_components}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1
+\end{verbatim}
+
+\paragraph{Isolates}\label{isolates}
+
+Finding the number of isolates is actually a little bit weird. There is
+no built in function for this, but recalling that an isolate is a vertex
+with degree zero, we can use the degree function to produce a vector of
+the nodes and their degrees. What we need to do is to ``count'' the
+number of times where the degree is zero. This is done with the sum
+function. Hence:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{sum}\NormalTok{(}\FunctionTok{degree}\NormalTok{(g) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0
+\end{verbatim}
+
+If we want to look at the proportion of values that are isolates, we can
+do this using the gorder() function from earlier (yeah, this is the
+reason we needed that.)
+
+Proportion of isolates:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{sum}\NormalTok{(}\FunctionTok{degree}\NormalTok{(g) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) }\SpecialCharTok{/} \FunctionTok{gorder}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0
+\end{verbatim}
+
+\paragraph{Density}\label{density}
+
+Let's use the function to find the density of the graph: edge\_density()
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{edge\_density}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1.166667
+\end{verbatim}
+
+Oh no! Edge density can't be a number greater than 1! What could have
+caused this? If a graph contains loops or is a multigraph, the density
+calculation will be wrong. We need to adjust for this by looking at a
+graph where only the unique edges are present and loops are accounted
+for. The edge\_density function can account for the loops using a bool
+edge\_density(graph, loops = FALSE). Changing this to true for loops
+will adjust the calculation, but it still doesn't fix the other issue.
+You can actually perform both tasks at once using the ``simplify''
+function.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{edge\_density}\NormalTok{(}\FunctionTok{simplify}\NormalTok{(g))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0.8333333
+\end{verbatim}
+
+\paragraph{Diameter}\label{diameter}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{diameter}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 2
+\end{verbatim}
+
+\paragraph{Average Path Length}\label{average-path-length}
+
+igraph used to have a function for average path length called:
+average.path.length(). However, this function is now depricated and has
+been replaced by the function: mean\_distance()
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{mean\_distance}\NormalTok{(g)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1.166667
+\end{verbatim}
+
+\subsubsection{2c.) Representation of summary
+statistics}\label{c.-representation-of-summary-statistics}
+
+Obviously, this is not very effective at presenting the results. We
+should make a summary table of these. I'm going to use the packages
+data.table and gt for this (if you don't have it, do you remember how to
+get it?)
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(data.table)}
+\NormalTok{table }\OtherTok{\textless{}{-}} \FunctionTok{data.table}\NormalTok{(}
+  \AttributeTok{ID =} \FunctionTok{c}\NormalTok{(}\StringTok{"Size"}\NormalTok{, }\StringTok{"Components"}\NormalTok{, }\StringTok{"Isolate Proportion"}\NormalTok{, }\StringTok{"Density"}\NormalTok{, }\StringTok{"Diameter"}\NormalTok{, }\StringTok{"Average Path Length"}\NormalTok{),}
+  \AttributeTok{Value =} \FunctionTok{c}\NormalTok{(}\FunctionTok{gorder}\NormalTok{(g), }\FunctionTok{count\_components}\NormalTok{(g), }\FunctionTok{sum}\NormalTok{(}\FunctionTok{degree}\NormalTok{(g) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) }\SpecialCharTok{/} \FunctionTok{gorder}\NormalTok{(g), }\FunctionTok{edge\_density}\NormalTok{(}\FunctionTok{simplify}\NormalTok{(g)), }\FunctionTok{diameter}\NormalTok{(g), }\FunctionTok{mean\_distance}\NormalTok{(g))}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(gt)}
+\NormalTok{table }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{gt}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{table}[t]
+\fontsize{12.0pt}{14.0pt}\selectfont
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}lr}
+\toprule
+ID & Value \\ 
+\midrule\addlinespace[2.5pt]
+Size & 4.0000000 \\ 
+Components & 1.0000000 \\ 
+Isolate Proportion & 0.0000000 \\ 
+Density & 0.8333333 \\ 
+Diameter & 2.0000000 \\ 
+Average Path Length & 1.1666667 \\ 
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\subsection{3.) Your turn \#1:}\label{your-turn-1}
+
+A collection of journal articles is provided for your consumption. I
+have provided csv files for both the nodes and links as well as code to
+read and create a network from this data. Using what you know from the
+code above, create a plot of this network and a table that summarizes
+the statistics describing this data.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{nodes }\OtherTok{\textless{}{-}} \FunctionTok{read.csv}\NormalTok{(}\StringTok{"Citation\_vertices.csv"}\NormalTok{, }\AttributeTok{header =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{as.is =} \ConstantTok{TRUE}\NormalTok{)}
+\NormalTok{links }\OtherTok{\textless{}{-}} \FunctionTok{read.csv}\NormalTok{(}\StringTok{"Citation\_Edgelist.csv"}\NormalTok{, }\AttributeTok{header =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{as.is =} \ConstantTok{TRUE}\NormalTok{)}
+\NormalTok{net }\OtherTok{\textless{}{-}} \FunctionTok{graph\_from\_data\_frame}\NormalTok{(}\AttributeTok{d =}\NormalTok{ links, }\AttributeTok{vertices =}\NormalTok{ nodes, }\AttributeTok{directed =} \ConstantTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsubsection{Plot (remember, this is a directed
+graph)}\label{plot-remember-this-is-a-directed-graph}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(net)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{Lab1_graph_basics_files/figure-latex/unnamed-chunk-28-1.pdf}}
+
+\subsubsection{Table of Summary
+Information}\label{table-of-summary-information}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{make\_table\_happen }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(graph) \{}
+  \FunctionTok{data.table}\NormalTok{(}
+    \AttributeTok{ID =} \FunctionTok{c}\NormalTok{(}\StringTok{"Size"}\NormalTok{, }\StringTok{"Components"}\NormalTok{, }\StringTok{"Isolate Proportion"}\NormalTok{, }\StringTok{"Density"}\NormalTok{, }\StringTok{"Diameter"}\NormalTok{, }\StringTok{"Average Path Length"}\NormalTok{),}
+    \AttributeTok{Value =} \FunctionTok{c}\NormalTok{(}\FunctionTok{gorder}\NormalTok{(graph), }\FunctionTok{count\_components}\NormalTok{(graph), }\FunctionTok{sum}\NormalTok{(}\FunctionTok{degree}\NormalTok{(graph) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) }\SpecialCharTok{/} \FunctionTok{gorder}\NormalTok{(graph), }\FunctionTok{edge\_density}\NormalTok{(}\FunctionTok{simplify}\NormalTok{(graph)), }\FunctionTok{diameter}\NormalTok{(graph), }\FunctionTok{mean\_distance}\NormalTok{(graph))}
+\NormalTok{  ) }\SpecialCharTok{|\textgreater{}}
+    \FunctionTok{gt}\NormalTok{()}
+\NormalTok{\}}
+
+\FunctionTok{make\_table\_happen}\NormalTok{(net)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{table}[t]
+\fontsize{12.0pt}{14.0pt}\selectfont
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}lr}
+\toprule
+ID & Value \\ 
+\midrule\addlinespace[2.5pt]
+Size & 46.00000000 \\ 
+Components & 13.00000000 \\ 
+Isolate Proportion & 0.19565217 \\ 
+Density & 0.02222222 \\ 
+Diameter & 8.00000000 \\ 
+Average Path Length & 2.84883721 \\ 
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\subsection{4.) Your turn \#2:}\label{your-turn-2}
+
+We are going to generate a random graph based on the Erdos-Renyi model.
+Your task is to produce the Plot and table of summary information for
+this network as well.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{set.seed}\NormalTok{(}\DecValTok{123}\NormalTok{)}
+\NormalTok{g2 }\OtherTok{\textless{}{-}} \FunctionTok{sample\_gnp}\NormalTok{(}\DecValTok{50}\NormalTok{, }\FloatTok{0.048}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsubsection{Plot}\label{plot}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(g2)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{Lab1_graph_basics_files/figure-latex/unnamed-chunk-31-1.pdf}}
+
+\subsubsection{Table of Summary
+Information}\label{table-of-summary-information-1}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{make\_table\_happen}\NormalTok{(g2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{table}[t]
+\fontsize{12.0pt}{14.0pt}\selectfont
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}lr}
+\toprule
+ID & Value \\ 
+\midrule\addlinespace[2.5pt]
+Size & 50.00000000 \\ 
+Components & 5.00000000 \\ 
+Isolate Proportion & 0.08000000 \\ 
+Density & 0.04816327 \\ 
+Diameter & 10.00000000 \\ 
+Average Path Length & 4.32463768 \\ 
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\subsection{}\label{section}
+
+\subsection{5.) Results}\label{results}
+
+Obviously, we have some work that needs done. Our plots don't look very
+good, we aren't representing any attributes of the vertices or edges, we
+aren't interpreting the statistical measures, we aren't finding clusters
+or cliques, we don't know how resistant these networks are, we don't
+know anything about the hubs or critical bridges in the data, etc\ldots;
+however, we now have a start.
+
+What you need to do nest is to ``knit'' your document into an html using
+the ``Knit'' button near the top of the screen. This will give you an
+HTML that you can turn in.
+
+\end{document}

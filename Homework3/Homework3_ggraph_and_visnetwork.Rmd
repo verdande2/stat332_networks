@@ -121,7 +121,7 @@ Saving your data at this point is a good idea. You can do this with `write_graph
 write_graph(g3, format = "gml", file = gml_filename)
 ```
 
-`r if(SKIP_AHEAD) {"\\end{comment}"}`
+
 
 ![](igraph plot.png)
 
@@ -274,22 +274,24 @@ data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
 
 
 
-g_nodes <- g |>
-  tidygraph::as_tbl_graph() |>
-  activate("nodes") |>
-  mutate(id = name,
-         name = as.numeric(factor(data$nodes$id))
-  )
+# g_nodes <- g |>
+#   tidygraph::as_tbl_graph() |>
+#   activate("nodes") |>
+#   mutate(id = name,
+#          name = as.numeric(factor(V(g)$id))
+#   )
 
 g_edges <- g |>
   tidygraph::as_tbl_graph() |>
-  activate("nodes") |>
-  mutate(from = as.numeric(factor(from))
-  )
+  activate("edges") |>
+  mutate(
+    from = as.numeric(factor(E(g)$from)),
+    to = as.numeric(factor(E(g)$to))
+    )
 
-data$nodes$name <- rownames(data$nodes) # preserve original names
+#data$nodes$name <- rownames(data$nodes) # preserve original names
 # data$nodes$id <- 
-rownames(data$nodes) <- c() # blank out original rownames
+#rownames(data$nodes) <- c() # blank out original rownames
 
 
 # now, adjust edge data
@@ -297,7 +299,8 @@ rownames(data$nodes) <- c() # blank out original rownames
 # data$edges$from <- id_map[data$edges$from]
 # data$edges$to   <- id_map[data$edges$to]
 
-data
+glimpse(g_nodes)
+glimpse(g_edges)
 ```
 
 ```{r plot_visnetwork_graph}

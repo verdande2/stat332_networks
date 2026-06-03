@@ -157,7 +157,7 @@ Now that we actually have the dataset loaded in and aliased for ease of use, we 
 First off, this line tells us a few (well, quite a few) things in a short number of characters. Right off, we know:
 - it's an `igraph` object (as we expected)
 - its first $7$ characters of the hexidecimal (unique) identifier for the graph object (`bf6202d`)
-- its four-letter `igraph` code string, indicating we have a **D**irected, **N**amed, unweighted, and is nonbipartite
+- its four-letter `igraph` code string, indicating we have a **D**irected, **N**amed, unweighted, and is not bipartite
 - it has $755$ vertices (airports)
 - it has $23,473$ edges (carrier flights)
 - the `name` of the graph is `US airports`
@@ -208,25 +208,51 @@ top_10
 # we have the top 10, now let's use those three digit airport codes to filter down the network
 keep_node_codes <- V(g)[V(g)$name %in% list(names(top_10))[[1]]] # pruning vertex indices per top 10 list
 
-g <- induced_subgraph(g, keep_node_codes)
+g <- induced_subgraph(g, keep_node_codes) # the proper way to steal the nodes and all relevant edges
 g
 ```
 
+10 nodes and over a thousand edges, but many are duplicate, let's see about fixing that...
+
+
 ```{r}
-glimpse(E(g)$Carrier)
+E(g)[[1]]
+```
+
+```{r}
+# g_simp <- simplify(g, edge.attr.comb = list(Departures = "sum", Carrier = "ignore", Passengers = "sum", Seats = "ignore", Aircraft = "ignore", Distance = "ignore")) # simplify will collapse all duplicate edges down to a single edge
+# g_simp
+
+# glimpse(edge_attr(g))
+
+edge_df <- igraph::as_data_frame(g, what = "edges")
+
+# Group by endpoints or edge groups and aggregate attributes
+collapsed_df <- edge_df %>%
+  group_by(from, to, Carrier, Aircraft, Seats = "sum", Passengers = "sum") %>%
+  #mutate(Seats_total = sum(Seats), Passengers_total= sum(Passengers)) %>%
+
+# Rebuild the simplified graph
+g_collapsed <- graph_from_data_frame(collapsed_df, directed = FALSE)
 
 ```
 
 
 ```{r}
-# investigating biggest carriers
+# print_igraph_attr(g_simp)
+```
+
+
+
+```{r}
+# investigating biggest carriers?
 
 ```
 
 
 ```{r}
-# filter futher by Carrier
-carrier <- "Delta Air Lines Inc."
+# filter further by Carrier
+# carrier <- "Delta Air Lines Inc."
 
 # this line triggers, and I don't know why: TODO look into why this is broken
 # > Error in `FUN()`:
@@ -234,14 +260,14 @@ carrier <- "Delta Air Lines Inc."
 #sg <- simplify(sg, edge.attr.comb = list(weight = "sum", type = "concatenate")) # remove multiple edges
 
 # instead, opting for a bit of a hack thanks to Stack Overflow
-g <- igraph::as_data_frame(g) %>%
-  #filter(Carrier == carrier) %>%
-  group_by(Carrier) %>% 
-  mutate(Departures_total = sum(Departures), Passengers_total = sum(Passengers)) %>%
-  unique() %>% 
-  graph_from_data_frame()
-
-g
+# sg <- igraph::as_data_frame(g) %>%
+#   #filter(Carrier == carrier) %>%
+#   group_by(Carrier) %>%
+#   mutate(Departures_total = sum(Departures), Passengers_total = sum(Passengers)) %>%
+#   unique() %>%
+#   graph_from_data_frame()
+# 
+# sg
 
 ```
 
@@ -359,11 +385,9 @@ My interpretation from this core result is that the top 10 airport hubs in the U
 
 ```{r plot_the_graph_data}
 
-p <- ggraph::ggraph(g, layout = "fr") +
+p <- ggraph::ggraph(g_simp, layout = "fr") +
   geom_edge_fan(
-    # aes(
-    #   strength = departure_strengths
-    #   ),
+    aes(size = Passengers),
     alpha = 0.8,
     color = "#ff0000"
   ) +
@@ -392,7 +416,7 @@ p
 ggraph(g, layout = "kk") + # same manual layout
     
   
-    geom_edge_fan(aes(edge_colour = Carrier)) +
+    geom_edge_fan(aes(edge_color = Carrier)) +
   
     # this line differs. static vertex size and color... Hmmmm...
     geom_node_point(color = "#2C7FB8"
