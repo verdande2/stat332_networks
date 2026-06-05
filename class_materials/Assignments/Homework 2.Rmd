@@ -1,0 +1,117 @@
+---
+title: 'STAT 332:  Network Analytics Homework 2'
+author: 'Instructor:  Joseph Reid'
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Instructions:
+
+Please complete this homework assignment by the due data posted on canvas. Please submit your work in an html file with solutions and code presented completely.
+
+# Homework 2: Networks and visualization with igraph
+
+## Question 1:
+
+Create a .csv file using a spreadsheet software or notepad. This file should have four columns: from, to, weight, name. Create a network using an edge-list with two strongly connected components where the whole network is weakly connected. The network will have nodes called Apple, Banana, Carrot, Date, Eggplant, Fig, Grapes, and Horseradish (I'll just use letters for the rest of the instructions. A, B, C, D, and E are strongly connected, as are F, G, and H. Furthermore, the graph should be a multigraph where there are two paths from A to B and three paths from E to D. Generate a weights attribute by creating random weights between 0 and 1 for each of the edges. Finally, provide a names attribute for every edge denoting the edge: S1 if it's the first edge connecting two nodes, S2 if it's the second, and S3 if it's the third. The graph should have no isolates. Also, create a nodes file that has the names of the nodes in a column called name and a column called type that has values of Fruit and Vegetable depending on the observation.
+
+### 1.a) 
+
+Read in your edgelist. The following code can help.
+
+```{r}
+#library(readr)
+#edges <- read.csv("Your_edge_file.csv",
+#                            header = TRUE,
+#                            sep = ",")
+          
+#edge_list <- edges[, c("from", "to")]          
+```
+
+Once you have your edgelist, convert it to an igraph object using the graph_from_data_frame() function (you may need the documentation).
+
+```{r}
+
+```
+
+### 1.b)
+
+Produce a summary of your graph to make sure the igraph works correctly.
+
+```{r}
+```
+
+### 1.c)
+
+In Lab 2 we looked at how to create a summary of the metadata for the graph. Use this code as a basis to make sure that the above conditions are met in general (Directed, Weigted, Not Simple, Has Multiple Edges, is weakly connected but not strongly connected, has two components when counting the number of strongly connected components but only one when counting the number of weakly connected components.
+
+```{r}
+library(data.table)
+
+```
+
+Wait a minute. If you used the same work we did in lab, you will find out that this graph is NOT WEIGHTED! That can't be right. Well, I suppose it can because we don't have the right edge properties on this graph.
+
+### 1.d)
+
+I guess we better add the other elements from the edges matrix into our graph as edge attributes.
+
+```{r}
+
+```
+
+Also, read in your nodes file the same way you did for the edges file and update the vertex property with the types.
+
+```{r}
+
+
+```
+
+```{r}
+
+```
+
+Finally, produce a summary of the graph again. You should see that, because you have a column called weight, the summary is now: DNWB 8. This means it is a weighted graph.
+
+```{r}
+
+```
+
+### 1.e)
+
+Produce a quick plot of the graph to make sure it looks like you expected.
+
+```{r}
+
+```
+
+### 2.)  Graphing
+
+Now, we are going to work on improving the plot, but we actually have a problem. The vertex name of "type" is actually a reserved term. This one is supposed to be a logical of 1 or 0. We need to rename our vertex attribute of "type" to "classification" and then overwrite the "type" variable. I'll give you this code.
+
+```{r}
+#V(graph)$classification <- V(graph)$type
+#V(graph)$type <- ifelse(V(graph)$type == "Fruit", TRUE, FALSE)
+```
+
+Now, start by using the layout_as_bipartite in your plot.
+
+```{r}
+
+```
+
+You should see a two row format for the results. Now, we need to make this look better.
+
+### 1.e)  
+
+Your final task on this will be to make this look better based on the lab from class. Create colors, use transparency, label edges, change shapes and thicknesses, etc... The one requirement is that you calculate the in-degree of the nodes, store this as a vertex attribute, and use that to size the vertex. Add a title, subtitle, and caption to the graph, and make sure to use legends.
+
+```{r}
+
+```

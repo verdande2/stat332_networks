@@ -7,7 +7,7 @@ output:
   html_document:
     self_contained: true
     df_print: paged
-    code_folding: hide
+    code_folding: show
   pdf_document: default
 ---
 
@@ -24,9 +24,260 @@ library(gt)
 
 library(patchwork)
 library(ggraph)
+library(visNetwork)
 
 source("../graph.R")
 ```
+
+```{r useful_functions}
+# takes in a string, returns a span with the color attribute set to whatever the color parameter is (anything that is accepted by HTML, so RGB hex codes, named colors, etc)
+textcol <- function(text, color){
+  paste0('<span style="color: ',
+         color,
+         ';">',
+         text,
+         '</span>'
+         )
+}
+
+```
+---
+
+# Grand Overview of the Project 
+
+## Instructions
+
+For your final project, you will conduct a comprehensive network analysis of a network of your choosing. Your goal is not merely to compute metrics, but to tell a coherent and analytical story about something important, critical, or revealing about your network.
+
+You should think of this project as a case study in network science:
+
+ * What kind of system is this?
+ * What matters structurally?
+ * What does the network reveal that would be hard to see otherwise?
+
+You are encouraged to choose a network that connects to your interests (social, biological, technological, informational, political, cultural, etc.).
+
+## 0.) Project Requirements at a Glance
+
+Your project must include all of the following components:
+
+| Key Components --------| More Key Components---------------------------------- |
+| :--------------------: | :---------------------------------------------------: |
+|Scale 	                 | Required Topics                                       |
+|Visualization 	         | Network layout(s) and visual interpretation           |
+|Macro-scale 	           | Global structure & overall network properties         |  
+|Meso-scale 	           | Communities, structure, and group-level patterns      | 
+|Micro-scale 	           | Node and/or edge-level importance                     |
+|Dynamics / robustness 	 | Network attack or failure analysis                    | 
+|Interpretation 	       | A unifying narrative or “story”                       |
+
+How you connect these pieces—and which specific measures you choose—is up to you.
+
+
+---
+
+## 1. Network Description & Research Question
+
+**Goal**: Introduce the network and motivate your analysis.
+
+Include:
+
+ * What does the network represent?\
+ * What do nodes and edges mean?\
+ * Is it directed/undirected?\
+ * Weighted/unweighted?\
+ * Where did the data come from?\
+
+Then clearly state _**one** guiding question_, such as:\
+ * “Which actors are most critical to the functioning of this system?”\
+ * “How robust is this network to targeted disruption?”\
+ * “Does influence concentrate within or across communities?”\
+ * “What structural roles explain observed outcomes?”\
+
+This question should guide _all_ later analysis:
+
+
+---
+
+## 2. Network Visualization & Exploratory Structure
+
+**Goal**: Use visualization to reveal structure, not just aesthetics.
+
+**Required**:
+
+  * **At least two different visualizations** (one will be talked about later in the instructions)
+  * Thoughtful choices about:
+    * Layout algorithms
+    * Node size and/or color
+    * Edge width or opacity (_if_ weighted)
+    * Labels
+    * Legends
+
+**Your task is to explain**:
+
+  * What patterns are visible?\
+  * Are there clusters, hubs, bridges, or isolates?\
+  * What does visualization suggest before formal analysis?\
+    
+**Answer:**
+
+# TODO ME! basic interpretation. clusters, hubs, isolates, and interesting patterns, bridges, etc
+
+
+---
+
+## 3. Macro-Scale Structure
+
+**Goal**: Characterize the network as a whole.
+
+You _must_ analyze **at least three (3) macro-scale properties**, that we covered in class and apply to your particular network.
+
+Explain what these metrics say about your network in the context of your question.  This might include topics such as:
+
+ * Connectivity
+ * Reachability
+ * Overall organization
+
+# TODO explain how these ties lead back into your guiding question
+
+
+---
+
+## 4. Meso-Scale Structure: Communities & Groups
+
+**Goal**: Identify and interpret intermediate structure.
+
+**Required**:
+
+ * Apply at least one community detection or structural method\
+ * Assign nodes to communities or groups\
+ * Visualize the result (this is **your second required visualization**)\
+
+Then, interpret questions like the following (pertaining to your question):
+
+ * Are communities meaningful in the real-world context?\
+ * Are they densely connected or loosely affiliated and what does that mean?\
+
+This section should connect naturally to later discussions of brokerage and robustness.
+
+
+---
+
+## 5. Micro-Scale Analysis: Nodes and/or Edges
+
+**Goal**: Identify important actors or relationships.
+
+You _must_:
+
+ * *_Select_* *at least two* node-level measures and/or one edge-level measure
+ * *_Justify_* _why_ these measures are appropriate
+ * *_Identify_* the most extreme or influential nodes/edges in the context of the question you are addressing
+
+Possible (not required) themes:
+
+ * Centrality
+ * Brokerage or mediation
+ * Prestige or influence
+ * Embeddedness
+ * Constraint or redundancy
+ * Critical ties
+
+*Do not just report rankings—interpret why these entities matter!*
+
+
+---
+
+## 6. Network Robustness & Attack Analysis
+
+**Goal**: Evaluate fragility and resilience.
+
+You must perform **at least _one_ (1) network attack or failure analysis**, such as:
+
+ * Targeted removal based on a node or edge metric
+ * Random failure
+ * Comparison of different attack strategies
+
+This may be a full simulation or it may be an analysis of single stage attacks on critical structures. Remember, attacks can include infection, removal, addition, or modulation of components of the graph and may be malicious, random, or even exploratory what-if types of analysis. Get creative!
+
+Analyze how actions affect some global and local level measure of your choice that reflect your key topic or theme.
+
+Things you may interpret:
+
+ * What does this tell us about vulnerability?
+ * Which structural features contribute to robustness or fragility?
+
+
+---
+
+## 7. Synthesis: Telling the Network’s Story
+
+**Goal**: Bring everything together.
+
+In this final section, _explicitly answer_:
+
+ * *What* is the key insight your network analysis revealed?
+ * *How* do macro-, meso-, and micro-scale findings connect?
+ * *What* would someone misunderstand if they didn’t use network analysis?
+
+
+---
+
+# Deliverables
+
+ * A written report (PDF or HTML), approximately *10–15* pages
+ * Clear *section headings* _aligned with the structure_ above
+ * Figures must be *legible*, *labeled*, and *discussed in text*
+ * *Code must be included in a separate file for reproducibility*.
+ * *Network/graph/dataset must also be included in a separate file*.
+ * Put *all* files into a `.zip` folder and submit that.
+
+*Evaluation Criteria* (What I Will Be Looking For)\
+You will be graded primarily on:
+
+ * *Appropriateness* of methodological *choices*
+ * *Quality of interpretation*
+ * *Integration* across scales
+ * *Clarity* and *coherence* of your *narrative*
+ * *Depth of insight*, not number of metrics
+
+There is no single "correct" answer. There are well-argued and poorly-argued analyses.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r load_dataset}
 # gml_file <- "as-22july06.gml"
@@ -155,112 +406,4 @@ assortativity_degree(g)
 ```
 
 
-
-
-
-
-
-
-```{r calculate_the_k_core}
-k_core_g <- coreness(g, mode = "all")
-```
-
-`k_core_g` is not a graph object. It records the k-index when the nodes are removed from the graph.
-
-```{r setup_and_plot_k_core_subgraph}
-
-
-V(g)$core <- k_core_g # storing the already calculated k-core in the vertices' core attr
-
-set.seed(1) # static seed for repeatability FOR NOW
-L <- layout_with_fr(g) # Fruchterman-Reingold layout
-
-ks <- sort(unique(V(g)$core)) # sorted vector of distinct k-core values
-ks <- ks[ks > 0]  # drop 0-core isolates
-
-# okay, breaking this down, looks like we are mapping over our distinct k-core values (in order, per sort call above), expecting a list return type and performing an anonymous function that is long enough to where it probably should be a _named_ function. Let's poke at it and comment on what it's doing...
-plots <- lapply(ks, function(k){
-  keep <- V(g)$core >= k # for any k passed in, keep holds the bool vector of vertex indices with >=k core
-  sg <- induced_subgraph(g, vids = V(g)[keep]) # making a new subgraph consisting of just the vertices that have >= current k-core (and any connecting edges between them)
-
-  # subset the full-graph layout to this subgraph's vertices (keeps positions stable)
-  idx <- as.integer(V(g)[keep])        # vertex ids in original graph
-  Lk  <- L[idx, , drop = FALSE] # subsetting the fr layout with the "keep" vertex ids/indices, the entire "row", and passing drop=FALSE ensures we get a df back out
-
-  # passing along our subgraph to ggraph, manual layout with our Lk values from above loc
-  ggraph(sg, layout = "manual", x = Lk[,1], y = Lk[,2]) +
-    
-    # now, adding relatively transparent mid gray edges connecting the vertices
-    geom_edge_link(alpha = 0.25, colour = "grey60") +
-    
-    # adding the vertices, colored based on their k-core value, static size of 2.5
-    geom_node_point(aes(color = core), size = 2.5) +
-    
-    # adding text labels, pulled from name attr, static size of 3, with a vertical adjustment
-    geom_node_text(aes(label = label),
-                 size = 3,
-                 vjust = 1.5) +
-    
-    # setting the color scale, option D is viridis (the green/blue gradient one), excellent choice, the end param sets the end of the color hue range from [0,1] to [0, 0.95]
-    # calling scale_color_viridis_c(), noting the _c ending, confused me for a while now, and it just dawned on me after reading the ggplot2 docs that that _c doesn't mean color option c, it stands for continuous, as opposed to d for discrete, or apparently b for binned color maps... Today I learned a thing...
-    scale_color_viridis_c(option = "C", end = 0.95) +
-    
-    # add a plot title, indicating the current k value, as well as the number of vertices and edges in the subgraph
-    ggtitle(paste0(k, "-core (core ≥ ", k, "), n=", vcount(sg), ", m=", ecount(sg))) +
-    
-    # blank theme with just default font size set
-    theme_void(base_size = 11) +
-    
-    # nullify the legend, and set the plot title to be smaller font face and bolded
-    theme(legend.position = "none",
-          plot.title = element_text(size = 10, face = "bold"))
-  
-  # no explicit return, so that ggraph is the return obj
-})
-
-# from what I am guessing, this will distribute the plots among a 2-col grid layout, for as many plots exist in ... well, plots. I'm relating this to patchwork or kinda like faceting behavior... edit 27 minutes later, when I notice what package wrap_plots is from, and didn't notice when copying its library call to top of file.... Argh!
-wrap_plots(plots, ncol = 2)
-
-```
-
-
-```{r}
-# alright, looks like we're applying a similar function as above over our kept k-cores, ks, expecting a list back and assigning to shell_plots
-shell_plots <- lapply(ks, function(k){
-  # identical as above, calculating k-cores and making a subgraph of them and their edges
-  keep <- V(g)$core == k
-  sg <- induced_subgraph(g, vids = V(g)[keep])
-
-  # again, getting the indices and doing some magic before indexing the layout and storing the coords
-  idx <- as.integer(V(g)[keep])
-  Lk  <- L[idx, , drop = FALSE]
-
-  ggraph(sg, layout = "manual", x = Lk[,1], y = Lk[,2]) + # same manual layout
-    
-    # this line differs. static vertex size and color... Hmmmm...
-    geom_node_point(size = 2.5, color = "#2C7FB8") +
-    
-    # identical
-    geom_node_text(aes(label = name),
-                 size = 3,
-                 vjust = 1.5) +
-    
-    # the key difference is a missing call to any ggraph function that adds edges/links, so only the vertices will display. 
-    
-    # title the plot with the k-shell value, k-core value, and the vertex count
-    ggtitle(paste0(k, "-shell (core == ", k, "), n=", vcount(sg))) +
-    
-    # blank theme with base font size 11
-    theme_void(base_size = 11)
-})
-
-# wraps the plots, however many there may be, in a 2-col grid style layout
-wrap_plots(shell_plots, ncol = 2)
-```
-
-
-
-```{r}
-plot(g)
-```
 

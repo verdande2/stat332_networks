@@ -1,0 +1,41 @@
+---
+title: "Stat 407 Community Detection Homework"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+link-citations: true
+natbib: true
+#csl: ieee.csl
+#bibliography: NetworkReferences.bib
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+I've given you a gml file for this homework. This one happens to be
+college football teams.\
+Now, I really know little to nothing about college football, but I'm
+pretty sure there are "communities" of teams that should be able to be
+identified. There are also teams that everyone wants to play in order to
+increase their rankings (cores?) etc...
+
+Using a collection of the methods from class, find the subgroups within
+this network that might indicate clusters of teams. :)
+
+1.) Plot things out.
+
+2.) Use multiple methods and create matrices that represent how much
+agreement or disagreement the methods have.
+
+3.) Find the cores.
+
+4.) Find the cliques
+
+5.) Explain the results.
+
+## References

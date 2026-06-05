@@ -1,0 +1,52 @@
+---
+title: "Stat 407 Topography Homework"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+link-citations: true
+natbib: true
+csl: ieee.csl
+bibliography: NetworkReferences.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this lab, please refer to the facebook dataset. This dataset is from [@rozemberczki2019multiscale].
+
+You may use the following code to read and generate the graph.
+
+```{r message=FALSE}
+library(igraph)
+library(knitr)
+```
+
+```{r}
+nodes <- read.csv("musae_facebook_target.csv", header=T, as.is=T)
+links <- read.csv("musae_facebook_edges.csv", header=T, as.is=T)
+net <- graph_from_data_frame(d=links, vertices=nodes, directed=F)
+```
+
+0.) Your first step, before doing any other work, will be to create a subgraph that is limited to only those nodes where the page_type is tvshow. Then overwrite this network with an induced subgraph where the isolates are removed (you should have 3282 nodes)
+
+I wouldn't recommend trying to plot the network right away. Start by looking at the size of the data use in the environment tab. Please write the code to produce an answer to the following questions and then interpret the results when asked.
+
+1.) Produce a summary of the graph object and answer the following by producing a nice summary table of the following information using the work from the lab.
+
+
+2.)  Produce the 5 measures of graph structure discussed in the less on from this weak.  Report these in a table that includes the measure name, the value of the statistic, and an interpretation of the statistic.
+
+3.) Create a table of the interconnectedness measures for this graph and provide an interpretation of this results.
+
+4.) Create a table with the degree, closeness, betweenness and eigenvalue centralization measures for this graph and interpret the results.
+
+5.) Produce a table of the efficiency measures of this graph and provide an interpretation of the results.
+
+6.) Now we are going to consider interconnectedness in this graph:
+
+
+6.) Given the measures that you have produced in this assignment, would you consider this network to be centralized or de-centralized? Similarly, would you consider this network to be highly interconnected or have low interconnectedness? Based on these results, what do you think the advantages and disadvantages of this network would be in terms of robustness and resialiance.  What are the critical strengths and weaknesses of this network?
+
+## References
