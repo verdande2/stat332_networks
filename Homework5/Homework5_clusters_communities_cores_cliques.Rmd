@@ -59,16 +59,132 @@ print_formatted_graph_summary_table(g)
 
 # 1.) Plot things out.
 
-```{r}
-# TODO make better plot with visNetwork
-plot(g)
+```{r prep_for_visnetwork}
+nodes <- igraph::as_data_frame(g, what = "vertices") |>
+  mutate(
+    title = paste0(label," (",value,")\n"),
+    size = value
+    )
+
+edges <- igraph::as_data_frame(g, what = "edges") |>
+  mutate(
+    # from   = as.character(from),
+    # to     = as.character(to),
+    width  = 2,
+    smooth = TRUE
+  )
+
+```
+
+```{r plooot}
+set.seed(1)
+p <- ggraph(g, layout = "lgl") +
+  geom_edge_fan(
+    aes(),
+    alpha = 0.5
+  ) +
+  
+  geom_node_point(
+    aes(
+      size = value
+      ),
+    alpha = 0.8
+  ) +
+
+  geom_node_text(
+    aes(
+      label = label,
+      color = "#
+      ff0000"
+      ),
+    repel = TRUE,
+    size = 4
+  ) +
+  labs(
+    title    = "A simple ugly plot",
+    subtitle = "A network plot of a terrorist cell.",
+  )
+p
+```
+
+```{r use_visnetwork_instead}
+set.seed(1)
+vis <- visNetwork(nodes, edges,
+                  main = "Football Plot",
+                  submain = "",
+                  footer = "",
+                  width = "100%"
+  ) |>
+  visIgraphLayout(layout = "layout_nicely") |>
+  visNodes(scaling = list(min = 5, max = 30)) |>
+  visEdges(smooth = list(enabled = TRUE, type = "dynamic")) |>
+  visOptions(
+    highlightNearest = TRUE,
+    nodesIdSelection = TRUE,
+    collapse = TRUE
+  ) |>
+  visLegend() |>
+  visInteraction(
+    dragNodes = TRUE,
+    dragView  = TRUE,
+    zoomView  = TRUE
+  ) |>
+  visPhysics(stabilization = TRUE)
+
+vis # we'll fuddle with this more later
 ```
 
 
 # 2.) Use multiple methods and create matrices that represent how much agreement or disagreement the methods have.
 
+```{r leiden_hosen}
+leiden_g <- cluster_leiden(g,
+                           objective_function = "modularity",
+                           weights = NA,
+                           resolution = 1,
+                           n_iterations = 6,
+                           vertex_weights = NULL)
+nodes$membership_leiden = leiden_g$membership
+```
+
 ```{r}
-# TODO ASK JOE what matrix methods exactly? Agree/disagree with what? Leiden vs Louvain vs others?
+louvain_g  <- cluster_louvain(g, NA, resolution = 1)
+
+nodes$membership_louvain = louvain_g$membership
+```
+
+```{r}
+# let's not...
+# plot(leiden_g, g)
+# plot(louvain_g, g)
+```
+
+```{r use_visnetwork_instead_redux}
+set.seed(1)
+vis <- visNetwork(nodes, edges,
+                  main = "Football Plot - Leiden Clustering",
+                  submain = "",
+                  footer = "",
+                  width = "100%"
+  ) |>
+  visIgraphLayout(layout = "layout_nicely") |>
+  visNodes(scaling = list(min = 5, max = 30)) |>
+  visEdges(smooth = list(enabled = TRUE, type = "dynamic")) |>
+  visOptions(
+    highlightNearest = TRUE,
+    nodesIdSelection = TRUE,
+    collapse = TRUE
+  ) |>
+  visClusteringByGroup(nodes$membership_leiden) |>
+  visLegend() |>
+  visInteraction(
+    dragNodes = TRUE,
+    dragView  = TRUE,
+    zoomView  = TRUE
+  ) |>
+  visPhysics(stabilization = TRUE)
+
+vis # we'll fuddle with this more later
 ```
 
 # 3.) Find the cores.
