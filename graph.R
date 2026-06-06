@@ -1,3 +1,7 @@
+library(patchwork)
+
+
+
 # assumes node have an attribute: name
 plottt <- function(g){
   set.seed(1)
