@@ -253,7 +253,7 @@ nodes <- igraph::as_data_frame(g, what = "vertices") %>%
       "<div style='align:center; margin: 5px;'><span style='font-weight:800; font-size:16pt'>",
       name,
       "</span><br /><span style='font-size:8pt'>",
-      Country,
+      country,
       "</span></div>"
       )
   )
@@ -268,26 +268,27 @@ edges <- igraph::as_data_frame(g, what = "edges") %>%
     smooth = TRUE
   )
 
+# TODO finish shape, edge color, edge line type, node color
 # Shape mapping
-node_types <- sort(unique(nodes$command_team)) # 2 unique options
-shape_vals <- c("dot", "square")[seq_along(node_types)]
-shape_map <- setNames(shape_vals, node_types)
+# node_types <- sort(unique(nodes$command_team)) # 2 unique options
+# shape_vals <- c("dot", "square")[seq_along(node_types)]
+# shape_map <- setNames(shape_vals, node_types)
 
-# nodes$shape <- shape_map[nodes$command_team] # TODO figure this out
+# nodes$shape <- shape_map[which(nodes$command_team)] # TODO figure this out
 
 
 # Node colors (background)
-node_colors <- setNames(scales::hue_pal()(length(node_types)), node_types)
-# nodes$color.background <- node_colors[nodes$command_team] # TODO problem right here, subsetting by logical
+# node_colors <- setNames(scales::hue_pal()(length(node_types)), node_types)
+# nodes$color.background <- node_colors[which(nodes$command_team)] # TODO problem right here, subsetting by logical
 nodes$color.border <- "#444444"
 
 # Edge colors
-edge_types <- sort(unique(edges$command_team))
-edge_colors <- setNames(scales::hue_pal()(length(edge_types)), edge_types)
-# edges$color <- edge_colors[edges$command_team] # TODO similar issue to above... wtf do I need to add which() to pull out indices, then pass it in?
+# edge_types <- sort(unique(edges$command_team))
+# edge_colors <- setNames(scales::hue_pal()(length(edge_types)), edge_types)
+# edges$color <- edge_colors[which(edges$command_team)] # TODO similar issue to above... wtf do I need to add which() to pull out indices, then pass it in?
 
 # Dash mapping (linetype analogue)
-edges$dashes <- !edges$command_team # already a logical
+# edges$dashes <- !edges$command_team # already a logical
 
 ```
 
@@ -295,9 +296,9 @@ edges$dashes <- !edges$command_team # already a logical
 ```{r plooot_with_visnetwork}
 set.seed(1)
 vis <- visNetwork(nodes, edges,
-                  main = "Terrorist Cell",
-                  submain = "",
-                  footer = "",
+                  main = "Tennis matches from 2007",
+                  submain = "TODO",
+                  footer = "TODO",
                   width = "100%"
   ) |>
   visNodes(scaling = list(min = 5, max = 30),
