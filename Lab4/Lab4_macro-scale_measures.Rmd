@@ -618,6 +618,7 @@ farthest_vertices(g, weights = NA) # overriding weights because we just want max
 ```
 
 Laplacian doesn't work for directed graphs! Do I even need a section for this?
+
 ```{r}
 # TODO laplacian section here!
 ```
