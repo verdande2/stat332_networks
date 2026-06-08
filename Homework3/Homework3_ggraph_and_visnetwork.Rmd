@@ -243,128 +243,81 @@ p
 # 3.) Graph with `visNetwork`
 
 ```{r prepare_the_graph_data_part_deux}
-  # command_team_edges <- E(g_actors)[.inc(V(g_actors)[Role == "Command Team"])]
 
-# load up the needed data, wta[[40]]
-g <- wta[[40]] # |> # load dataset from correct year, 2007
+# Build nodes
+nodes <- igraph::as_data_frame(g, what = "vertices") %>%
+  tibble::rownames_to_column("id") %>%
+  mutate(
+    id    = as.character(id),
+    title = paste0(
+      "<div style='align:center; margin: 5px;'><span style='font-weight:800; font-size:16pt'>",
+      name,
+      "</span><br /><span style='font-size:8pt'>",
+      Country,
+      "</span></div>"
+      )
+  )
 
-  # tidygraph::as_tbl_graph() |> # convert to tidygraph to filter below
-  # activate("nodes") |> # activate nodes to filter them
-  # filter(country %in% c("USA", "GBR", "AUS")) |> # only USA/GBR/AUS data
-  # filter(!node_is_isolated()) # no isolates!
-g
-```
+# Build edges
+edges <- igraph::as_data_frame(g, what = "edges") %>%
+  mutate(
+    from   = as.character(from),
+    to     = as.character(to),
+    width  = 1,
+    arrows = "to",
+    smooth = TRUE
+  )
 
-```{r prepare_for_visnetwork}
-data <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
-# TODO Fix edgelist so visNetwork can read the dataset!
-# visnetwork wants every node to have an id (integer) and every edge set to be a pairing of those ids (integers), so we need to adjust a bit here
+# Shape mapping
+node_types <- sort(unique(nodes$command_team)) # 2 unique options
+shape_vals <- c("dot", "square")[seq_along(node_types)]
+shape_map <- setNames(shape_vals, node_types)
 
-# data$nodes[data$edges$from]
-
-
-
-# g_nodes <- g |>
-#   tidygraph::as_tbl_graph() |>
-#   activate("nodes") |>
-#   mutate(id = name,
-#          name = as.numeric(factor(V(g)$id))
-#   )
-
-# g_edges <- g |>
-#   tidygraph::as_tbl_graph() |>
-#   activate("edges") |>
-#   mutate(
-#     from = as.numeric(factor(E(g)$from)),
-#     to = as.numeric(factor(E(g)$to))
-#     )
-
-#data$nodes$name <- rownames(data$nodes) # preserve original names
-# data$nodes$id <- 
-#rownames(data$nodes) <- c() # blank out original rownames
+# nodes$shape <- shape_map[nodes$command_team] # TODO figure this out
 
 
-# now, adjust edge data
-# from, to get the same treatment
-# data$edges$from <- id_map[data$edges$from]
-# data$edges$to   <- id_map[data$edges$to]
+# Node colors (background)
+node_colors <- setNames(scales::hue_pal()(length(node_types)), node_types)
+# nodes$color.background <- node_colors[nodes$command_team] # TODO problem right here, subsetting by logical
+nodes$color.border <- "#444444"
 
-# glimpse(g_nodes)
-# glimpse(g_edges)
-```
+# Edge colors
+edge_types <- sort(unique(edges$command_team))
+edge_colors <- setNames(scales::hue_pal()(length(edge_types)), edge_types)
+# edges$color <- edge_colors[edges$command_team] # TODO similar issue to above... wtf do I need to add which() to pull out indices, then pass it in?
 
-```{r plot_visnetwork_graph}
-# visNetwork(nodes, edges, height = "800px", width = "100%") |>
-#   visNodes(color = list(background = "lightblue",
-#                         border = "darkblue",
-#                         highlight = "yellow"),
-#            shadow = list(enabled = TRUE, size = 10)
-#            ) |>
-#   visEdges(shadow = TRUE,
-#            arrows = list(
-#              to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
-#              ),
-#            color = list(
-#              color = "lightblue", # make 'em pretty
-#              highlight = "red")
-#            ) |>
-#   visLayout(randomSeed = 12) # TODO remove me before submit!
-```
-
-```{r try_the_visigraph_plot}
-# visNetwork::visIgraph(g, idToLabel = FALSE, physics = TRUE)
-
-```
-
-Well, while `physics = TRUE` is rather amusing to toy with, I'm still not getting any edges showing up... Let's investigate. Further investigation into this issue can be found in the appendices at the end. The TL;DR would be that the edge list has to/from columns as the strings of the player names, **not** the ids, which are required for `visNetwork`.
-
-I'll have to replace the strings with their `id` programmatically, so let's write some helper functions (for the details of their construction, see appendices) that will likely make things go easier:
-
-```{r final_helper_functions}
-# TODO copy/paste funcs here
-# 
-# igraph_node_name_to_id <- function(g, name) {
-#   which(V(g)$name == name)
-# }
-# 
-# igraph_convert_names_to_ids <- function(g) {
-#   g
-# }
-
+# Dash mapping (linetype analogue)
+edges$dashes <- !edges$command_team # already a logical
 
 ```
 
 
-```{r fix_the_bad_juju}
-# g <- igraph_convert_names_to_ids(g) # TODO fix this function
+```{r plooot_with_visnetwork}
+set.seed(1)
+vis <- visNetwork(nodes, edges,
+                  main = "Terrorist Cell",
+                  submain = "",
+                  footer = "",
+                  width = "100%"
+  ) |>
+  visNodes(scaling = list(min = 5, max = 30),
+           font = list(size = 24)
+           ) |>
+  visEdges(smooth = list(enabled = TRUE, type = "dynamic")) |>
+  visOptions(
+    highlightNearest = TRUE,
+    nodesIdSelection = TRUE,
+    collapse = TRUE
+  ) |>
+  visInteraction(
+    dragNodes = TRUE,
+    dragView  = TRUE,
+    zoomView  = TRUE
+  ) |>
+  visPhysics(stabilization = TRUE)
 
+vis
 
-# remember, we need to convert our igraph/ggraph into a node and edge list for use with visNetwork
-# graph <- visNetwork::toVisNetworkData(g, idToLabel = FALSE)
-# 
-# nodes <- graph$nodes
-# edges <- graph$edges
-```
-
-Now that we've remapped the edges from string labels to id integers again, we should be able to construct the visNetwork object anew and re-plot, and we _should_ get our edges back!
-
-```{r plot_visnetwork_graph_take_two}
-# let's try this again!
-# visNetwork(nodes, edges, height = "800px", width = "100%") |>
-#   visNodes(color = list(background = "lightblue",
-#                         border = "darkblue",
-#                         highlight = "yellow"),
-#            shadow = list(enabled = TRUE, size = 10)
-#            ) |>
-#   visEdges(shadow = TRUE,
-#            arrows = list(
-#              to = list(enabled = TRUE, scaleFactor = 2) # enable and doublesize to arrows
-#              ),
-#            color = list(
-#              color = "lightblue", # make 'em pretty
-#              highlight = "red")
-#            ) |>
-#   visLayout(randomSeed = 12) # TODO remove me before submit!
 ```
 
 
