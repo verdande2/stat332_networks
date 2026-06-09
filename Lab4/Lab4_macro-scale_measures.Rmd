@@ -637,7 +637,7 @@ cat("Best φ from PageRank sweep:", conductance_2$phi, "\n")
 
 ## Adhesion
 
-Now, we consider adhesion:
+Now, we consider connectivity and adhesion:
 
 ```{r find_adhesion}
 adhesion(g)
@@ -647,7 +647,7 @@ adhesion(g)
 vertex_connectivity(g)
 ```
 
-Now, let's calculate the fiedler's value for the graph:
+Now, let's calculate the Fiedler's value for the graph:
 
 ```{r find_fiedlers_value}
 

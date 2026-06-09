@@ -33,28 +33,28 @@ You may use the following code to read and generate the graph.
 ```{r read_csv_files}
 nodes <- read.csv("musae_facebook_target.csv", header = TRUE, as.is = TRUE)
 links <- read.csv("musae_facebook_edges.csv", header = TRUE, as.is = TRUE)
+
 ```
 
 
 ```{r make_graph}
 g <- igraph::graph_from_data_frame(d = links, vertices = nodes, directed = FALSE)
-sg <- igraph::graph_from_data_frame(d = links, vertices = nodes, directed = FALSE)
-# TODO convert igraph to visNetwork?
+
 ```
 
 0.) Your first step, before doing any other work, will be to create a subgraph that is limited to only those nodes where the `page_type` is "tvshow". Then overwrite this network with an induced subgraph where the isolates are removed (you should have **3,282** nodes)
 
 ```{r create_subgraph}
-sg <- g %>% 
+V(g)$degree_total <- degree(g, mode = "all", loops = FALSE) # , normalized = TRUE removed so it's more human readable
+
+g <- g %>% 
   as_tbl_graph() %>%
   activate("nodes") %>%
-  filter(page_type == "tvshow") %>%
-  filter(deg > 0)
-
+  filter(page_type == "tvshow" & degree_total > 0)
 
 cat(paste0(
   "Number of nodes: ",
-  length(V(sg))
+  length(V(g))
 ))
 ```
 
@@ -64,55 +64,77 @@ I wouldn't recommend trying to plot the network right away. Start by looking at 
 
 ```{r summarize_the_graph}
 # barf out the easy stuff first
-sg
-print_formatted_graph_summary_table(sg)
+summary(g)
 ```
 
 ```{r make_pretty_table}
 # now, let's calculate some better measures and spit them out in a nicely formatted gt() table:
-# TODO make measurements and table
-# output_measurement_table <- function(g) {
-#   tbl <- data.frame(
-#     measure_name = c(),
-#     measure_value = c()
-#   )
-#   # TODO finish this func
-#   tbl | gt
-# }
-# 
-# output_measurement_table(sg)
+
+print_formatted_graph_summary_table(g)
 ```
+
+Editor's note: why is there something that is flagging the network as having loops? That doesn't make sense... Let's remove that...
+
+```{r}
+g <- simplify(g)
+```
+
+And to confirm:
+```{r}
+print_formatted_graph_summary_table(g)
+```
+
+Wait, what? Simplify is supposed to removed multiple edges and any loops present and yet this... Hmmmm....
+
+# TODO Fix issue here?
 
 2.)  Produce the **5** measures of graph structure discussed in the lesson from this week. Report these in a table that includes the measure name, the value of the statistic, and an interpretation of the statistic.
 
 ```{r create_basic_measures_table}
-# TODO ASK JOE Which are the 5 measures from that week? Interconnectedness measures? Closeness? Betweenness? Eigen?
+output_five_basic_measures_table <- function(g) {
+  tbl <- data.frame(
+    measure_name = c(
+      "asdf",
+      "",
+      "",
+      "",
+      ""
+    ),
+    measure_value = c(
+      "",
+      "",
+      "",
+      "",
+      ""
+    )
+  )
 
-# output_five_basic_measures_table <- function(g) {
-#   tbl <- data.frame(
-#     measure_name = c(),
-#     measure_value = c()
-#   )
-#   # TODO finish this func
-#   tbl | gt
-# }
-# 
-# output_five_basic_measures_table(sg)
+  tbl |> gt()
+}
+
+output_five_basic_measures_table(g)
 ```
 
 3.) Create a table of the interconnectedness measures for this graph and provide an interpretation of this results.
 
 ```{r create_interconnectedness_measures_table}
-# output_interconnectedness_measures_table <- function(g) {
-#   tbl <- data.frame(
-#     measure_name = c(),
-#     measure_value = c()
-#   )
-#   # TODO finish this func
-#   tbl | gt
-# }
-# 
-# output_interconnectedness_measures_table(sg)
+output_interconnectedness_measures_table <- function(g) {
+  tbl <- data.frame(
+    measure_name = c(
+      "Edge Density",
+      "Cohesion",
+      "Global Clustering",
+      "Assortativity"
+    ),
+    measure_value = c( # TODO placeholder
+      1:4 
+    )
+  )
+
+  tbl |> gt()
+}
+
+output_interconnectedness_measures_table(g)
 ```
 
 **Answer:**
@@ -121,16 +143,23 @@ TODO interpretation
 4.) Create a table with the degree, closeness, betweenness and eigenvalue centralization measures for this graph and interpret the results.
 
 ```{r create_more_measures_table}
-# output_more_measures_table <- function(g) {
-#   tbl <- data.frame(
-#     measure_name = c(),
-#     measure_value = c()
-#   )
-#   # TODO finish this func
-#   tbl | gt
-# }
-# 
-# output_more_measures_table(sg)
+output_more_measures_table <- function(g) {
+  tbl <- data.frame(
+    measure_name = c(
+      "Degree",
+      "Closeness",
+      "Betweenness",
+      "Eigenvalue"
+    ),
+    measure_value = c( # TODO placeholder
+      1:4
+    )
+  )
+
+  tbl |> gt()
+}
+
+output_more_measures_table(g)
 ```
 
 **Answer:**
@@ -139,16 +168,22 @@ TODO interpretation
 5.) Produce a table of the efficiency measures of this graph and provide an interpretation of the results.
 
 ```{r create_efficiency_measures_table}
-# output_efficiency_measures_table <- function(g) {
-#   tbl <- data.frame(
-#     measure_name = c(),
-#     measure_value = c()
-#   )
-#   # TODO finish this func
-#   tbl | gt
-# }
-# 
-# output_efficiency_measures_table(sg)
+output_efficiency_measures_table <- function(g) {
+  tbl <- data.frame(
+    measure_name = c(
+      "Average Shortest Path",
+      "Global Efficiency",
+      "Average Local Efficiency"
+    ),
+    measure_value = c( # TODO placeholder
+      1:3
+    )
+  )
+
+  tbl |> gt()
+}
+
+output_efficiency_measures_table(g)
 ```
 
 **Answer:**
@@ -157,6 +192,6 @@ TODO interpretation
 6.) Given the measures that you have produced in this assignment, would you consider this network to be centralized or de-centralized? Similarly, would you consider this network to be highly interconnected or have low interconnectedness? Based on these results, what do you think the advantages and disadvantages of this network would be in terms of robustness and resilience. What are the critical strengths and weaknesses of this network?
 
 **Answer:**
-TODO interpretation
+# TODO interpretation
 
 ## References

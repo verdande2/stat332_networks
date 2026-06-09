@@ -59,23 +59,6 @@ print_formatted_graph_summary_table(g)
 
 # 1.) Plot things out.
 
-```{r prep_for_visnetwork}
-nodes <- igraph::as_data_frame(g, what = "vertices") |>
-  mutate(
-    title = paste0(label," (",value,")\n"),
-    size = value
-    )
-
-edges <- igraph::as_data_frame(g, what = "edges") |>
-  mutate(
-    # from   = as.character(from),
-    # to     = as.character(to),
-    width  = 2,
-    smooth = TRUE
-  )
-
-```
-
 ```{r plooot}
 set.seed(1)
 p <- ggraph(g, layout = "lgl") +
@@ -102,9 +85,35 @@ p <- ggraph(g, layout = "lgl") +
   ) +
   labs(
     title    = "A simple ugly plot",
-    subtitle = "A network plot of a terrorist cell.",
-  )
+    subtitle = "A network plot of football teams",
+  ) +
+  guides(position = "none")
 p
+```
+
+```{r prep_for_plooot}
+nodes <- igraph::as_data_frame(g, what = "vertices") |>
+  mutate(
+    title = paste0(label," (",value,")\n"),
+    size = value
+    )
+
+edges <- igraph::as_data_frame(g, what = "edges") |>
+  mutate(
+    # from   = as.character(from),
+    # to     = as.character(to),
+    width  = 2,
+    smooth = TRUE
+  )
+
+edges$color <- "#000000"
+nodes$title <- paste0(
+  nodes$label,
+  " (",
+  nodes$value,
+  ")"
+)
+
 ```
 
 ```{r use_visnetwork_instead}
