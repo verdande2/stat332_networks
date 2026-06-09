@@ -1,5 +1,6 @@
+library(tidyverse)
 library(patchwork)
-
+library(tibble)
 
 
 # assumes node have an attribute: name
@@ -342,7 +343,6 @@ show_k_core_shell_plots <- function(g){
   wrap_plots(shell_plots, ncol = 2)
 }
 
-# TODO line by line debug this
 conductance_of_set <- function(g, S, weights = E(g)$weight) {
   # if weights=null is passed, start weights at vector of 1s
   if (is.null(weights)) weights <- rep(1, ecount(g))
@@ -377,7 +377,6 @@ find_fiedlers_number <- function(g){
   lambda_2
 }
 
-# TODO line by line this function and comment it all out
 fiedler_sweep_cut <- function(g) {
 
   # Make sure it's undirected and weighted sensibly
@@ -417,7 +416,6 @@ fiedler_sweep_cut <- function(g) {
   )
 }
 
-# TODO line by line this func
 page_rank_sweep_cut <- function(g, alpha = 0.15) {
 
   if (is.directed(g)) {
@@ -455,7 +453,6 @@ page_rank_sweep_cut <- function(g, alpha = 0.15) {
   )
 }
 
-# TODO line by line and comment
 centr_clo_weighted <- function(g) {
   # convert tie strength → distance
   d <- 1 / E(g)$weight
@@ -475,7 +472,6 @@ centr_clo_weighted <- function(g) {
   num / denom
 }
 
-# TODO line by line
 centr_betw_weighted <- function(g) {
   # Convert strength → distance
   d <- 1 / E(g)$weight # reciprocalize!
@@ -491,7 +487,6 @@ centr_betw_weighted <- function(g) {
   num / denom
 }
 
-# TODO line by line comment
 centr_eigen_weighted <- function(g) {
   # weighted EC scores
   ec <- eigen_centrality(g, weights = E(g)$weight)$vector
