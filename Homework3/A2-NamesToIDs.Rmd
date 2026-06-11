@@ -13,7 +13,7 @@ pdf_document: default
 knitr::opts_chunk$set(cache = FALSE)
 knitr::opts_chunk$set(echo = TRUE)
 
-library(igraph) # TODO look into quietly = TRUE, warn.conflicts = FALSE, verbose = FALSE params in library()
+library(igraph)
 library(networkdata)
 library(ggplot2)
 library(tidygraph)
@@ -294,8 +294,6 @@ g <- igraph::read_graph(gml_filename, format = "gml")
   v_attr <- vertex_attr(g)
   lookup_table <- (v_attr$id) # id starts at zero, may need to start at 1? maybe?
   names(lookup_table) <- v_attr$name
-  
-  # TODO finish this function out, determine if 1 or 0 index
 
   # now, lookup_table["name"] should return the id
 

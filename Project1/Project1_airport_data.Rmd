@@ -167,7 +167,7 @@ g <- induced_subgraph(g, keep_node_codes) # the proper way to steal the nodes an
 g
 ```
 
-10 nodes and over a thousand edges, but many are duplicate, let's see about fixing that...
+10 nodes and over a thousand edges, but many are duplicate... I think we're on track. Now, let's see about fixing those edges...
 
 
 ```{r}
@@ -184,7 +184,7 @@ edge_df <- igraph::as_data_frame(g, what = "edges")
 
 # Group by endpoints or edge groups and aggregate attributes
 collapsed_df <- edge_df %>%
-  group_by(from, to, Carrier, Aircraft, Seats = "sum", Passengers = "sum") %>%
+  group_by(from, to, Carrier, Aircraft, Seats = "sum", Passengers = "sum") # %>%
   #mutate(Seats_total = sum(Seats), Passengers_total= sum(Passengers)) %>%
 
 # Rebuild the simplified graph
@@ -201,7 +201,7 @@ g_collapsed <- graph_from_data_frame(collapsed_df, directed = FALSE)
 
 
 ```{r}
-# investigating biggest carriers?
+# investigating biggest carriers individually?
 
 ```
 
@@ -228,8 +228,9 @@ g_collapsed <- graph_from_data_frame(collapsed_df, directed = FALSE)
 ```
 
 Now, let's calculate some things:
+
 ```{r}
-# TODO calculate measures and throw into big pretty table
+# TODO calculate measures and throw into big pretty table, make pretty
 reachability_cohesion(g)
 diameter(g)
 get_diameter(g)
@@ -316,8 +317,8 @@ ggraph(g, layout = "kk") +
 First, let's get a rough idea of what we are working with. Our dataset is an imported `igraph` object, spanning some $755$ airports as vertices, and $23,473$ edges representing directed flights between them, with vertex data containing attributes for the airport's standard 3-character identifier, 
 
 
-Possible avenues of interest.
-Average occupancy percentage for flights from ALSDKJFALFDJS to LAKSDJFLAKSDJFSDLK, passengers/seat_count
+Possible avenues of interest:
+- Average occupancy percentage for flights from ALSDKJFALFDJS to LAKSDJFLAKSDJFSDLK, passengers/seat_count
 maybe subsetting to flights with capacity over xyz number and see the patterns of their routes
 
 Comparing average occupancy for flights that are longer distance vs shorter distance, or east/west cost, etc

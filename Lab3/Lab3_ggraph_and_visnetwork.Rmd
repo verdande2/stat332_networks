@@ -451,8 +451,9 @@ shape_map <- setNames(shape_vals, node_types)
 
 
 # Node colors (background)
-node_colors <- setNames(scales::hue_pal()(length(node_types)), node_types)
+# node_colors <- setNames(scales::hue_pal()(length(node_types)), node_types)
 # nodes$color.background <- node_colors[nodes$command_team] # TODO problem right here, subsetting by logical
+nodes$color.background <- ifelse(nodes$command_team, "#ff0000", "#555555")
 nodes$color.border <- "#444444"
 
 # Edge colors

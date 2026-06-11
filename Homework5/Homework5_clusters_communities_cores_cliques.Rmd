@@ -95,7 +95,8 @@ p
 nodes <- igraph::as_data_frame(g, what = "vertices") |>
   mutate(
     title = paste0(label," (",value,")\n"),
-    size = value
+    size = value,
+    name = label
     )
 
 edges <- igraph::as_data_frame(g, what = "edges") |>
@@ -203,7 +204,7 @@ show_k_core_plots(g) # from graph.R
 ```
 
 ```{r calculate_the_k_core_shells_and_plot}
-show_k_core_shell_plots(g) # from graph.R
+# show_k_core_shell_plots(g) # from graph.R # TODO figure out why this is shitting the bed not finding a name attribute somewhere in geom_node_text()
 ```
 
 # 4.) Find the cliques.
@@ -213,12 +214,16 @@ clique_num(g)
 ```
 
 ```{r}
-cliques(g, min = clique_num(g))
-
+cliq_set <- cliques(g, min = clique_num(g))
+cliq_set
 ```
 
 ```{r}
 largest_cliques(g)
+```
+
+```{r}
+# plot(g, cliq_set[[1]], cliq_set[[2]]) # this line confuzzles the confuzzle out of me...
 ```
 
 There appear to be two cliques in the data, both of size 9. I would have thought it'd line up with the size of the divisions, or perhaps geographically explained. Apparently there are 12 divisions in this league of college football. 

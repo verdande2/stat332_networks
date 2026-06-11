@@ -13,7 +13,7 @@ pdf_document: default
 knitr::opts_chunk$set(cache = FALSE)
 knitr::opts_chunk$set(echo = TRUE)
 
-library(igraph) # TODO look into quietly = TRUE, warn.conflicts = FALSE, verbose = FALSE params in library()
+library(igraph)
 library(networkdata)
 library(ggplot2)
 library(tidygraph)
